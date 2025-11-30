@@ -1,0 +1,11 @@
+{
+  "name": "Custom Home Tracker",
+  "short_name": "HomeTracker",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1976d2",
+  "icons": []
+}
+
+

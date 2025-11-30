@@ -1,0 +1,13 @@
+I want to build a custom home tracking and coordination application.  I am a custom home builder and I build one house and I found lot of coordination problem in scheduling and lot of things we missed to check.
+My goal of this project is to make sure that we don't miss anything while building a new home.  This is what I want to , we will have a react app which can also be opened on mobile PWA and desktop also.
+My backend should be nodejs with mongodb . We will use minimal database collections .  I am keeping all my existing home bids in an excel in this folder.
+Every home needs all this things like Architecture, Geotechnical report,  Structure Engineering, City initial approvals, Electricals, Plumbing, HVAC, Foundation, Framing, Windows 
+Tiles, Floors, Drywalls, Fireplace, Roof, Paint, Exterior Stucco, Cabinets, Counter tops , Doors, Stairs, Trim .  
+Now I want to organize all this things from my applciation some of the problems i faced are I did not ordered windows ahead or after framing windows dimensions did not match and they are several examples like it where fireplace dimensions did not match, roofer did not did his work ahead blockingn other bids, based on floor height doors i need to readjust.
+I am thinking we should have three main logical phases one is pre-construction, exterior construction and interior construction.  Each phase will contain most of the above bids inputs so it should include them.
+Each bid might involve in different phases, for example an electrical will be involved in preconstruction phase where we should have contract signed before construction, all electricals diagrams are in place or any other tasks and in construction they do rough in and probably need a inspection for rough in.
+Based on that i am thinking to have Each major phase will have a bid associated and each bid will have tasks associated with them where we need to complete to finish that bid for that phase. For each bid we should also attach comments, photos or files as the contruction goes on to update the progress. 
+There should be another scheduling option to schedule and it can be scheduled directly from the task or there will be common schedule to show all schedules we have. 
+We will have another option for storing all documents in a place which also can be pinned to one of the bid associated so that it is easy to filter 
+Each bid also have total pricing and any additional pricing occurs while building.  I want to able to add new tasks for a bid other than predefined tasks. And probably have a template for inital task lists for all phases and for all bids. 
+We capture everything in a big mongdb document except photos where we store in S3 bucket and give the links here.  Write entire cde under custom home directory
