@@ -9,7 +9,7 @@ export default function Terms() {
       <Container maxWidth="md">
         <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 } }}>
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <img src="/logo.svg" alt="Buildwise AI" style={{ height: 28, marginRight: 8 }} />
+            <img src={`${import.meta.env.BASE_URL}logo.svg`} alt="Buildwise AI" style={{ height: 28, marginRight: 8 }} />
             <span className="brand-text">Buildwise AI</span>
           </Box>
           <Typography variant="h4" sx={{ fontWeight: 700, mb: 2 }}>

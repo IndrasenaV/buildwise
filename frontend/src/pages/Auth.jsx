@@ -22,7 +22,7 @@ export default function Auth() {
     <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', px: 2 }}>
       <Box sx={{ width: '100%', maxWidth: 520 }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 2 }}>
-          <img src="/logo.svg" alt="Buildwise AI" style={{ height: 40, marginBottom: 8 }} />
+          <img src={`${import.meta.env.BASE_URL}logo.svg`} alt="Buildwise AI" style={{ height: 40, marginBottom: 8 }} />
           <div className="brand-text brand-text--lg">Buildwise AI</div>
         </Box>
         <Paper variant="outlined" sx={{ p: 2 }}>

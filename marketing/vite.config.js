@@ -8,6 +8,11 @@ export default defineConfig({
   },
   preview: {
     port: 5174
+  },
+  base: '/',
+  build: {
+    outDir: '../backend/public/marketing',
+    emptyOutDir: true
   }
 });
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { api } from '../api/client'
 import Paper from '@mui/material/Paper'
@@ -11,6 +11,89 @@ import List from '@mui/material/List'
 import ListItem from '@mui/material/ListItem'
 import ListItemText from '@mui/material/ListItemText'
 import Chip from '@mui/material/Chip'
+import * as d3 from 'd3'
+
+function TradesPie({ trades, size = 260 }) {
+  const ref = useRef(null)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    while (el.firstChild) el.removeChild(el.firstChild)
+    const data = (trades || [])
+      .map((t) => ({ name: t.name, value: Math.max(0, Number(t.totalPrice) || 0) }))
+      .filter((d) => d.value > 0)
+    if (!data.length) {
+      const div = document.createElement('div')
+      div.style.textAlign = 'center'
+      div.style.color = '#607d8b'
+      div.style.fontSize = '12px'
+      div.textContent = 'No trade budgets'
+      el.appendChild(div)
+      return
+    }
+    const tooltip = d3.select(el)
+      .append('div')
+      .style('position', 'absolute')
+      .style('background', 'rgba(0,0,0,0.75)')
+      .style('color', '#fff')
+      .style('padding', '4px 8px')
+      .style('border-radius', '4px')
+      .style('font-size', '12px')
+      .style('pointer-events', 'none')
+      .style('display', 'none')
+      .style('z-index', '10')
+    const fmt = (n) => Number(n || 0).toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
+    const svg = d3
+      .select(el)
+      .append('svg')
+      .attr('width', size)
+      .attr('height', size)
+      .append('g')
+      .attr('transform', `translate(${size / 2}, ${size / 2})`)
+    const radius = (size / 2) - 6
+    const arc = d3.arc().innerRadius(radius * 0.55).outerRadius(radius)
+    const pie = d3.pie().sort(null).value((d) => d.value)
+    const arcs = pie(data)
+    const palette = d3.schemeTableau10
+    const color = (i) => palette[i % palette.length]
+    svg
+      .selectAll('path')
+      .data(arcs)
+      .enter()
+      .append('path')
+      .attr('d', arc)
+      .attr('fill', (_d, i) => color(i))
+      .attr('stroke', '#fff')
+      .attr('stroke-width', 1)
+      .on('mousemove', (event, d) => {
+        const [x, y] = d3.pointer(event, el)
+        tooltip
+          .style('left', `${x + 12}px`)
+          .style('top', `${y + 12}px`)
+          .style('display', 'block')
+          .text(`${d.data.name}: ${fmt(d.data.value)}`)
+      })
+      .on('mouseleave', () => {
+        tooltip.style('display', 'none')
+      })
+    const total = data.reduce((s, d) => s + d.value, 0)
+    svg
+      .append('text')
+      .attr('text-anchor', 'middle')
+      .attr('dy', '-0.2em')
+      .style('font-size', '20px')
+      .style('font-weight', 600)
+      .text(total.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }))
+    svg
+      .append('text')
+      .attr('text-anchor', 'middle')
+      .attr('dy', '1.2em')
+      .style('font-size', '12px')
+      .style('fill', '#607d8b')
+      .text('Total Budget')
+  }, [trades, size])
+  return <div ref={ref} style={{ position: 'relative' }} />
+}
 
 export default function HomeBudget() {
   const { id } = useParams()
@@ -49,32 +132,39 @@ export default function HomeBudget() {
 
       <Paper variant="outlined" sx={{ p: 2 }}>
         <Typography variant="h6" gutterBottom>Budget Overview</Typography>
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 2 }}>
-          <Box>
-            <Typography variant="body2" color="text.secondary">Total Budget</Typography>
-            <Typography variant="h6">{fmt(summary.totalBudget)}</Typography>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '300px 1fr' }, alignItems: 'center', gap: 2 }}>
+          <Box sx={{ justifySelf: 'center' }}>
+            <TradesPie trades={trades} size={260} />
           </Box>
           <Box>
-            <Typography variant="body2" color="text.secondary">Paid</Typography>
-            <Typography variant="h6">{fmt(summary.totalPaid)}</Typography>
-          </Box>
-          <Box>
-            <Typography variant="body2" color="text.secondary">Outstanding</Typography>
-            <Typography variant="h6">{fmt(summary.totalOutstanding)}</Typography>
-          </Box>
-          <Box>
-            <Typography variant="body2" color="text.secondary">Invoiced (All)</Typography>
-            <Typography variant="h6">{fmt(summary.totalInvoiced)}</Typography>
-          </Box>
-          <Box>
-            <Typography variant="body2" color="text.secondary">Additional Costs</Typography>
-            <Typography variant="h6">{fmt(summary.totalExtras)}</Typography>
-          </Box>
-          <Box>
-            <Typography variant="body2" color="text.secondary">Variance</Typography>
-            <Typography variant="h6" sx={{ color: summary.totalVariance > 0 ? 'error.main' : 'success.main' }}>
-              {fmt(summary.totalVariance)}
-            </Typography>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 2 }}>
+              <Box>
+                <Typography variant="body2" color="text.secondary">Total Budget</Typography>
+                <Typography variant="h6">{fmt(summary.totalBudget)}</Typography>
+              </Box>
+              <Box>
+                <Typography variant="body2" color="text.secondary">Paid</Typography>
+                <Typography variant="h6">{fmt(summary.totalPaid)}</Typography>
+              </Box>
+              <Box>
+                <Typography variant="body2" color="text.secondary">Outstanding</Typography>
+                <Typography variant="h6">{fmt(summary.totalOutstanding)}</Typography>
+              </Box>
+              <Box>
+                <Typography variant="body2" color="text.secondary">Invoiced (All)</Typography>
+                <Typography variant="h6">{fmt(summary.totalInvoiced)}</Typography>
+              </Box>
+              <Box>
+                <Typography variant="body2" color="text.secondary">Additional Costs</Typography>
+                <Typography variant="h6">{fmt(summary.totalExtras)}</Typography>
+              </Box>
+              <Box>
+                <Typography variant="body2" color="text.secondary">Variance</Typography>
+                <Typography variant="h6" sx={{ color: summary.totalVariance > 0 ? 'error.main' : 'success.main' }}>
+                  {fmt(summary.totalVariance)}
+                </Typography>
+              </Box>
+            </Box>
           </Box>
         </Box>
       </Paper>

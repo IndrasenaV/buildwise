@@ -5,6 +5,8 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const dotenv = require('dotenv');
 dotenv.config();
+const path = require('path');
+const fs = require('fs');
 
 const { connectToDatabase } = require('./config/db');
 const homesRouter = require('./routes/homes');
@@ -55,6 +57,33 @@ app.use('/api/templates', templatesRouter);
 app.use('/api/homes', messagesRouter);
 app.use('/api/file-storage', fileStorageRouter);
 app.use('/api/ai', aiRouter);
+
+// Static file hosting
+const publicDir = path.resolve(__dirname, '../public');
+const appDir = path.join(publicDir, 'app');
+const marketingDir = path.join(publicDir, 'marketing');
+
+// Serve frontend app at /app
+if (fs.existsSync(appDir)) {
+  app.use('/app', express.static(appDir, { index: false, extensions: ['html'] }));
+  app.get(['/app', '/app/*'], (_req, res, next) => {
+    const indexFile = path.join(appDir, 'index.html');
+    if (fs.existsSync(indexFile)) return res.sendFile(indexFile);
+    return next();
+  });
+}
+
+// Serve marketing site at /
+if (fs.existsSync(marketingDir)) {
+  app.use('/', express.static(marketingDir, { index: 'index.html', extensions: ['html'] }));
+  // History fallback for marketing (non-API, non-/app)
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/app')) return next();
+    const indexFile = path.join(marketingDir, 'index.html');
+    if (fs.existsSync(indexFile)) return res.sendFile(indexFile);
+    return next();
+  });
+}
 
 app.use(notFoundHandler);
 app.use(errorHandler);

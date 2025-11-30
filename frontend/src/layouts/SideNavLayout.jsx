@@ -95,7 +95,7 @@ export default function SideNavLayout() {
               <MenuIcon />
             </IconButton>
             <Box sx={{ display: 'flex', alignItems: 'center', ml: 1, cursor: 'pointer' }} onClick={() => go('/homes')}>
-              <img src="/logo.svg" alt="Buildwise AI" style={{ height: 24, marginRight: 8 }} />
+              <img src={`${import.meta.env.BASE_URL}logo.svg`} alt="Buildwise AI" style={{ height: 24, marginRight: 8 }} />
               <span className="brand-text">Buildwise AI</span>
             </Box>
           </Toolbar>
@@ -118,7 +118,7 @@ export default function SideNavLayout() {
       >
         <Box sx={{ p: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={() => go('/homes')}>
-            <img src="/logo.svg" alt="Buildwise AI" style={{ height: 26, marginRight: 8 }} />
+            <img src={`${import.meta.env.BASE_URL}logo.svg`} alt="Buildwise AI" style={{ height: 26, marginRight: 8 }} />
             <span className="brand-text">Buildwise AI</span>
           </Box>
         </Box>
@@ -140,12 +140,6 @@ export default function SideNavLayout() {
             <ListItemButton onClick={() => go('/templates')}>
               <ListItemIcon><DesignServicesOutlinedIcon /></ListItemIcon>
               <ListItemText primary="Templates" />
-            </ListItemButton>
-          </ListItem>
-          <ListItem disablePadding>
-            <ListItemButton onClick={() => go('/account')}>
-              <ListItemIcon><SettingsIcon /></ListItemIcon>
-              <ListItemText primary="Account" />
             </ListItemButton>
           </ListItem>
         </List>
@@ -226,6 +220,13 @@ export default function SideNavLayout() {
         <Box sx={{ flexGrow: 1 }} />
         <Divider />
         <Box sx={{ p: 2 }}>
+          <ListItem disablePadding>
+            <ListItemButton selected={location.pathname.includes('/account')} onClick={() => go('/account')}>
+              <ListItemIcon><SettingsIcon /></ListItemIcon>
+              <ListItemText primary="Account" />
+            </ListItemButton>
+          </ListItem>
+          <Divider sx={{ my: 1 }} />
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
             {userEmail || 'Logged in'}
           </Typography>
@@ -237,9 +238,11 @@ export default function SideNavLayout() {
           </ListItem>
         </Box>
       </Drawer>
-      <Box component="main" sx={{ flexGrow: 1, p: 3, pt: isMobile ? 8 : 3 }}>
-        <Container maxWidth="md">
-          <Outlet />
+      <Box component="main" sx={{ flexGrow: 1, p: 3, pt: isMobile ? 8 : 3, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+        <Container maxWidth="md" sx={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
+          <Box sx={{ flexGrow: 1 }}>
+            <Outlet />
+          </Box>
           <Box sx={{ mt: 6, mb: 2, textAlign: 'center' }}>
             <Typography variant="body2" color="text.secondary">
               © {new Date().getFullYear()} Laitysol LLC. All Rights Reserved.
