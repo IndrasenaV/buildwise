@@ -22,8 +22,8 @@ export default function Auth() {
     <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', px: 2 }}>
       <Box sx={{ width: '100%', maxWidth: 520 }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 2 }}>
-          <HomeIcon color="primary" sx={{ fontSize: 48, mb: 1 }} />
-          <Typography variant="h4" sx={{ fontWeight: 700 }}>Home Tracker</Typography>
+          <img src="/logo.svg" alt="Buildwise AI" style={{ height: 40, marginBottom: 8 }} />
+          <div className="brand-text brand-text--lg">Buildwise AI</div>
         </Box>
         <Paper variant="outlined" sx={{ p: 2 }}>
           <Tabs value={tab} onChange={(_e, v) => setTab(v)} centered>
@@ -34,6 +34,11 @@ export default function Auth() {
             {tab === 0 ? <Login /> : <Register />}
           </Box>
         </Paper>
+        <Box sx={{ mt: 3, textAlign: 'center' }}>
+          <Typography variant="body2" color="text.secondary">
+            © {new Date().getFullYear()} Laitysol LLC. All Rights Reserved.
+          </Typography>
+        </Box>
       </Box>
     </Box>
   )

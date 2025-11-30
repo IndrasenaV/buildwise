@@ -18,7 +18,7 @@ export default function Footer() {
           <Link href="#contact" underline="none" color="text.secondary">Contact</Link>
         </Stack>
         <Typography variant="body2" color="text.secondary" sx={{ justifySelf: { xs: 'start', md: 'end' } }}>
-          © {year} BuildWise AI. All rights reserved.
+          © {year} Laitysol LLC. All Rights Reserved.
         </Typography>
       </Container>
     </Box>

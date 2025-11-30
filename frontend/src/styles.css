@@ -92,4 +92,21 @@ button {
 .sublist { margin: 8px 0 0 0; padding-left: 14px; }
 .error { color: #ff8a8a; }
 
+/* Branding */
+.brand-text {
+  font-weight: 700;
+  font-size: 18px;
+  line-height: 1;
+}
+.brand-text--lg {
+  font-size: 28px;
+}
+.brand-row {
+  display: flex;
+  align-items: center;
+}
+.brand-row img {
+  display: block;
+}
+
 

@@ -14,11 +14,13 @@ import HomeBudget from './pages/HomeBudget.jsx'
 import Templates from './pages/Templates.jsx'
 import HomeMessages from './pages/HomeMessages.jsx'
 import TemplateEditor from './pages/TemplateEditor.jsx'
+import Terms from './pages/Terms.jsx'
 
 function App() {
   return (
     <Routes>
       <Route path="/" element={<Auth />} />
+      <Route path="/terms" element={<Terms />} />
       <Route element={<SideNavLayout />}>
         <Route path="/homes" element={<HomeList />} />
         <Route path="/homes/:id" element={<Navigate to="preconstruction" replace />} />

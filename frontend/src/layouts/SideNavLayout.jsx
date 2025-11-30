@@ -92,9 +92,10 @@ export default function SideNavLayout() {
             <IconButton edge="start" aria-label="menu" onClick={() => setMobileOpen(true)}>
               <MenuIcon />
             </IconButton>
-            <Typography variant="h6" sx={{ ml: 1, fontWeight: 700, cursor: 'pointer' }} onClick={() => go('/homes')}>
-              Home Tracker
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', ml: 1, cursor: 'pointer' }} onClick={() => go('/homes')}>
+              <img src="/logo.svg" alt="Buildwise AI" style={{ height: 24, marginRight: 8 }} />
+              <span className="brand-text">Buildwise AI</span>
+            </Box>
           </Toolbar>
         </AppBar>
       )}
@@ -114,9 +115,10 @@ export default function SideNavLayout() {
         }}
       >
         <Box sx={{ p: 2 }}>
-          <Typography variant="h6" sx={{ fontWeight: 700, cursor: 'pointer' }} onClick={() => go('/homes')}>
-            Home Tracker
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={() => go('/homes')}>
+            <img src="/logo.svg" alt="Buildwise AI" style={{ height: 26, marginRight: 8 }} />
+            <span className="brand-text">Buildwise AI</span>
+          </Box>
         </Box>
         <Divider />
         <List>
@@ -224,6 +226,11 @@ export default function SideNavLayout() {
       <Box component="main" sx={{ flexGrow: 1, p: 3, pt: isMobile ? 8 : 3 }}>
         <Container maxWidth="md">
           <Outlet />
+          <Box sx={{ mt: 6, mb: 2, textAlign: 'center' }}>
+            <Typography variant="body2" color="text.secondary">
+              © {new Date().getFullYear()} Laitysol LLC. All Rights Reserved.
+            </Typography>
+          </Box>
         </Container>
       </Box>
     </Box>
