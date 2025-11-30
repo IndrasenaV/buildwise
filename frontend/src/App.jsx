@@ -15,6 +15,7 @@ import Templates from './pages/Templates.jsx'
 import HomeMessages from './pages/HomeMessages.jsx'
 import TemplateEditor from './pages/TemplateEditor.jsx'
 import Terms from './pages/Terms.jsx'
+import Account from './pages/Account.jsx'
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
       <Route path="/" element={<Auth />} />
       <Route path="/terms" element={<Terms />} />
       <Route element={<SideNavLayout />}>
+        <Route path="/account" element={<Account />} />
         <Route path="/homes" element={<HomeList />} />
         <Route path="/homes/:id" element={<Navigate to="preconstruction" replace />} />
         <Route path="/homes/:id/:phase" element={<HomeDetail />} />

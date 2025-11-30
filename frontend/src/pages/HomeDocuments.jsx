@@ -15,6 +15,15 @@ import List from '@mui/material/List'
 import ListItem from '@mui/material/ListItem'
 import ListItemText from '@mui/material/ListItemText'
 import Divider from '@mui/material/Divider'
+import Grid from '@mui/material/Grid'
+import Link from '@mui/material/Link'
+import Chip from '@mui/material/Chip'
+import Box from '@mui/material/Box'
+import Dialog from '@mui/material/Dialog'
+import DialogTitle from '@mui/material/DialogTitle'
+import DialogContent from '@mui/material/DialogContent'
+import IconButton from '@mui/material/IconButton'
+import CloseIcon from '@mui/icons-material/Close'
 
 export default function HomeDocuments() {
   const { id } = useParams()
@@ -25,6 +34,7 @@ export default function HomeDocuments() {
   const [url, setUrl] = useState('')
   const [pinType, setPinType] = useState('home')
   const [pinId, setPinId] = useState('')
+  const [preview, setPreview] = useState({ open: false, url: '', title: '' })
 
   useEffect(() => {
     api.getHome(id).then(setHome).catch((e) => setError(e.message))
@@ -61,6 +71,19 @@ export default function HomeDocuments() {
     }
   }
 
+  function openPreview(url, title) {
+    setPreview({ open: true, url, title })
+  }
+  function closePreview() {
+    setPreview({ open: false, url: '', title: '' })
+  }
+  function isImage(u) {
+    return /\.(png|jpg|jpeg|webp|gif)$/i.test(u || '')
+  }
+  function isPdf(u) {
+    return /\.pdf($|[\?#])/i.test(u || '')
+  }
+
   return (
     <Stack spacing={2}>
       <Paper variant="outlined" sx={{ p: 2 }}>
@@ -73,7 +96,7 @@ export default function HomeDocuments() {
               <InputLabel id="pin-type">Pin To</InputLabel>
               <Select labelId="pin-type" label="Pin To" value={pinType} onChange={(e) => setPinType(e.target.value)}>
                 <MenuItem value="home">Home</MenuItem>
-                <MenuItem value="bid">Bid</MenuItem>
+                <MenuItem value="trade">Trade</MenuItem>
                 <MenuItem value="task">Task</MenuItem>
               </Select>
             </FormControl>
@@ -86,10 +109,10 @@ export default function HomeDocuments() {
                   value={pinId}
                   onChange={(e) => setPinId(e.target.value)}
                 >
-                  {pinType === 'bid' &&
-                    (home?.bids || []).map((b) => <MenuItem key={b._id} value={b._id}>{b.name}</MenuItem>)}
+                  {pinType === 'trade' &&
+                    ((home?.trades || home?.bids || [])).map((b) => <MenuItem key={b._id} value={b._id}>{b.name}</MenuItem>)}
                   {pinType === 'task' &&
-                    (home?.bids || []).flatMap((b) =>
+                    ((home?.trades || home?.bids || [])).flatMap((b) =>
                       (b.tasks || []).map((t) => (
                         <MenuItem key={t._id} value={t._id}>{`${b.name} — ${t.title}`}</MenuItem>
                       ))
@@ -115,21 +138,66 @@ export default function HomeDocuments() {
             </Select>
           </FormControl>
         </Stack>
-        <List dense disablePadding>
-          {docs.map((d, idx) => (
-            <div key={d._id}>
-              <ListItem>
-                <ListItemText
-                  primary={<a href={d.url} target="_blank" rel="noreferrer">{d.title}</a>}
-                  secondary={`${d.pinnedTo?.type || 'home'}${d.pinnedTo?.id ? ` • ${d.pinnedTo.id}` : ''}`}
-                />
-              </ListItem>
-              {idx < docs.length - 1 && <Divider component="li" />}
-            </div>
-          ))}
-          {!docs.length && <Typography variant="body2" color="text.secondary">No documents</Typography>}
-        </List>
+        <Grid container spacing={2}>
+          {docs.map((d) => {
+            const name = d.fileName || d.title || (d.url || '').split('/').pop() || 'File'
+            const uploadedBy = d.uploadedBy?.fullName || d.uploadedBy?.email || ''
+            const uploadedAt = d.createdAt ? new Date(d.createdAt).toLocaleString() : ''
+            return (
+              <Grid item xs={12} sm={6} md={4} key={d._id}>
+                <Paper variant="outlined" sx={{ p: 2, display: 'grid', gap: 1 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{name}</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ wordBreak: 'break-all' }}>
+                    {d.title && d.title !== name ? d.title : ''}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {uploadedBy ? `Uploaded by: ${uploadedBy}` : ''}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {uploadedAt ? `Uploaded: ${uploadedAt}` : ''}
+                  </Typography>
+                  <Chip size="small" label={`Pinned: ${d.pinnedTo?.type || 'home'}`} sx={{ width: 'fit-content' }} />
+                  <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                    <Button size="small" variant="contained" onClick={() => openPreview(d.url, name)}>View</Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      component={Link}
+                      href={d.url}
+                      download
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Download
+                    </Button>
+                  </Box>
+                </Paper>
+              </Grid>
+            )
+          })}
+          {!docs.length && (
+            <Grid item xs={12}>
+              <Typography variant="body2" color="text.secondary">No documents</Typography>
+            </Grid>
+          )}
+        </Grid>
       </Paper>
+
+      <Dialog open={preview.open} onClose={closePreview} fullWidth maxWidth="lg">
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span>{preview.title}</span>
+          <IconButton onClick={closePreview} aria-label="close">
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers sx={{ height: '80vh', p: 0 }}>
+          {isImage(preview.url) ? (
+            <img src={preview.url} alt={preview.title} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+          ) : (
+            <iframe title={preview.title} src={preview.url} style={{ width: '100%', height: '100%', border: 0 }} />
+          )}
+        </DialogContent>
+      </Dialog>
     </Stack>
   )
 }

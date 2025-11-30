@@ -22,6 +22,7 @@ import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate'
 import SendIcon from '@mui/icons-material/Send'
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline'
 import Chip from '@mui/material/Chip'
+import CloseIcon from '@mui/icons-material/Close'
 
 export default function HomeBidDetail() {
   const { id, bidId } = useParams()
@@ -39,6 +40,7 @@ export default function HomeBidDetail() {
   const [msgList, setMsgList] = useState([])
   const [msgText, setMsgText] = useState('')
   const [msgFiles, setMsgFiles] = useState([])
+  const [preview, setPreview] = useState({ open: false, url: '', title: '' })
 
   useEffect(() => {
     api.getHome(id).then((h) => {
@@ -137,14 +139,32 @@ export default function HomeBidDetail() {
     if (!docUploadFile) return
     setError('')
     try {
-      const res = await api.uploadTradeFile(id, bidId, docUploadFile, docUploadTitle || docUploadFile.name)
-      setHome(res.home)
+      const uploaded = await api.uploadTradeFile(id, bidId, docUploadFile, docUploadTitle || docUploadFile.name)
+      const fileUrl = uploaded?.data?.fileUrl || uploaded?.fileUrl || ''
+      const fileName = uploaded?.data?.fileName || uploaded?.fileName || (docUploadTitle || docUploadFile.name)
+      if (!fileUrl) throw new Error('Upload succeeded but file URL missing')
+      const resDoc = await api.addDocument(id, {
+        title: fileName,
+        url: fileUrl,
+        pinnedTo: { type: 'trade', id: bidId }
+      })
+      setHome(resDoc.home)
       setDocUploadFile(null)
       setDocUploadTitle('')
       setDocDialogOpen(false)
     } catch (e) {
       setError(e.message)
     }
+  }
+
+  function isImage(u) {
+    return /\.(png|jpg|jpeg|webp|gif)$/i.test(u || '')
+  }
+  function openPreview(url, title) {
+    setPreview({ open: true, url, title })
+  }
+  function closePreview() {
+    setPreview({ open: false, url: '', title: '' })
   }
 
   async function presignedUpload(file) {
@@ -318,7 +338,15 @@ export default function HomeBidDetail() {
                   secondary={
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                       {m.author?.fullName || m.author?.email ? <Chip size="small" label={m.author?.fullName || m.author?.email} /> : null}
-                      {(m.attachments || []).map((a, i) => (<a key={`${m._id}-a-${i}`} href={a.url} target="_blank" rel="noreferrer">{a.title || `Attachment ${i + 1}`}</a>))}
+                      {(m.attachments || []).map((a, i) => (
+                        <a
+                          key={`${m._id}-a-${i}`}
+                          href={a.url}
+                          onClick={(e) => { e.preventDefault(); openPreview(a.url, a.title || `Attachment ${i + 1}`) }}
+                        >
+                          {a.title || `Attachment ${i + 1}`}
+                        </a>
+                      ))}
                       <span>{new Date(m.createdAt).toLocaleString()}</span>
                     </Box>
                   }
@@ -355,7 +383,13 @@ export default function HomeBidDetail() {
           {bidDocs.map((d, idx) => (
             <div key={d._id || `${idx}`}>
               <ListItem>
-                <ListItemText primary={<a href={d.url} target="_blank" rel="noreferrer">{d.title}</a>} />
+                <ListItemText
+                  primary={
+                    <a href={d.url} onClick={(e) => { e.preventDefault(); openPreview(d.url, d.title) }}>
+                      {d.title}
+                    </a>
+                  }
+                />
               </ListItem>
               {idx < bidDocs.length - 1 && <Divider component="li" />}
             </div>
@@ -391,6 +425,22 @@ export default function HomeBidDetail() {
           <Button onClick={() => setDocDialogOpen(false)}>Cancel</Button>
           <Button variant="contained" onClick={uploadTradeDocument} disabled={!docUploadFile}>Upload</Button>
         </DialogActions>
+      </Dialog>
+
+      <Dialog open={preview.open} onClose={closePreview} fullWidth maxWidth="lg">
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span>{preview.title}</span>
+          <IconButton onClick={closePreview} aria-label="close">
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers sx={{ height: '80vh', p: 0 }}>
+          {isImage(preview.url) ? (
+            <img src={preview.url} alt={preview.title} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+          ) : (
+            <iframe title={preview.title} src={preview.url} style={{ width: '100%', height: '100%', border: 0 }} />
+          )}
+        </DialogContent>
       </Dialog>
 
       <Paper variant="outlined" sx={{ p: 2 }}>

@@ -272,7 +272,24 @@ async function addDocument(req, res) {
   if (error) {
     return res.status(400).json({ message: 'Validation failed', details: error.details });
   }
-  const doc = { _id: uuidv4(), ...value, createdAt: new Date() };
+  // derive fileName if not provided via title
+  let derivedFileName = value.title || '';
+  try {
+    const u = new URL(value.url);
+    const last = decodeURIComponent((u.pathname || '').split('/').pop() || '');
+    if (!derivedFileName && last) derivedFileName = last;
+  } catch {}
+  const uploadedBy = {
+    email: (req?.user?.email || '').toLowerCase(),
+    fullName: req?.user?.fullName || '',
+  };
+  const doc = {
+    _id: uuidv4(),
+    ...value,
+    fileName: derivedFileName || value.title,
+    uploadedBy,
+    createdAt: new Date(),
+  };
   const home = await Home.findByIdAndUpdate(
     homeId,
     { $push: { documents: doc } },

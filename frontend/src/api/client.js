@@ -122,6 +122,23 @@ export const api = {
   },
   createMessage: (homeId, body) => apiRequest(`/homes/${homeId}/messages`, { method: 'POST', body: JSON.stringify(body) }),
   createTaskFromMessage: (homeId, body) => apiRequest(`/homes/${homeId}/messages/task-from-message`, { method: 'POST', body: JSON.stringify(body) }),
+  // Account + subscription
+  getMyAccount: () => apiRequest('/my/account'),
+  initMyAccount: () => apiRequest('/my/account/init', { method: 'POST' }),
+  inviteAccountMember: ({ email, fullName, role }) => apiRequest('/my/account/members', { method: 'POST', body: JSON.stringify({ email, fullName, role }) }),
+  updateAccountMemberRole: ({ email, role }) => apiRequest('/my/account/members', { method: 'PATCH', body: JSON.stringify({ email, role }) }),
+  removeAccountMember: (email) => apiRequest(`/my/account/members/${encodeURIComponent(email)}`, { method: 'DELETE' }),
+  getSubscription: () => apiRequest('/my/account/subscription'),
+  updateSubscription: (action) => apiRequest('/my/account/subscription', { method: 'PATCH', body: JSON.stringify({ action }) }),
+  // Per-home subscriptions
+  listAccountSubscriptions: () => apiRequest('/my/account/subscriptions'),
+  createAccountSubscription: ({ homeId, planId }) =>
+    apiRequest('/my/account/subscriptions', { method: 'POST', body: JSON.stringify({ homeId, planId }) }),
+  updateAccountHomeSubscription: ({ homeId, action, planId }) =>
+    apiRequest(`/my/account/subscriptions/${encodeURIComponent(homeId)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(planId ? { action, planId } : { action })
+    }),
 }
 
 

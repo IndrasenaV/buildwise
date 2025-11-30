@@ -159,8 +159,16 @@ export default function HomeDetail() {
   async function uploadDocumentForTask() {
     if (!uploadFile) return
     try {
-      const res = await api.uploadTaskFile(id, taskModal.task._id, uploadFile, uploadTitle || uploadFile.name)
-      setHome(res.home)
+      const uploaded = await api.uploadTaskFile(id, taskModal.task._id, uploadFile, uploadTitle || uploadFile.name)
+      const fileUrl = uploaded?.data?.fileUrl || uploaded?.fileUrl || ''
+      const fileName = uploaded?.data?.fileName || uploaded?.fileName || (uploadTitle || uploadFile.name)
+      if (!fileUrl) throw new Error('Upload succeeded but file URL missing')
+      const resDoc = await api.addDocument(id, {
+        title: fileName,
+        url: fileUrl,
+        pinnedTo: { type: 'task', id: taskModal.task._id }
+      })
+      setHome(resDoc.home)
       setUploadFile(null)
       setUploadTitle('')
     } catch (e) {

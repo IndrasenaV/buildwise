@@ -18,6 +18,11 @@ const DocumentSchema = new mongoose.Schema(
     title: { type: String, required: true },
     url: { type: String, required: true },
     s3Key: { type: String },
+    fileName: { type: String, default: '' },
+    uploadedBy: {
+      email: { type: String, default: '' },
+      fullName: { type: String, default: '' },
+    },
     pinnedTo: {
       type: {
         type: String,

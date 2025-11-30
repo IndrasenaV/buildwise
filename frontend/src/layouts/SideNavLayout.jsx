@@ -31,6 +31,7 @@ import { useTheme } from '@mui/material/styles'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import DesignServicesOutlinedIcon from '@mui/icons-material/DesignServicesOutlined'
 import ChatIcon from '@mui/icons-material/Chat'
+import SettingsIcon from '@mui/icons-material/Settings'
 
 const drawerWidth = 260
 
@@ -138,6 +139,12 @@ export default function SideNavLayout() {
             <ListItemButton onClick={() => go('/templates')}>
               <ListItemIcon><DesignServicesOutlinedIcon /></ListItemIcon>
               <ListItemText primary="Templates" />
+            </ListItemButton>
+          </ListItem>
+          <ListItem disablePadding>
+            <ListItemButton onClick={() => go('/account')}>
+              <ListItemIcon><SettingsIcon /></ListItemIcon>
+              <ListItemText primary="Account" />
             </ListItemButton>
           </ListItem>
         </List>
