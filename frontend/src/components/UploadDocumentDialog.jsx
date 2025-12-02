@@ -24,6 +24,7 @@ import { api } from '../api/client'
  * - defaultTradeId?: string
  * - defaultTaskId?: string
  * - onCompleted?: (updatedHome) => void
+ * - lockDefaults?: boolean // when true, lock pin target to provided defaults (used for Task modal)
  */
 export default function UploadDocumentDialog({
   open,
@@ -33,7 +34,8 @@ export default function UploadDocumentDialog({
   defaultPinnedType = 'home',
   defaultTradeId = '',
   defaultTaskId = '',
-  onCompleted
+  onCompleted,
+  lockDefaults = false
 }) {
   const [pinnedType, setPinnedType] = useState(defaultPinnedType)
   const [tradeId, setTradeId] = useState(defaultTradeId)
@@ -106,20 +108,22 @@ export default function UploadDocumentDialog({
       <DialogTitle>Upload Document</DialogTitle>
       <DialogContent dividers>
         <Stack spacing={2} sx={{ mt: 1 }}>
-          <FormControl fullWidth>
-            <InputLabel id="pin-type">Pin To</InputLabel>
-            <Select
-              labelId="pin-type"
-              label="Pin To"
-              value={pinnedType}
-              onChange={(e) => setPinnedType(e.target.value)}
-            >
-              <MenuItem value="home">Home</MenuItem>
-              <MenuItem value="trade">Trade</MenuItem>
-              <MenuItem value="task">Task</MenuItem>
-            </Select>
-          </FormControl>
-          {pinnedType === 'trade' && (
+          {!lockDefaults && (
+            <FormControl fullWidth>
+              <InputLabel id="pin-type">Pin To</InputLabel>
+              <Select
+                labelId="pin-type"
+                label="Pin To"
+                value={pinnedType}
+                onChange={(e) => setPinnedType(e.target.value)}
+              >
+                <MenuItem value="home">Home</MenuItem>
+                <MenuItem value="trade">Trade</MenuItem>
+                <MenuItem value="task">Task</MenuItem>
+              </Select>
+            </FormControl>
+          )}
+          {pinnedType === 'trade' && !lockDefaults && (
             <FormControl fullWidth>
               <InputLabel id="trade-id">Select Trade</InputLabel>
               <Select
@@ -134,7 +138,7 @@ export default function UploadDocumentDialog({
               </Select>
             </FormControl>
           )}
-          {pinnedType === 'task' && (
+          {pinnedType === 'task' && !lockDefaults && (
             <FormControl fullWidth>
               <InputLabel id="task-id">Select Task</InputLabel>
               <Select

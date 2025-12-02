@@ -10,7 +10,7 @@
     "build:frontend": "npm --prefix ../frontend run build",
     "build:marketing": "npm --prefix ../marketing run build",
     "build:public": "npm run build:marketing && npm run build:frontend",
-    "package:zip": "bash -lc 'cd .. && rm -f buildwise_server.zip && zip -r buildwise_server.zip backend -x \"backend/node_modules/**\"'"
+    "package:zip": "bash -lc 'cd .. && rm -f buildwise_server.zip && zip -r buildwise_server.zip backend -x \"backend/node_modules/**\"'",
     "lint": "echo \"No linter configured\"",
     "seed:templates": "node src/scripts/seedTemplates.js"
   },

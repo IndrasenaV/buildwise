@@ -45,11 +45,12 @@ cd buildwise
 Replace the key path, host, and destination folder as needed.
 
 ```bash
-scp -i deployment/ubuntu.pem ../buildwise_server.zip ubuntu@YOUR_HOST:~/buildwise
+scp -i deployment/ubuntu.pem ./buildwise_server.zip ubuntu@18.220.232.228:~/buildwise
 
-ssh -i deployment/ubuntu.pem ubuntu@YOUR_HOST
+ssh -i deployment/ubuntu.pem ubuntu@18.220.232.228
 
 cd ~/buildwise
+
 pm2 stop buildwise-server || true
 rm -rf backend
 unzip buildwise_server.zip
@@ -68,18 +69,17 @@ pm2 startup
 Or start without ecosystem (set PORT and MONGODB_URI explicitly):
 ```bash
 export PORT=8888
-export MONGODB_URI='YOUR_MONGODB_URI'
 pm2 start src/server.js --name buildwise-server
 pm2 save
 ```
 
 ### 5) Verify
 ```bash
-curl http://YOUR_HOST:8888/api/health
+curl http://http://18.220.232.228:5051/api/health
 ```
 Open:
-- Marketing: `http://YOUR_HOST:8888/`
-- App: `http://YOUR_HOST:8888/app/#/homes`
+- Marketing: `http://18.220.232.228:8888/`
+- App: `http://18.220.232.228:8888/app/#/homes`
 
 ### 6) PM2 Operations
 ```bash

@@ -1,7 +1,6 @@
 require('express-async-errors');
 const express = require('express');
 const cors = require('cors');
-const helmet = require('helmet');
 const morgan = require('morgan');
 const dotenv = require('dotenv');
 dotenv.config();
@@ -21,27 +20,14 @@ const aiRouter = require('./routes/ai');
 const { notFoundHandler, errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
+// If running behind a load balancer or proxy, trust X-Forwarded-* headers
+app.set('trust proxy', 1);
 
-app.use(helmet());
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: false }));
-{
-  const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173')
-    .split(',')
-    .map((s) => s.trim());
-  app.use(
-    cors({
-      origin: function (origin, callback) {
-        // allow non-browser or same-origin requests with no origin
-        if (!origin) return callback(null, true);
-        if (allowedOrigins.includes(origin)) return callback(null, true);
-        return callback(new Error('Not allowed by CORS'));
-      },
-      credentials: true,
-      optionsSuccessStatus: 204,
-    })
-  );
-}
+// CORS for API routes only (allow all origins for now)
+app.use('/api', cors());
+app.options('/api/*', cors());
 app.use(morgan('dev'));
 
 app.get('/api/health', (_req, res) => {
@@ -67,6 +53,8 @@ const marketingDir = path.join(publicDir, 'marketing');
 if (fs.existsSync(appDir)) {
   app.use('/app', express.static(appDir, { index: false, extensions: ['html'] }));
   app.get(['/app', '/app/*'], (_req, res, next) => {
+    // Do not intercept asset requests
+    if (_req.path.startsWith('/app/assets/')) return next();
     const indexFile = path.join(appDir, 'index.html');
     if (fs.existsSync(indexFile)) return res.sendFile(indexFile);
     return next();
@@ -100,12 +88,7 @@ process.on('uncaughtException', (err) => {
 });
 
 (async () => {
-  try {
-    await connectToDatabase();
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('Database connection failed. Server will continue to run. Reason:', err?.message || err);
-  }
+  await connectToDatabase();
   app.listen(port, () => {
     console.log(`CustomHome API listening on http://localhost:${port}`);
   });

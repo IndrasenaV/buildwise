@@ -15,6 +15,8 @@ const {
   addBidInvoice,
   updateBidInvoice,
 } = require('../controllers/homeController');
+const { compareTradeBids } = require('../controllers/bidCompareController');
+const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -32,6 +34,8 @@ router.post('/:homeId/trades/:bidId/invoices', addBidInvoice);
 router.patch('/:homeId/trades/:bidId/invoices/:invoiceId', updateBidInvoice);
 router.post('/:homeId/trades/:bidId/quality-checks', require('../controllers/homeController').addQualityCheckToBid);
 router.patch('/:homeId/trades/:bidId/quality-checks/:checkId', require('../controllers/homeController').updateQualityCheck);
+// Bid comparison (PDFs -> OpenAI with trade-specific prompt)
+router.post('/:homeId/trades/:bidId/compare-bids', requireAuth, compareTradeBids);
 
 router.post('/:homeId/schedules', addSchedule);
 router.post('/:homeId/documents', addDocument);

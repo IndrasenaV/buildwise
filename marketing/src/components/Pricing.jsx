@@ -15,7 +15,7 @@ export default function Pricing() {
     {
       name: 'AI Assurance',
       subtitle: 'Plan + bid analysis',
-      features: ['AI plan & drawing analysis', 'Bid & contract checks', 'Variance & omission flags', 'Priority support'],
+      features: ['AI plan & drawing analysis', 'Bid & contract checks', 'Bid comparison across vendors', 'Variance & omission flags', 'Priority support'],
       cta: 'Request proposal',
       featured: true,
       priceDisplay: '$299/month/home',
@@ -28,6 +28,42 @@ export default function Pricing() {
       cta: 'Talk to sales',
       priceDisplay: 'Talk to sales',
       chipLabel: 'Per home • custom'
+    },
+    {
+      name: 'Local Subcontractors',
+      subtitle: 'Curated trade network',
+      features: [
+        'Access to vetted local subs across major trades',
+        'Faster bid cycles and better coverage',
+        'Performance history and references'
+      ],
+      cta: 'Get access',
+      priceDisplay: 'Add‑on package',
+      chipLabel: 'Add‑on • custom'
+    },
+    {
+      name: 'Builder Discounts Access',
+      subtitle: 'Pro pricing at top suppliers',
+      features: [
+        'Tile, roofing, countertops, cabinets, paint, lumber & more',
+        'Leverage our builder registrations with major suppliers',
+        'Guidance on SKUs, selections, and lead times'
+      ],
+      cta: 'Unlock discounts',
+      priceDisplay: 'Add‑on package',
+      chipLabel: 'Add‑on • save more'
+    },
+    {
+      name: 'Designer & Architect Access',
+      subtitle: 'Pro design partners',
+      features: [
+        'Access to trusted interior designers & architects',
+        'Concept to permit‑ready coordination',
+        'Spec packages and value‑engineering support'
+      ],
+      cta: 'Meet partners',
+      priceDisplay: 'Add‑on package',
+      chipLabel: 'Add‑on • curated'
     }
   ];
   return (

@@ -33,6 +33,7 @@ import FormControlLabel from '@mui/material/FormControlLabel'
 import EditIcon from '@mui/icons-material/Edit'
 import AddIcon from '@mui/icons-material/Add'
 import Tooltip from '@mui/material/Tooltip'
+import BidCompareDialog from '../components/BidCompareDialog.jsx'
 
 export default function HomeBidDetail() {
   const { id, bidId } = useParams()
@@ -65,6 +66,14 @@ export default function HomeBidDetail() {
   const [taskMsgText, setTaskMsgText] = useState('')
   const [taskMsgFiles, setTaskMsgFiles] = useState([])
   const [taskUploadOpen, setTaskUploadOpen] = useState(false)
+  const [compareOpen, setCompareOpen] = useState(false)
+
+  const taskDocs = useMemo(() => {
+    const docs = home?.documents || []
+    const taskId = taskModal?.task?._id
+    if (!taskId) return []
+    return docs.filter((d) => d?.pinnedTo?.type === 'task' && d?.pinnedTo?.id === taskId)
+  }, [home, taskModal?.task?._id])
 
   useEffect(() => {
     api.getHome(id).then((h) => {
@@ -109,6 +118,7 @@ export default function HomeBidDetail() {
     const tradeAttachments = (home?.trades || []).find((t) => t._id === bidId)?.attachments || []
     return [...tradeAttachments, ...tradePinned]
   }, [home, bidId])
+  const bidPdfDocs = useMemo(() => (bidDocs || []).filter((d) => /\.pdf($|[\?#])/i.test(d?.url || '')), [bidDocs])
   const invoices = useMemo(() => (bid?.invoices || []), [bid])
   const paidSum = useMemo(() => invoices.filter(i => i.paid).reduce((s, i) => s + (Number(i.amount) || 0), 0), [invoices])
   const outstanding = useMemo(() => Math.max((Number(bid?.totalPrice ?? 0)) - paidSum, 0), [bid, paidSum])
@@ -497,6 +507,7 @@ export default function HomeBidDetail() {
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems="center" justifyContent="space-between">
               <Typography variant="subtitle2">Contracts / Documents</Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Button variant="outlined" onClick={() => setCompareOpen(true)}>Compare Bids</Button>
                 <Button variant="outlined" onClick={() => { setAiResult(''); setAiOpen(true) }}>Analyze with AI</Button>
                 <Button variant="contained" onClick={() => setDocDialogOpen(true)}>Upload</Button>
               </Box>
@@ -764,6 +775,26 @@ export default function HomeBidDetail() {
             <Typography variant="subtitle2">Upload Document/Photo</Typography>
             <Button variant="contained" onClick={() => setTaskUploadOpen(true)}>Upload Document</Button>
             <Divider />
+            <Typography variant="subtitle2">Documents</Typography>
+            <List dense disablePadding>
+              {taskDocs.map((d, idx) => (
+                <div key={d._id || idx}>
+                  <ListItem>
+                    <ListItemText
+                      primary={
+                        <a href={d.url} target="_blank" rel="noreferrer">
+                          {d.title || d.fileName || 'Document'}
+                        </a>
+                      }
+                      secondary={d.uploadedBy?.fullName || d.uploadedBy?.email ? `Uploaded by ${d.uploadedBy.fullName || d.uploadedBy.email}` : undefined}
+                    />
+                  </ListItem>
+                  {idx < taskDocs.length - 1 && <Divider component="li" />}
+                </div>
+              ))}
+              {!taskDocs.length && <Typography variant="body2" color="text.secondary">No documents attached</Typography>}
+            </List>
+            <Divider />
             <Typography variant="subtitle2">Messages</Typography>
             <List dense disablePadding>
               {(taskMessages || []).map((m, idx) => (
@@ -809,6 +840,7 @@ export default function HomeBidDetail() {
         trades={home?.trades || []}
         defaultPinnedType="task"
         defaultTaskId={taskModal.task?._id || ''}
+        lockDefaults
         onCompleted={(updatedHome) => setHome(updatedHome)}
       />
 
@@ -946,6 +978,14 @@ export default function HomeBidDetail() {
           }} variant="contained" disabled={!addDialog?.title}>Add</Button>
         </DialogActions>
       </Dialog>
+      <BidCompareDialog
+        open={compareOpen}
+        onClose={() => setCompareOpen(false)}
+        homeId={id}
+        tradeId={bidId}
+        existingDocs={bidPdfDocs}
+        onAfterUpload={(updatedHome) => setHome(updatedHome)}
+      />
     </Stack>
   )
 }

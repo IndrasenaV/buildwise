@@ -6,11 +6,14 @@ import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import Alert from '@mui/material/Alert'
 import Chip from '@mui/material/Chip'
+import Button from '@mui/material/Button'
+import Box from '@mui/material/Box'
 import Table from '@mui/material/Table'
 import TableHead from '@mui/material/TableHead'
 import TableBody from '@mui/material/TableBody'
 import TableRow from '@mui/material/TableRow'
 import TableCell from '@mui/material/TableCell'
+import BidCompareDialog from '../components/BidCompareDialog.jsx'
 import TableContainer from '@mui/material/TableContainer'
 
 export default function HomeTrades() {
@@ -18,12 +21,23 @@ export default function HomeTrades() {
   const [home, setHome] = useState(null)
   const [error, setError] = useState('')
   const navigate = useNavigate()
+  const [compareDlg, setCompareDlg] = useState({ open: false, tradeId: '' })
 
   useEffect(() => {
     api.getHome(id).then(setHome).catch((e) => setError(e.message))
   }, [id])
 
   const trades = useMemo(() => home?.trades || [], [home])
+  const docsByTrade = useMemo(() => {
+    const map = {}
+    const allDocs = Array.isArray(home?.documents) ? home.documents : []
+    for (const t of trades) {
+      const pinned = allDocs.filter((d) => d?.pinnedTo?.type === 'trade' && d?.pinnedTo?.id === t._id)
+      const attachments = Array.isArray(t?.attachments) ? t.attachments : []
+      map[t._id] = [...attachments, ...pinned]
+    }
+    return map
+  }, [home, trades])
 
   const computeTaskProgress = (trade) => {
     const tasks = Array.isArray(trade?.tasks) ? trade.tasks : []
@@ -48,6 +62,7 @@ export default function HomeTrades() {
                 <TableCell>Phases</TableCell>
                 <TableCell align='right'>Tasks</TableCell>
                 <TableCell align='center' sx={{ width: 120 }}>Progress</TableCell>
+                <TableCell align='right' sx={{ width: 160 }}>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -84,6 +99,17 @@ export default function HomeTrades() {
                         variant='outlined'
                       />
                     </TableCell>
+                    <TableCell align='right' onClick={(e) => e.stopPropagation()}>
+                      <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={() => setCompareDlg({ open: true, tradeId: t._id })}
+                        >
+                          Compare Bids
+                        </Button>
+                      </Box>
+                    </TableCell>
                   </TableRow>
                 )
               })}
@@ -98,6 +124,14 @@ export default function HomeTrades() {
           </Table>
         </TableContainer>
       </Paper>
+      <BidCompareDialog
+        open={compareDlg.open}
+        onClose={() => setCompareDlg({ open: false, tradeId: '' })}
+        homeId={id}
+        tradeId={compareDlg.tradeId}
+        existingDocs={(docsByTrade[compareDlg.tradeId] || []).filter((d) => /\.pdf($|[\?#])/i.test(d?.url || ''))}
+        onAfterUpload={(updatedHome) => setHome(updatedHome)}
+      />
     </Stack>
   )
 }

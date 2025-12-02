@@ -239,7 +239,7 @@ export default function SideNavLayout() {
         </Box>
       </Drawer>
       <Box component="main" sx={{ flexGrow: 1, p: 3, pt: isMobile ? 8 : 3, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-        <Container maxWidth="md" sx={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
+        <Container maxWidth={location.pathname.includes('/documents') ? false : 'lg'} sx={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
           <Box sx={{ flexGrow: 1 }}>
             <Outlet />
           </Box>

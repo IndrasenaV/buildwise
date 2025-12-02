@@ -3,6 +3,7 @@
 # dependencies
 node_modules/
 playwright-report/
+public/
 .env
 /.pnp
 .pnp.js

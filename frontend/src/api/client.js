@@ -1,4 +1,54 @@
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5051/api'
+const API_BASE =
+  import.meta.env.VITE_API_BASE ||
+  (import.meta.env.PROD ? '/api' : 'http://localhost:5051/api')
+
+function titleCase(s) {
+  try {
+    const str = String(s || '')
+    if (!str) return ''
+    return str.charAt(0).toUpperCase() + str.slice(1)
+  } catch {
+    return ''
+  }
+}
+
+function humanizePath(pathArr) {
+  if (!Array.isArray(pathArr) || !pathArr.length) return ''
+  // Special-case contacts[index].field -> Contact N: field
+  if (pathArr[0] === 'contacts' && typeof pathArr[1] === 'number') {
+    const idx = Number(pathArr[1]) + 1
+    const tail = pathArr.slice(2).join(' ')
+    return `Contact ${idx}${tail ? ` ${tail}` : ''}`
+  }
+  return pathArr.join(' ')
+}
+
+function formatApiError(body) {
+  try {
+    if (body && Array.isArray(body.details) && body.details.length) {
+      const messages = body.details.map((d) => {
+        const fieldPath = humanizePath(d.path)
+        const field = String((d.path && d.path[d.path.length - 1]) || d?.context?.label || '').replace(/"/g, '')
+        if ((d.type || '').includes('string.email')) {
+          return `${fieldPath ? `${fieldPath}: ` : ''}${titleCase(field || 'Email')} is not a valid email`
+        }
+        if ((d.type || '').includes('any.required')) {
+          return `${fieldPath ? `${fieldPath}: ` : ''}${titleCase(field || 'Field')} is required`
+        }
+        const cleaned = String(d.message || '').replace(/"/g, '')
+        // If Joi message starts with the raw path, replace with humanized label
+        if (fieldPath && cleaned.startsWith((d.context?.label || field) || '')) {
+          const parts = cleaned.split(/\s+/).slice(1).join(' ')
+          return `${fieldPath}: ${parts || 'invalid'}`
+        }
+        return fieldPath ? `${fieldPath}: ${cleaned}` : cleaned
+      })
+      return `Please fix the following:\n- ${messages.join('\n- ')}`
+    }
+    if (body && body.message) return body.message
+  } catch {}
+  return ''
+}
 
 async function apiRequest(path, options = {}) {
   let authHeaders = {}
@@ -13,7 +63,19 @@ async function apiRequest(path, options = {}) {
     ...options,
   })
   if (!res.ok) {
-    const text = await res.text()
+    // Safely read body twice (json or text) using clone
+    const clone = res.clone()
+    let parsed
+    try {
+      parsed = await clone.json()
+    } catch (_e) {
+      parsed = null
+    }
+    if (parsed) {
+      const friendly = formatApiError(parsed)
+      throw new Error(friendly || parsed.message || `Request failed: ${res.status}`)
+    }
+    const text = await clone.text().catch(() => '')
     throw new Error(text || `Request failed: ${res.status}`)
   }
   const contentType = res.headers.get('content-type') || ''
@@ -161,6 +223,12 @@ export const api = {
   // AI analyze: upload files (by URL) and let OpenAI read them directly (supports PDFs with diagrams)
   analyzeDocuments: ({ urls, prompt }) =>
     apiRequest('/ai/analyze-files', { method: 'POST', body: JSON.stringify({ urls, prompt }) }),
+  // Bid comparison for a trade
+  compareTradeBids: (homeId, bidId, { urls, extraContext }) =>
+    apiRequest(`/homes/${homeId}/trades/${bidId}/compare-bids`, {
+      method: 'POST',
+      body: JSON.stringify({ urls, extraContext })
+    }),
 }
 
 

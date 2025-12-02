@@ -115,6 +115,13 @@ export default function HomeDetail() {
   const [taskMsgFiles, setTaskMsgFiles] = useState([])
   const [taskUploadOpen, setTaskUploadOpen] = useState(false)
 
+  const taskDocs = useMemo(() => {
+    const docs = home?.documents || []
+    const taskId = taskModal?.task?._id
+    if (!taskId) return []
+    return docs.filter((d) => d?.pinnedTo?.type === 'task' && d?.pinnedTo?.id === taskId)
+  }, [home, taskModal?.task?._id])
+
   function openTask(bidId, task) {
     setTaskModal({ open: true, bidId, task })
     setTaskEdit({ title: task.title, description: task.description || '' })
@@ -354,6 +361,26 @@ export default function HomeDetail() {
             <Typography variant="subtitle2">Upload Document/Photo</Typography>
             <Button variant="contained" onClick={() => setTaskUploadOpen(true)}>Upload Document</Button>
             <Divider />
+            <Typography variant="subtitle2">Documents</Typography>
+            <List dense disablePadding>
+              {taskDocs.map((d, idx) => (
+                <div key={d._id || idx}>
+                  <ListItem>
+                    <ListItemText
+                      primary={
+                        <a href={d.url} target="_blank" rel="noreferrer">
+                          {d.title || d.fileName || 'Document'}
+                        </a>
+                      }
+                      secondary={d.uploadedBy?.fullName || d.uploadedBy?.email ? `Uploaded by ${d.uploadedBy.fullName || d.uploadedBy.email}` : undefined}
+                    />
+                  </ListItem>
+                  {idx < taskDocs.length - 1 && <Divider component="li" />}
+                </div>
+              ))}
+              {!taskDocs.length && <Typography variant="body2" color="text.secondary">No documents attached</Typography>}
+            </List>
+            <Divider />
             <Typography variant="subtitle2">Messages</Typography>
             <List dense disablePadding>
               {(taskMessages || []).map((m, idx) => (
@@ -399,6 +426,7 @@ export default function HomeDetail() {
         trades={home?.trades || []}
         defaultPinnedType="task"
         defaultTaskId={taskModal.task?._id || ''}
+        lockDefaults
         onCompleted={(updatedHome) => setHome(updatedHome)}
       />
 
