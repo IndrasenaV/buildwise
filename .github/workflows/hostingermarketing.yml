@@ -36,6 +36,6 @@ jobs:
           server: ftp://82.180.152.245
           username: u160555473.buildwise
           password: Buildwise@09
-          local-dir: ./marketing/build/
+          local-dir: ./backend/public/marketing/
           server-dir: /domains/loopway.in/public_html/buildwise/
           dangerous-clean-slate: true
