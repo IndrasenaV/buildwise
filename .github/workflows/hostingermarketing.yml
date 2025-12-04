@@ -37,5 +37,5 @@ jobs:
           username: u160555473.buildwise
           password: Buildwise@09
           local-dir: ./backend/public/marketing/
-          server-dir: /domains/loopway.in/public_html/buildwise/
+          server-dir: /buildwise/
           dangerous-clean-slate: true
