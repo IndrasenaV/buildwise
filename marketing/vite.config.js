@@ -9,7 +9,8 @@ export default defineConfig({
   preview: {
     port: 5174
   },
-  base: '/',
+  // Use relative base so assets resolve under the current folder (e.g., /buildwise/)
+  base: './',
   build: {
     outDir: '../backend/public/marketing',
     emptyOutDir: true
