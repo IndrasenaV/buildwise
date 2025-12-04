@@ -7,6 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview --port 5174",
+    "copy:demos": "bash -lc 'mkdir -p ../backend/public/marketing/assets/demos && cp -f ../frontend/tests/screenshots/*.png ../backend/public/marketing/assets/demos/ || true'",
+    "build:with-demos": "npm run build && npm run copy:demos",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:report": "playwright show-report"

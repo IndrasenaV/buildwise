@@ -1,6 +1,11 @@
 // @ts-check
 import { defineConfig, devices } from '@playwright/test';
 
+// Optional HTTP Basic Auth for environments that require it
+const httpUser = process.env.HTTP_USERNAME || process.env.PLAYWRIGHT_HTTP_USERNAME || process.env.E2E_HTTP_USER || '';
+const httpPass = process.env.HTTP_PASSWORD || process.env.PLAYWRIGHT_HTTP_PASSWORD || process.env.E2E_HTTP_PASS || '';
+const httpCredentials = httpUser && httpPass ? { username: httpUser, password: httpPass } : undefined;
+
 export default defineConfig({
   testDir: './tests',
   fullyParallel: true,
@@ -10,7 +15,8 @@ export default defineConfig({
   reporter: [['list'], ['html', { outputFolder: 'playwright-report' }]],
   use: {
     baseURL: 'http://localhost:5173',
-    trace: 'on-first-retry'
+    trace: 'on-first-retry',
+    httpCredentials
   },
   webServer: {
     command: 'npm run dev',

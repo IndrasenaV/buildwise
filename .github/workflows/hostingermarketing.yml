@@ -1,0 +1,39 @@
+name: Hostinger Build and Deploy Marketing 
+
+on:
+  workflow_dispatch:  # Allows manual triggering
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    env:
+      CI: false
+
+    steps:
+      # Step 1: Checkout repository
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Step 2: Set up Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      # Step 3: Install dependencies and build
+      - name: Install dependencies and build
+        run: |
+          cd marketing
+          npm install
+          npm run build
+
+      # Step 4: Deploy to FTP Server
+      - name: Deploy to FTP Server
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ftp://82.180.152.245
+          username: u160555473.buildwise
+          password: Buildwise@09
+          local-dir: ./marketing/build/
+          server-dir: /domains/loopway.in/public_html/buildwise/
+          dangerous-clean-slate: true

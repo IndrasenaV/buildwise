@@ -33,4 +33,12 @@ export async function stubApi(page: Page, handlers: Record<string, any>) {
   });
 }
 
+export async function loginUI(page: Page, email = 'demo@builder.com', password = 'password') {
+  await page.goto('/');
+  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Password').fill(password);
+  await page.getByRole('button', { name: 'Continue' }).click();
+  // wait for token to be set by app
+  await page.waitForFunction(() => !!localStorage.getItem('token'));
+}
 
