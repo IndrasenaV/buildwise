@@ -33,7 +33,7 @@ jobs:
       - name: Deploy to FTP Server
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          server: ftp://82.180.152.245
+          server: 82.180.152.245
           username: u160555473.buildwise
           password: Buildwise@09
           local-dir: ./backend/public/marketing/
