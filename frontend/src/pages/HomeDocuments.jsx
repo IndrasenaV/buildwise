@@ -37,6 +37,7 @@ export default function HomeDocuments() {
   const [tab, setTab] = useState('all') // all | contract | bid | invoice | picture
   const [preview, setPreview] = useState({ open: false, url: '', title: '' })
   const [uploadOpen, setUploadOpen] = useState(false)
+  const [uploadForCategory, setUploadForCategory] = useState('other')
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
@@ -130,6 +131,119 @@ export default function HomeDocuments() {
         }
       />
       <Paper variant="outlined" sx={{ p: 2 }}>
+        <Typography variant="h6" gutterBottom>Architecture</Typography>
+        {(() => {
+          const all = Array.isArray(home?.documents) ? home.documents : []
+          const byCat = (cat) =>
+            all.filter((d) => (d.category || '') === cat).sort((a, b) => (Number(b.version || 0) - Number(a.version || 0)) || (new Date(b.createdAt || 0) - new Date(a.createdAt || 0)))
+          const sections = [
+            { key: 'architecture_base', label: 'Base Architecture', required: true },
+            { key: 'architecture_structural', label: 'Structural (optional)', required: false },
+            { key: 'architecture_foundation', label: 'Foundation Letter (optional)', required: false },
+            { key: 'architecture_mep', label: 'MEP Planning (optional)', required: false },
+          ]
+          return (
+            <Stack spacing={2}>
+              {sections.map((sec) => {
+                const items = byCat(sec.key)
+                const finalItem = items.find((d) => d.isFinal)
+                return (
+                  <Box key={sec.key} sx={{ borderTop: '1px solid rgba(255,255,255,0.08)', pt: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                        {sec.label} {sec.required && !items.length ? <span style={{ color: '#ff7961', fontWeight: 400, fontSize: 12 }}>(required)</span> : null}
+                      </Typography>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => { setUploadForCategory(sec.key); setUploadOpen(true) }}
+                      >
+                        {items.length ? 'Upload New Version' : 'Upload'}
+                      </Button>
+                    </Box>
+                    {finalItem && (
+                      <Typography variant="body2" sx={{ mb: 0.5 }}>
+                        Final: v{finalItem.version || '—'} — {finalItem.title || finalItem.fileName || 'Document'}
+                      </Typography>
+                    )}
+                    {items.length ? (
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow>
+                            <TableCell>Version</TableCell>
+                            <TableCell>Title</TableCell>
+                            <TableCell>Uploaded</TableCell>
+                            <TableCell>Final</TableCell>
+                            <TableCell align="right">Actions</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {items.map((d) => {
+                            const name = d.fileName || d.title || (d.url || '').split('/').pop() || 'File'
+                            const uploadedAt = d.createdAt ? new Date(d.createdAt).toLocaleString() : ''
+                            const isFinal = !!d.isFinal
+                            return (
+                              <TableRow key={d._id}>
+                                <TableCell>{d.version || '—'}</TableCell>
+                                <TableCell sx={{ wordBreak: 'break-all' }}>{d.title || name}</TableCell>
+                                <TableCell>{uploadedAt || '—'}</TableCell>
+                                <TableCell>{isFinal ? 'Yes' : 'No'}</TableCell>
+                                <TableCell align="right">
+                                  <Tooltip title="View">
+                                    <IconButton size="small" onClick={() => openPreview(d.url, name)}>
+                                      <VisibilityIcon fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Download">
+                                    <IconButton size="small" component={Link} href={d.url} download target="_blank" rel="noreferrer">
+                                      <DownloadIcon fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  {!isFinal && (
+                                    <Tooltip title="Mark as Final">
+                                      <span>
+                                        <IconButton
+                                          size="small"
+                                          disabled={busy}
+                                          onClick={async () => {
+                                            try {
+                                              setBusy(true)
+                                              const updated = await api.updateDocument(id, d._id, { isFinal: true })
+                                              setHome(updated)
+                                            } catch {}
+                                            finally { setBusy(false) }
+                                          }}
+                                        >
+                                          ✓
+                                        </IconButton>
+                                      </span>
+                                    </Tooltip>
+                                  )}
+                                  <Tooltip title="Delete">
+                                    <span>
+                                      <IconButton size="small" color="error" disabled={busy} onClick={() => onDelete(d._id)}>
+                                        <DeleteOutlineIcon fontSize="small" />
+                                      </IconButton>
+                                    </span>
+                                  </Tooltip>
+                                </TableCell>
+                              </TableRow>
+                            )
+                          })}
+                        </TableBody>
+                      </Table>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">No documents uploaded.</Typography>
+                    )}
+                  </Box>
+                )
+              })}
+            </Stack>
+          )
+        })()}
+      </Paper>
+
+      <Paper variant="outlined" sx={{ p: 2 }}>
         <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
           <Button size="small" variant={tab === 'all' ? 'contained' : 'outlined'} onClick={() => setTab('all')}>All</Button>
           <Button size="small" variant={tab === 'contract' ? 'contained' : 'outlined'} onClick={() => setTab('contract')}>Contracts</Button>
@@ -220,6 +334,7 @@ export default function HomeDocuments() {
         homeId={id}
         trades={home?.trades || home?.bids || []}
         defaultPinnedType="home"
+        defaultDocType={uploadForCategory}
         onCompleted={(updatedHome) => setHome(updatedHome)}
       />
     </Stack>

@@ -14,6 +14,7 @@ import PricingPage from './pages/PricingPage.jsx';
 import Onsite from './pages/Onsite.jsx';
 import Packages from './pages/Packages.jsx';
 import Register from './pages/Register.jsx';
+import Terms from './pages/Terms.jsx';
 
 export default function App() {
   const [route, setRoute] = useState(typeof window !== 'undefined' ? (window.location.hash || '#/') : '#/');
@@ -50,6 +51,8 @@ export default function App() {
         <Packages />
       ) : route.startsWith('#/register') ? (
         <Register />
+      ) : route.startsWith('#/terms') ? (
+        <Terms />
       ) : (
         <>
           <Hero />

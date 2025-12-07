@@ -16,6 +16,7 @@ export default function Footer() {
           <Link href="#pricing" underline="none" color="text.secondary">Pricing</Link>
           <Link href="#faq" underline="none" color="text.secondary">FAQ</Link>
           <Link href="#contact" underline="none" color="text.secondary">Contact</Link>
+          <Link href="#/terms" underline="none" color="text.secondary">Terms</Link>
         </Stack>
         <Typography variant="body2" color="text.secondary" sx={{ justifySelf: { xs: 'start', md: 'end' } }}>
           © {year} Laitysol LLC. All Rights Reserved.

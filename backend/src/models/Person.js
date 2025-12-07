@@ -10,6 +10,10 @@ const PersonSchema = new mongoose.Schema(
     emailConfirmed: { type: Boolean, default: false },
     emailConfirmToken: { type: String, index: true },
     emailConfirmExpires: { type: Date },
+    // Terms & Conditions consent tracking
+    agreedToTermsAt: { type: Date },
+    agreedToTermsVersion: { type: String },
+    agreedToTermsIp: { type: String },
   },
   { timestamps: true }
 );

@@ -291,7 +291,22 @@ const documentCreateSchema = Joi.object({
   title: Joi.string().required(),
   url: Joi.string().uri().required(),
   s3Key: Joi.string().allow('').optional(),
-  category: Joi.string().valid('contract', 'bid', 'invoice', 'picture', 'permit', 'other').optional(),
+  category: Joi.string()
+    .valid(
+      'contract',
+      'bid',
+      'invoice',
+      'picture',
+      'permit',
+      'other',
+      'architecture_base',
+      'architecture_structural',
+      'architecture_foundation',
+      'architecture_mep'
+    )
+    .optional(),
+  version: Joi.number().integer().min(1).optional(),
+  isFinal: Joi.boolean().optional(),
   pinnedTo: Joi.object({
     type: Joi.string().valid('home', 'trade', 'task').default('home'),
     id: Joi.string().allow('').optional(),
@@ -306,6 +321,10 @@ async function addDocument(req, res) {
   if (error) {
     return res.status(400).json({ message: 'Validation failed', details: error.details });
   }
+  const current = await Home.findById(homeId);
+  if (!current) {
+    return res.status(404).json({ message: 'Home not found' });
+  }
   // derive fileName if not provided via title
   let derivedFileName = value.title || '';
   try {
@@ -317,12 +336,24 @@ async function addDocument(req, res) {
     email: (req?.user?.email || '').toLowerCase(),
     fullName: req?.user?.fullName || '',
   };
+  const isArchitecture =
+    value.category === 'architecture_base' ||
+    value.category === 'architecture_structural' ||
+    value.category === 'architecture_foundation' ||
+    value.category === 'architecture_mep';
+  let version = value.version;
+  if (isArchitecture && (!version || version < 1)) {
+    const existing = (current.documents || []).filter((d) => d.category === value.category);
+    const maxVer = existing.reduce((m, d) => Math.max(m, Number(d.version || 0)), 0);
+    version = Math.max(1, maxVer + 1);
+  }
   const doc = {
     _id: uuidv4(),
     ...value,
     fileName: derivedFileName || value.title,
     uploadedBy,
     createdAt: new Date(),
+    version: version || value.version || 1,
   };
   const home = await Home.findByIdAndUpdate(
     homeId,
@@ -331,6 +362,13 @@ async function addDocument(req, res) {
   );
   if (!home) {
     return res.status(404).json({ message: 'Home not found' });
+  }
+  if (doc.isFinal && doc.category) {
+    await Home.updateOne(
+      { _id: homeId },
+      { $set: { 'documents.$[o].isFinal': false } },
+      { arrayFilters: [{ 'o.category': doc.category, 'o._id': { $ne: String(doc._id) } }] }
+    ).catch(() => {});
   }
   return res.status(201).json({ home, document: doc });
 }
@@ -351,6 +389,57 @@ async function deleteDocument(req, res) {
     { new: true }
   );
   return res.json({ home: updated });
+}
+
+const documentUpdateSchema = Joi.object({
+  title: Joi.string().optional(),
+  category: Joi.string()
+    .valid(
+      'contract',
+      'bid',
+      'invoice',
+      'picture',
+      'permit',
+      'other',
+      'architecture_base',
+      'architecture_structural',
+      'architecture_foundation',
+      'architecture_mep'
+    )
+    .optional(),
+  version: Joi.number().integer().min(1).optional(),
+  isFinal: Joi.boolean().optional(),
+});
+
+async function updateDocument(req, res) {
+  const { homeId, docId } = req.params;
+  const { value, error } = documentUpdateSchema.validate(req.body || {}, { abortEarly: false });
+  if (error) {
+    return res.status(400).json({ message: 'Validation failed', details: error.details });
+  }
+  const home = await Home.findById(homeId);
+  if (!home) return res.status(404).json({ message: 'Home not found' });
+  const doc = (home.documents || []).find((d) => String(d._id) === String(docId));
+  if (!doc) return res.status(404).json({ message: 'Document not found' });
+  const category = value.category !== undefined ? value.category : (doc.category || 'other');
+  const set = {};
+  if (value.title !== undefined) set['documents.$[d].title'] = value.title;
+  if (value.category !== undefined) set['documents.$[d].category'] = value.category;
+  if (value.version !== undefined) set['documents.$[d].version'] = value.version;
+  if (value.isFinal !== undefined) set['documents.$[d].isFinal'] = value.isFinal;
+  const updateOps = { $set: set };
+  const arrayFilters = [{ 'd._id': String(docId) }];
+  if (value.isFinal === true && category) {
+    updateOps.$set['documents.$[o].isFinal'] = false;
+    arrayFilters.push({ 'o.category': category, 'o._id': { $ne: String(docId) } });
+  }
+  const updated = await Home.findOneAndUpdate(
+    { _id: homeId },
+    updateOps,
+    { new: true, arrayFilters }
+  );
+  if (!updated) return res.status(404).json({ message: 'Update failed' });
+  return res.json(updated);
 }
 
 const qualityCheckCreateSchema = Joi.object({
@@ -421,6 +510,7 @@ module.exports = {
   addQualityCheckToBid,
   addSchedule,
   addDocument,
+  updateDocument,
   deleteDocument,
   assignClientToHome,
   addMonitorToHome,

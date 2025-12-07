@@ -19,6 +19,9 @@ const DocumentSchema = new mongoose.Schema(
     url: { type: String, required: true },
     s3Key: { type: String },
     fileName: { type: String, default: '' },
+    category: { type: String, default: 'other' }, // e.g. contract | bid | invoice | picture | permit | architecture_*
+    version: { type: Number, default: 1 }, // versioning for architecture docs
+    isFinal: { type: Boolean, default: false }, // whether this version is marked final (per category)
     uploadedBy: {
       email: { type: String, default: '' },
       fullName: { type: String, default: '' },

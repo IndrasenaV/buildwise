@@ -96,6 +96,7 @@ export const api = {
   addHomeQualityCheck: (homeId, bidId, body) => apiRequest(`/homes/${homeId}/trades/${bidId}/quality-checks`, { method: 'POST', body: JSON.stringify(body) }),
   addSchedule: (homeId, body) => apiRequest(`/homes/${homeId}/schedules`, { method: 'POST', body: JSON.stringify(body) }),
   addDocument: (homeId, body) => apiRequest(`/homes/${homeId}/documents`, { method: 'POST', body: JSON.stringify(body) }),
+  updateDocument: (homeId, docId, body) => apiRequest(`/homes/${homeId}/documents/${encodeURIComponent(docId)}`, { method: 'PATCH', body: JSON.stringify(body) }),
   deleteDocument: (homeId, docId) => apiRequest(`/homes/${homeId}/documents/${encodeURIComponent(docId)}`, { method: 'DELETE' }),
   // Presign no longer supported after switching to server-style aws-sdk v2 upload
   presignUpload: () => Promise.reject(new Error('Presigned uploads are no longer supported')),

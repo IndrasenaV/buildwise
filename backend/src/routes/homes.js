@@ -39,6 +39,7 @@ router.post('/:homeId/trades/:bidId/compare-bids', requireAuth, compareTradeBids
 
 router.post('/:homeId/schedules', addSchedule);
 router.post('/:homeId/documents', addDocument);
+router.patch('/:homeId/documents/:docId', require('../controllers/homeController').updateDocument);
 router.delete('/:homeId/documents/:docId', require('../controllers/homeController').deleteDocument);
 
 router.post('/:homeId/assign-client', assignClientToHome);

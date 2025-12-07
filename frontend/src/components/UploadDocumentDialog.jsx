@@ -35,7 +35,8 @@ export default function UploadDocumentDialog({
   defaultTradeId = '',
   defaultTaskId = '',
   onCompleted,
-  lockDefaults = false
+  lockDefaults = false,
+  defaultDocType = 'other'
 }) {
   const [pinnedType, setPinnedType] = useState(defaultPinnedType)
   const [tradeId, setTradeId] = useState(defaultTradeId)
@@ -45,6 +46,7 @@ export default function UploadDocumentDialog({
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [docType, setDocType] = useState('other') // contract | bid | invoice | picture | other
+  const [markFinal, setMarkFinal] = useState(false)
 
   useEffect(() => {
     if (open) {
@@ -55,9 +57,10 @@ export default function UploadDocumentDialog({
       setFile(null)
       setError('')
       setSubmitting(false)
-      setDocType('other')
+      setDocType(defaultDocType || 'other')
+      setMarkFinal(false)
     }
-  }, [open, defaultPinnedType, defaultTradeId, defaultTaskId])
+  }, [open, defaultPinnedType, defaultTradeId, defaultTaskId, defaultDocType])
 
   const allTasks = useMemo(() => {
     return (trades || []).flatMap((t) => (t.tasks || []).map((task) => ({ ...task, tradeId: t._id, tradeName: t.name })))
@@ -91,12 +94,16 @@ export default function UploadDocumentDialog({
         : pinnedType === 'trade'
           ? { type: 'trade', id: tradeId }
           : { type: 'task', id: taskId }
-      const resDoc = await api.addDocument(homeId, {
+      const payload = {
         title: fileName,
         url: fileUrl,
         category: docType,
         pinnedTo
-      })
+      }
+      if (String(docType || '').startsWith('architecture_')) {
+        payload.isFinal = !!markFinal
+      }
+      const resDoc = await api.addDocument(homeId, payload)
       if (onCompleted) onCompleted(resDoc.home)
       onClose?.()
     } catch (e) {
@@ -123,9 +130,22 @@ export default function UploadDocumentDialog({
               <MenuItem value="bid">Bid</MenuItem>
               <MenuItem value="invoice">Invoice</MenuItem>
               <MenuItem value="picture">Picture</MenuItem>
+              <MenuItem value="permit">Permit</MenuItem>
+              <MenuItem value="architecture_base">Architecture — Base</MenuItem>
+              <MenuItem value="architecture_structural">Architecture — Structural</MenuItem>
+              <MenuItem value="architecture_foundation">Architecture — Foundation Letter</MenuItem>
+              <MenuItem value="architecture_mep">Architecture — MEP Planning</MenuItem>
               <MenuItem value="other">Other</MenuItem>
             </Select>
           </FormControl>
+          {String(docType || '').startsWith('architecture_') && (
+            <FormControl>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input type="checkbox" checked={markFinal} onChange={(e) => setMarkFinal(e.target.checked)} />
+                <Typography variant="body2">Mark as Final</Typography>
+              </label>
+            </FormControl>
+          )}
           {!lockDefaults && (
             <FormControl fullWidth>
               <InputLabel id="pin-type">Pin To</InputLabel>

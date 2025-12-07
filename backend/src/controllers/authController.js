@@ -97,12 +97,14 @@ const marketingRegisterSchema = Joi.object({
   fullName: Joi.string().required(),
   password: Joi.string().min(6).required(),
   planId: Joi.string().valid('guide', 'ai_assurance').default('guide'),
+  acceptedTerms: Joi.boolean().valid(true).required(),
+  termsVersion: Joi.string().allow('').optional(),
 });
 
 async function registerMarketing(req, res) {
   const { value, error } = marketingRegisterSchema.validate(req.body || {}, { abortEarly: false });
   if (error) return res.status(400).json({ message: 'Validation failed', details: error.details });
-  const { email, fullName, password, planId } = value;
+  const { email, fullName, password, planId, acceptedTerms, termsVersion } = value;
   const lower = email.toLowerCase();
   const existing = await Person.findOne({ email: lower });
   if (existing && existing.passwordHash) {
@@ -111,10 +113,12 @@ async function registerMarketing(req, res) {
   const passwordHash = await bcrypt.hash(password, 10);
   const confirmToken = crypto.randomBytes(24).toString('hex');
   const confirmExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  const now = new Date();
+  const clientIp = req.ip;
   const person = existing
     ? await Person.findOneAndUpdate(
         { email: lower },
-        { $set: { fullName, passwordHash, emailConfirmed: false, emailConfirmToken: confirmToken, emailConfirmExpires: confirmExpires }, $addToSet: { roles: 'builder' } },
+        { $set: { fullName, passwordHash, emailConfirmed: false, emailConfirmToken: confirmToken, emailConfirmExpires: confirmExpires, agreedToTermsAt: now, agreedToTermsVersion: termsVersion || 'marketing', agreedToTermsIp: clientIp }, $addToSet: { roles: 'builder' } },
         { new: true }
       )
     : await Person.create({
@@ -126,6 +130,9 @@ async function registerMarketing(req, res) {
         emailConfirmed: false,
         emailConfirmToken: confirmToken,
         emailConfirmExpires: confirmExpires,
+        agreedToTermsAt: now,
+        agreedToTermsVersion: termsVersion || 'marketing',
+        agreedToTermsIp: clientIp,
       });
   // Create account with 90-day free trial
   const existingAccount = await Account.findOne({ primaryEmail: lower });
