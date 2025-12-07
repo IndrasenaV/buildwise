@@ -238,6 +238,12 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ urls, extraContext })
     }),
+  // Prompts (admin)
+  listPrompts: (q) => apiRequest(`/prompts${q ? `?q=${encodeURIComponent(q)}` : ''}`),
+  getPrompt: (key) => apiRequest(`/prompts/${encodeURIComponent(key)}`),
+  upsertPrompt: (body) => apiRequest('/prompts', { method: 'POST', body: JSON.stringify(body) }),
+  updatePrompt: (key, body) => apiRequest(`/prompts/${encodeURIComponent(key)}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  deletePrompt: (key) => apiRequest(`/prompts/${encodeURIComponent(key)}`, { method: 'DELETE' }),
 }
 
 

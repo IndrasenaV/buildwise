@@ -14,7 +14,7 @@ const AiUsageSchema = new mongoose.Schema(
 const AiLogSchema = new mongoose.Schema(
   {
     userEmail: { type: String, index: true },
-    mode: { type: String, enum: ['url', 'files'], required: true },
+    mode: { type: String, enum: ['url', 'urls', 'files', 'trade', 'architecture', 'bid_compare'], required: true },
     prompt: { type: String, default: '' },
     urls: [{ type: String }],
     model: { type: String },

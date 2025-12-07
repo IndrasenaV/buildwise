@@ -20,6 +20,17 @@ import PageHeader from '../components/PageHeader.jsx'
 import UploadDocumentDialog from '../components/UploadDocumentDialog.jsx'
 import Link from '@mui/material/Link'
 import { useLocation } from 'react-router-dom'
+import Dialog from '@mui/material/Dialog'
+import DialogTitle from '@mui/material/DialogTitle'
+import DialogContent from '@mui/material/DialogContent'
+import DialogActions from '@mui/material/DialogActions'
+import TextField from '@mui/material/TextField'
+import MenuItem from '@mui/material/MenuItem'
+import CircularProgress from '@mui/material/CircularProgress'
+import List from '@mui/material/List'
+import ListItem from '@mui/material/ListItem'
+import ListItemText from '@mui/material/ListItemText'
+import Divider from '@mui/material/Divider'
 
 export default function HomePlanning() {
   const { id } = useParams()
@@ -30,6 +41,8 @@ export default function HomePlanning() {
   const [uploadOpen, setUploadOpen] = useState(false)
   const [uploadForCategory, setUploadForCategory] = useState('architecture_base')
   const [busy, setBusy] = useState(false)
+  const [addTaskDlg, setAddTaskDlg] = useState({ open: false, title: '', description: '', tradeId: '', phaseKey: 'planning' })
+  const [analyzeDlg, setAnalyzeDlg] = useState({ open: false, busy: false, result: null })
 
   useEffect(() => {
     api.getHome(id).then(setHome).catch(() => {})
@@ -98,6 +111,49 @@ export default function HomePlanning() {
             )}
           </Typography>
         )}
+        {/* Suggestions */}
+        {finalItem?.analysis?.suggestions?.length ? (
+          <Box sx={{ mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ mt: 1, mb: .5 }}>Suggestions</Typography>
+            <List dense disablePadding>
+              {finalItem.analysis.suggestions.map((s, idx) => (
+                <div key={idx}>
+                  <ListItem>
+                    <ListItemText primary={s} />
+                  </ListItem>
+                  {idx < finalItem.analysis.suggestions.length - 1 && <Divider component="li" />}
+                </div>
+              ))}
+            </List>
+          </Box>
+        ) : null}
+        {/* Suggested Tasks */}
+        {finalItem?.analysis?.suggestedTasks?.length ? (
+          <Box sx={{ mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ mt: 1, mb: .5 }}>Suggested Tasks</Typography>
+            <List dense disablePadding>
+              {finalItem.analysis.suggestedTasks.map((t, idx) => (
+                <div key={idx}>
+                  <ListItem
+                    secondaryAction={
+                      <Button size="small" variant="outlined" onClick={() => setAddTaskDlg({ open: true, title: t.title, description: t.description || '', tradeId: '', phaseKey: (t.phaseKey || 'planning') })}>Add Task</Button>
+                    }
+                  >
+                    <ListItemText
+                      primary={t.title}
+                      secondary={
+                        <span>
+                          {(t.description || '').trim() || '—'} {t.phaseKey ? ` · Phase: ${t.phaseKey}` : ''}
+                        </span>
+                      }
+                    />
+                  </ListItem>
+                  {idx < finalItem.analysis.suggestedTasks.length - 1 && <Divider component="li" />}
+                </div>
+              ))}
+            </List>
+          </Box>
+        ) : null}
         <Table size="small">
           <TableHead>
             <TableRow>
@@ -144,10 +200,15 @@ export default function HomePlanning() {
                           <IconButton
                             size="small"
                             onClick={async () => {
+                              setAnalyzeDlg({ open: true, busy: true, result: null })
                               try {
-                                const updated = await api.analyzeArchitectureDoc(id, d._id)
-                                setHome(updated)
-                              } catch {}
+                                const resp = await api.analyzeArchitectureDoc(id, d._id)
+                                const updatedHome = resp?.home || resp
+                                setHome(updatedHome)
+                                setAnalyzeDlg({ open: true, busy: false, result: resp?.result || null })
+                              } catch (e) {
+                                setAnalyzeDlg({ open: true, busy: false, result: { error: String(e?.message || 'Analysis failed') } })
+                              }
                             }}
                           >
                             ⚙
@@ -235,6 +296,107 @@ export default function HomePlanning() {
         defaultDocType={uploadForCategory}
         onCompleted={(updatedHome) => setHome(updatedHome)}
       />
+      {/* Add Task Dialog */}
+      <Dialog open={addTaskDlg.open} onClose={() => setAddTaskDlg((d) => ({ ...d, open: false }))} fullWidth maxWidth="sm">
+        <DialogTitle>Add Suggested Task</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField label="Title" value={addTaskDlg.title} onChange={(e) => setAddTaskDlg((d) => ({ ...d, title: e.target.value }))} fullWidth />
+            <TextField label="Description" value={addTaskDlg.description} onChange={(e) => setAddTaskDlg((d) => ({ ...d, description: e.target.value }))} fullWidth multiline minRows={2} />
+            <TextField
+              label="Phase"
+              value={addTaskDlg.phaseKey}
+              onChange={(e) => setAddTaskDlg((d) => ({ ...d, phaseKey: e.target.value }))}
+              select
+              fullWidth
+            >
+              {['planning','preconstruction','exterior','interior'].map((p) => (<MenuItem key={p} value={p}>{p}</MenuItem>))}
+            </TextField>
+            <TextField
+              label="Trade"
+              value={addTaskDlg.tradeId}
+              onChange={(e) => setAddTaskDlg((d) => ({ ...d, tradeId: e.target.value }))}
+              select
+              fullWidth
+            >
+              {(home?.trades || []).map((t) => (<MenuItem key={t._id} value={t._id}>{t.name}</MenuItem>))}
+            </TextField>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAddTaskDlg((d) => ({ ...d, open: false }))}>Cancel</Button>
+          <Button
+            variant="contained"
+            disabled={!addTaskDlg.tradeId || !addTaskDlg.title}
+            onClick={async () => {
+              try {
+                const res = await api.addTask(id, addTaskDlg.tradeId, { title: addTaskDlg.title, description: addTaskDlg.description, phaseKey: addTaskDlg.phaseKey })
+                setHome(res.home)
+                setAddTaskDlg({ open: false, title: '', description: '', tradeId: '', phaseKey: 'planning' })
+              } catch {}
+            }}
+          >
+            Add
+          </Button>
+        </DialogActions>
+      </Dialog>
+      {/* Analyze Result Dialog */}
+      <Dialog open={analyzeDlg.open} onClose={() => (!analyzeDlg.busy ? setAnalyzeDlg((d) => ({ ...d, open: false })) : null)} fullWidth maxWidth="sm">
+        <DialogTitle>Architecture Analysis</DialogTitle>
+        <DialogContent dividers>
+          {analyzeDlg.busy ? (
+            <Stack alignItems="center" sx={{ py: 4 }}>
+              <CircularProgress />
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>Analyzing…</Typography>
+            </Stack>
+          ) : (
+            <Stack spacing={2}>
+              {analyzeDlg.result?.error && <Typography variant="body2" color="error.main">{analyzeDlg.result.error}</Typography>}
+              <Box>
+                <Typography variant="subtitle2">Detected</Typography>
+                <Typography variant="body2">House Type: {analyzeDlg.result?.houseType || '—'}</Typography>
+                <Typography variant="body2">Roof Type: {analyzeDlg.result?.roofType || '—'}</Typography>
+                <Typography variant="body2">Exterior Type: {analyzeDlg.result?.exteriorType || '—'}</Typography>
+              </Box>
+              {!!(analyzeDlg.result?.suggestions || []).length && (
+                <Box>
+                  <Typography variant="subtitle2">Suggestions</Typography>
+                  <List dense disablePadding>
+                    {(analyzeDlg.result?.suggestions || []).map((s, i) => (
+                      <div key={i}>
+                        <ListItem><ListItemText primary={s} /></ListItem>
+                        {i < (analyzeDlg.result?.suggestions || []).length - 1 && <Divider component="li" />}
+                      </div>
+                    ))}
+                  </List>
+                </Box>
+              )}
+              {!!(analyzeDlg.result?.suggestedTasks || []).length && (
+                <Box>
+                  <Typography variant="subtitle2">Suggested Tasks</Typography>
+                  <List dense disablePadding>
+                    {(analyzeDlg.result?.suggestedTasks || []).map((t, i) => (
+                      <div key={i}>
+                        <ListItem
+                          secondaryAction={
+                            <Button size="small" variant="outlined" onClick={() => setAddTaskDlg({ open: true, title: t.title, description: t.description || '', tradeId: '', phaseKey: (t.phaseKey || 'planning') })}>Add Task</Button>
+                          }
+                        >
+                          <ListItemText primary={t.title} secondary={(t.description || '').trim() || '—'} />
+                        </ListItem>
+                        {i < (analyzeDlg.result?.suggestedTasks || []).length - 1 && <Divider component="li" />}
+                      </div>
+                    ))}
+                  </List>
+                </Box>
+              )}
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAnalyzeDlg((d) => ({ ...d, open: false }))} disabled={analyzeDlg.busy}>Close</Button>
+        </DialogActions>
+      </Dialog>
     </Stack>
   )
 }

@@ -60,14 +60,17 @@ router.post('/:homeId/documents/:docId/analyze-architecture', async (req, res) =
             houseType: result.houseType || '',
             roofType: result.roofType || '',
             exteriorType: result.exteriorType || '',
+            suggestions: Array.isArray(result.suggestions) ? result.suggestions : [],
+            suggestedTasks: Array.isArray(result.suggestedTasks) ? result.suggestedTasks : [],
             raw: result.raw || '',
+            analyzed: true,
             analyzedAt: new Date(),
           }
         }
       },
       { new: true, arrayFilters: [{ 'd._id': String(docId) }] }
     );
-    return res.json(updated);
+    return res.json({ home: updated, result });
   } catch (e) {
     return res.status(500).json({ message: e.message || 'Analysis failed' });
   }

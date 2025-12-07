@@ -9,13 +9,14 @@ import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 
 export default function Features() {
   const items = [
-    { icon: <AssignmentTurnedInIcon />, title: 'Guided tasks', desc: 'Step‑by‑step workflow for every build phase with self quality checks.' },
-    { icon: <ArchitectureIcon />, title: 'AI plan analysis', desc: 'Upload drawings; get flagged conflicts and missing scope across trades.' },
-    { icon: <ConstructionIcon />, title: 'Bid & contract assurance', desc: 'Catch inconsistencies, exclusions, and risky clauses before execution.' },
-    { icon: <CompareArrowsIcon />, title: 'Bid comparison', desc: 'Compare multiple vendor bids line‑by‑line; highlight gaps, overlaps, and missing scope using AI.' },
-    { icon: <CheckCircleIcon />, title: 'Savings you can feel', desc: 'Avoid change orders and schedule slips—save tens of thousands.' },
-    { icon: <CheckCircleIcon />, title: 'Simple per‑home pricing', desc: 'Subscribe monthly or per‑project on a per‑home basis.' },
-    { icon: <SupportAgentIcon />, title: 'Pro coordinator option', desc: 'Hire a pro builder coordinator for full support including onsite.' },
+    { icon: <AssignmentTurnedInIcon />, title: 'Adaptive guidance', desc: 'Not a static checklist—steps change by phase, plans, preferences, and conversations.' },
+    { icon: <ArchitectureIcon />, title: 'Understands your project', desc: 'Uses your drawings, preferences, and messages to provide context‑aware guidance.' },
+    { icon: <ConstructionIcon />, title: 'Bid & contract assurance', desc: 'Catch exclusions and risky clauses early—reduce change orders and delays.' },
+    { icon: <CompareArrowsIcon />, title: 'Bid comparison', desc: 'Apples‑to‑apples comparisons with line‑item gaps and follow‑ups for vendors.' },
+    { icon: <CheckCircleIcon />, title: 'Calmer decisions', desc: 'Cut through internet overload; get the one next right step for your build.' },
+    { icon: <CheckCircleIcon />, title: 'Simple per‑home pricing', desc: 'Pay per project; add optional onsite coordination when you need it.' },
+    { icon: <SupportAgentIcon />, title: 'Human support & onsite visits', desc: 'Talk to real people and get onsite help at key milestones—AI augments, it doesn’t replace.' },
+    { icon: <SupportAgentIcon />, title: 'Smart assistance, you decide', desc: 'We enhance your research with context from plans and messages, then help you decide.' },
   ];
   return (
     <Box id="features" sx={{ py: 8 }}>

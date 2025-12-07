@@ -3,6 +3,7 @@ import { Box } from '@mui/material';
 import NavBar from './components/NavBar.jsx';
 import Hero from './components/Hero.jsx';
 import Features from './components/Features.jsx';
+import CompareTable from './components/CompareTable.jsx';
 import Segments from './components/Segments.jsx';
 import Pricing from './components/Pricing.jsx';
 import HowItWorks from './components/HowItWorks.jsx';
@@ -35,6 +36,7 @@ export default function App() {
           <Hero />
           {/* Home = summary sections */}
           <Features />
+          <CompareTable />
           <Segments />
           <Pricing />
           <HowItWorks />

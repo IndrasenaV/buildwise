@@ -7,7 +7,7 @@ const path = require('node:path');
 const { AiLog } = require('../models/AiLog');
 const { Message } = require('../models/Message');
 const { Home } = require('../models/Home');
-const { buildTradePrompt } = require('../services/bidComparisonPrompts');
+const { getPromptText, getTradePrompt } = require('../services/promptService');
 
 const analyzeSchema = Joi.object({
   // Allow either a single URL or an array of URLs
@@ -51,11 +51,17 @@ async function extractTextFromUrl(u) {
 }
 
 async function analyzeUrl(req, res) {
-  const { value, error } = analyzeSchema.validate(req.body || {}, { abortEarly: false });
+  const schema = Joi.object({
+    url: Joi.string().uri(),
+    urls: Joi.array().items(Joi.string().uri()),
+    prompt: Joi.string().min(1),
+    promptKey: Joi.string(),
+  }).oxor('url', 'urls').xor('prompt', 'promptKey');
+  const { value, error } = schema.validate(req.body || {}, { abortEarly: false });
   if (error) {
     return res.status(400).json({ message: 'Validation failed', details: error.details });
   }
-  const { url, urls, prompt } = value;
+  const { url, urls, prompt: bodyPrompt, promptKey } = value;
   try {
     const openai = ensureOpenAI();
     let combined = '';
@@ -80,14 +86,11 @@ async function analyzeUrl(req, res) {
       return res.status(415).json({ message: 'Unsupported or empty content at URL(s)' });
     }
 
-    const system = [
-      'You are Buildwise AI. Analyze construction-related documents and provide clear, actionable, and accurate insights.',
-      'If there are uncertainties or missing data, call them out explicitly.',
-      'Keep answers concise and structured.'
-    ].join(' ');
+    const system = await getPromptText('system.analyze');
+    const userPrompt = promptKey ? await getPromptText(promptKey) : bodyPrompt;
     const messages = [
       { role: 'system', content: system },
-      { role: 'user', content: `User prompt: ${prompt}` },
+      { role: 'user', content: `User prompt: ${userPrompt}` },
       { role: 'user', content: `Relevant document text:\n${combined.slice(0, 200000)}` }
     ];
 
@@ -103,7 +106,7 @@ async function analyzeUrl(req, res) {
       await AiLog.create({
         userEmail: req?.user?.email || null,
         mode: (urls && urls.length ? 'urls' : 'url'),
-        prompt,
+        prompt: userPrompt,
         urls: urls && urls.length ? urls : (url ? [url] : []),
         model: completion?.model || 'gpt-4o-mini',
         responseText: text,
@@ -125,14 +128,15 @@ async function analyzeUrl(req, res) {
 async function analyzeFilesDirectToOpenAI(req, res) {
   const schema = Joi.object({
     urls: Joi.array().items(Joi.string().uri()).min(1).required(),
-    prompt: Joi.string().min(1).required(),
+    prompt: Joi.string().min(1),
+    promptKey: Joi.string(),
     model: Joi.string().optional(),
-  });
+  }).xor('prompt','promptKey');
   const { value, error } = schema.validate(req.body || {}, { abortEarly: false });
   if (error) {
     return res.status(400).json({ message: 'Validation failed', details: error.details });
   }
-  const { urls, prompt, model } = value;
+  const { urls, prompt: bodyPrompt, promptKey, model } = value;
   try {
     const openai = ensureOpenAI();
     // Support images (vision) and text/PDFs (text extraction)
@@ -160,26 +164,24 @@ async function analyzeFilesDirectToOpenAI(req, res) {
       return res.status(415).json({ message: 'Unsupported or empty content at URL(s)' });
     }
     const usedModel = model || (imageUrls.length > 0 ? 'gpt-4o' : 'gpt-4o-mini');
-    const system = [
-      'You are Buildwise AI. Analyze construction-related documents and images and provide clear, actionable, and accurate insights.',
-      'If there are uncertainties or missing data, call them out explicitly.',
-      'Keep answers concise and structured.'
-    ].join(' ');
+    const system = await getPromptText('system.analyze');
     let completion;
     if (imageUrls.length === 0) {
       // Text/PDF-only flow: use plain string messages to avoid any parsing ambiguities
+      const userPrompt = promptKey ? await getPromptText(promptKey) : bodyPrompt;
       completion = await openai.chat.completions.create({
         model: usedModel,
         messages: [
           { role: 'system', content: system },
-          { role: 'user', content: `User prompt:\n${prompt}\n\nRelevant document text:\n${combined.slice(0, 200000)}` },
+          { role: 'user', content: `User prompt:\n${userPrompt}\n\nRelevant document text:\n${combined.slice(0, 200000)}` },
         ],
         temperature: 0.2,
       });
     } else {
       // Mixed content (images): use multi-part content for vision support
       const userContent = [];
-      userContent.push({ type: 'text', text: `User prompt: ${prompt}` });
+      const userPrompt = promptKey ? await getPromptText(promptKey) : bodyPrompt;
+      userContent.push({ type: 'text', text: `User prompt: ${userPrompt}` });
       if (combined.trim()) {
         userContent.push({ type: 'text', text: `Relevant document text:\n${combined.slice(0, 200000)}` });
       }
@@ -200,7 +202,7 @@ async function analyzeFilesDirectToOpenAI(req, res) {
       await AiLog.create({
         userEmail: req?.user?.email || null,
         mode: 'files',
-        prompt,
+        prompt: promptKey ? await getPromptText(promptKey) : bodyPrompt,
         urls,
         model: completion?.model || usedModel,
         responseText: result,
@@ -268,24 +270,15 @@ async function analyzeTradeContext(req, res) {
       const home = await Home.findById(homeId).lean();
       const trade = (home?.trades || []).find((t) => String(t._id) === String(tradeId));
       if (trade) {
-        tradePrompt = buildTradePrompt(trade.name || trade.category || '', '');
+        tradePrompt = await getTradePrompt(trade.name || trade.category || '', '');
       }
     }
-    const system = [
-      'You are Buildwise AI. Provide accurate, structured construction analysis.',
-      'Use provided context from project messages and documents. Call out uncertainties explicitly.',
-      'Keep answers structured, specific, and concise where possible.',
-    ].join(' ');
+    const system = (await getPromptText('system.analyze.context')) || (await getPromptText('system.analyze'));
     let completion;
     if (wantImages && imageUrls.length > 0) {
       const userContent = [];
-      const userPrompt = prompt && prompt.trim()
-        ? `User prompt:\n${prompt.trim()}`
-        : (tradePrompt ? `Guidance:\n${tradePrompt}` : 'Provide a concise, structured analysis.');
-      userContent.push({ type: 'text', text: userPrompt });
-      if (tradePrompt && prompt && prompt.trim()) {
-        userContent.push({ type: 'text', text: `Trade context:\n${tradePrompt}` });
-      }
+      if (tradePrompt) userContent.push({ type: 'text', text: `Trade guidance:\n${tradePrompt}` });
+      if (prompt && prompt.trim()) userContent.push({ type: 'text', text: `User notes:\n${prompt.trim()}` });
       if (msgText.trim()) userContent.push({ type: 'text', text: `Recent project messages:\n${msgText.slice(0, 50_000)}` });
       if (docsText.trim()) userContent.push({ type: 'text', text: `Relevant document text:\n${docsText.slice(0, 150_000)}` });
       for (const img of imageUrls.slice(0, 10)) {
@@ -301,11 +294,8 @@ async function analyzeTradeContext(req, res) {
       });
     } else {
       const parts = [];
-      const userPrompt = prompt && prompt.trim()
-        ? `User prompt:\n${prompt.trim()}\n`
-        : (tradePrompt ? `Guidance:\n${tradePrompt}\n` : 'Provide a concise, structured analysis.\n');
-      parts.push(userPrompt);
-      if (tradePrompt && prompt && prompt.trim()) parts.push(`Trade context:\n${tradePrompt}\n`);
+      if (tradePrompt) parts.push(`Trade guidance:\n${tradePrompt}\n`);
+      if (prompt && prompt.trim()) parts.push(`User notes:\n${prompt.trim()}\n`);
       if (msgText.trim()) parts.push(`Recent project messages:\n${msgText.slice(0, 50_000)}\n`);
       if (docsText.trim()) parts.push(`Relevant document text:\n${docsText.slice(0, 150_000)}\n`);
       completion = await openai.chat.completions.create({
@@ -411,17 +401,8 @@ async function analyzeArchitecture(req, res) {
       } catch (_e) {}
     }
     const usedModel = model || (imageUrls.length > 0 ? 'gpt-4o' : 'gpt-4o-mini');
-    const system = [
-      'You are Buildwise AI. Return ONLY raw JSON when asked. No prose, no code fences.',
-    ].join(' ');
-    const instruction = [
-      'Extract home characteristics from the provided architectural drawings/blueprints or images.',
-      'Respond with a JSON object with keys:',
-      'houseType (one of: single_family, townhome, pool, airport_hangar or empty string),',
-      'roofType (one of: shingles, concrete_tile, flat_roof, metal_roof, other or empty string),',
-      'exteriorType (one of: brick, stucco, siding, other or empty string).',
-      'If unsure for any key, use empty string. Do NOT include code fences or explanations.',
-    ].join(' ');
+    const system = await getPromptText('system.jsonOnly');
+    const instruction = await getPromptText('architecture.analyze');
     let completion;
     if (imageUrls.length > 0) {
       const userContent = [{ type: 'text', text: instruction }];
@@ -454,18 +435,28 @@ async function analyzeArchitecture(req, res) {
     const houseType = normalizeHouseType(parsed.houseType);
     const roofType = normalizeRoofType(parsed.roofType);
     const exteriorType = normalizeExteriorType(parsed.exteriorType);
+    const suggestions = Array.isArray(parsed.suggestions) ? parsed.suggestions.map((s) => String(s || '').trim()).filter(Boolean) : [];
+    const suggestedTasks = Array.isArray(parsed.suggestedTasks)
+      ? parsed.suggestedTasks.map((t) => ({
+          title: String(t?.title || '').trim(),
+          description: String(t?.description || '').trim(),
+          phaseKey: ['planning','preconstruction','exterior','interior'].includes(String(t?.phaseKey || '').toLowerCase())
+            ? String(t.phaseKey).toLowerCase()
+            : 'planning',
+        })).filter((t) => t.title)
+      : [];
     try {
       await AiLog.create({
         userEmail: req?.user?.email || null,
         mode: 'architecture',
-        prompt: 'architecture',
+        prompt: instruction,
         urls,
         model: completion?.model || usedModel,
         responseText: raw,
         usage: completion?.usage || undefined,
       });
     } catch (_e) {}
-    return res.json({ houseType, roofType, exteriorType, raw });
+    return res.json({ houseType, roofType, exteriorType, suggestions, suggestedTasks, raw, model: completion?.model || usedModel });
   } catch (e) {
     return res.status(500).json({ message: e.message || 'Architecture analysis failed' });
   }
@@ -537,7 +528,28 @@ async function analyzeArchitectureUrls(urls, model) {
   const houseType = normalizeHouseType(parsed.houseType);
   const roofType = normalizeRoofType(parsed.roofType);
   const exteriorType = normalizeExteriorType(parsed.exteriorType);
-  return { houseType, roofType, exteriorType, raw, model: completion?.model || usedModel };
+  const suggestions = Array.isArray(parsed.suggestions) ? parsed.suggestions.map((s) => String(s || '').trim()).filter(Boolean) : [];
+  const suggestedTasks = Array.isArray(parsed.suggestedTasks)
+    ? parsed.suggestedTasks.map((t) => ({
+        title: String(t?.title || '').trim(),
+        description: String(t?.description || '').trim(),
+        phaseKey: normalizeHouseType('x') && ['planning','preconstruction','exterior','interior'].includes(String(t?.phaseKey || '').toLowerCase())
+          ? String(t.phaseKey).toLowerCase()
+          : 'planning',
+      })).filter((t) => t.title)
+    : [];
+  try {
+    await AiLog.create({
+      userEmail: null,
+      mode: 'architecture',
+      prompt: instruction,
+      urls,
+      model: completion?.model || usedModel,
+      responseText: raw,
+      usage: completion?.usage || undefined,
+    });
+  } catch (_e) {}
+  return { houseType, roofType, exteriorType, suggestions, suggestedTasks, raw, model: completion?.model || usedModel };
 }
 
 module.exports = { analyzeUrl, analyzeFiles: analyzeFilesDirectToOpenAI, analyzeTradeContext, analyzeArchitecture, analyzeArchitectureUrls };

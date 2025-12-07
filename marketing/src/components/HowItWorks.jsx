@@ -3,10 +3,10 @@ import { Box, Container, Grid, Card, CardContent, Chip, Typography } from '@mui/
 
 export default function HowItWorks() {
   const steps = [
-    { title: 'Create a project', desc: 'Start a new home or development and select your pricing mode.' },
-    { title: 'Upload plans and bids', desc: 'We analyze for conflicts, omissions, and risky exclusions across trades.' },
-    { title: 'Review findings', desc: 'Resolve issues before construction to prevent change orders and delays.' },
-    { title: 'Execute with confidence', desc: 'Follow guided tasks and self‑checks through each build phase.' },
+    { title: 'Create a project', desc: 'Start a new home and invite your team (builder, designer, partners).' },
+    { title: 'Upload your architecture', desc: 'We parse drawings to understand house, roof, exterior, and cross‑trade details.' },
+    { title: 'Add bids (optional)', desc: 'Run bid assurance and comparisons to catch gaps/exclusions early.' },
+    { title: 'Get adaptive tasks', desc: 'Phase‑aware tasks, tailored to your plans and preferences. Ask for human or onsite help anytime.' },
   ];
   return (
     <Box id="how" sx={{ py: 8, background: 'linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0))' }}>

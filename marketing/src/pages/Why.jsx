@@ -5,11 +5,15 @@ export default function Why() {
   return (
     <Box sx={{ py: 8 }}>
       <Container maxWidth="md">
-        <Typography variant="h3" sx={{ fontWeight: 800, mb: 2 }}>Why Buildwise? A Builder’s Playbook for Owners</Typography>
+        <Typography variant="h3" sx={{ fontWeight: 800, mb: 2 }}>Why Buildwise? An Adaptive Builder for Owners</Typography>
         <Typography color="text.secondary" sx={{ mb: 3 }}>
           We built our own homes. We felt the pain—and the potential. We learned the hard way that a great builder isn’t just a “nice to have”; they’re the connective tissue that keeps design, trades, suppliers, permits, and schedules aligned. But paying a flat 20–25% management fee isn’t the only path. Buildwise is how owners manage like a pro—without paying builder‑level margins.
         </Typography>
         <Stack spacing={3}>
+          <Section title="Real humans, real onsite help">
+            <Bullet>We’re available for support—email, calls, and optional onsite visits when it matters.</Bullet>
+            <Bullet>AI enhances your research by organizing context (plans, preferences, messages) and proposing next steps—you stay in control.</Bullet>
+          </Section>
           <Section title="What a builder really does (beyond swinging hammers)">
             <Bullet>Orchestrates dozens of trades so scopes don’t collide or leave gaps.</Bullet>
             <Bullet>Turns drawings into buildable plans: clarifies missing details, options, and alternates.</Bullet>
@@ -26,13 +30,12 @@ export default function Why() {
             <Bullet>Permit/H.O.A. hurdles: submittals, engineering, inspections, and sequencing.</Bullet>
           </Section>
 
-          <Section title="How Buildwise helps you act like a builder">
-            <Bullet>Bid Comparison: line‑by‑line normalization to catch exclusions and hidden costs.</Bullet>
-            <Bullet>Trade playbooks: checklists and quality gates for electrical, plumbing, HVAC, etc.</Bullet>
-            <Bullet>Design‑to‑field alignment: prompts to close gaps (e.g., cabinet finishes, grout specs).</Bullet>
-            <Bullet>Local Subcontractor Network: vetted trades, performance references, faster bids.</Bullet>
-            <Bullet>Builder Discounts Access: tile, roofing, countertops, cabinets, paint, lumber, and more.</Bullet>
-            <Bullet>Permits & HOA guides: what to file, typical review timelines, and inspection prep.</Bullet>
+          <Section title="How Buildwise is different from task apps">
+            <Bullet>Adaptive guidance: not static checklists—steps change by phase, plans, and preferences.</Bullet>
+            <Bullet>Understands your project: uses drawings and conversations to give context‑aware guidance.</Bullet>
+            <Bullet>Actionable over informational: next best step beats internet rabbit holes and endless research.</Bullet>
+            <Bullet>Bid & contract assurance: line‑by‑line gaps, exclusions, and vendor follow‑ups.</Bullet>
+            <Bullet>Design‑to‑field alignment: prompts to close missing specs before they become change orders.</Bullet>
           </Section>
 
           <Section title="Why not just hire a builder?">

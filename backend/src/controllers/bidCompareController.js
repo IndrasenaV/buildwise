@@ -2,7 +2,8 @@ const Joi = require('joi');
 const OpenAI = require('openai');
 const pdfParse = require('pdf-parse');
 const { Home } = require('../models/Home');
-const { buildTradePrompt } = require('../services/bidComparisonPrompts');
+const { getPromptText, getTradePrompt } = require('../services/promptService');
+const { AiLog } = require('../models/AiLog');
 
 function ensureOpenAI() {
   const apiKey = process.env.OPENAI_API_KEY || process.env.OPENAI_API_TOKEN;
@@ -54,7 +55,7 @@ async function compareTradeBids(req, res) {
     if (!home) return res.status(404).json({ message: 'Home not found' });
     const trade = (home.trades || []).find((t) => String(t._id) === String(bidId));
     if (!trade) return res.status(404).json({ message: 'Trade not found on home' });
-    const prompt = buildTradePrompt(trade.name || trade.category || '', value.extraContext || '');
+    const prompt = await getTradePrompt(trade.name || trade.category || '', value.extraContext || '');
     // Extract text from each URL (cap combined length)
     let combined = '';
     for (let i = 0; i < value.urls.length; i++) {
@@ -73,10 +74,7 @@ async function compareTradeBids(req, res) {
     if (!combined.trim()) {
       return res.status(415).json({ message: 'No readable text found in provided PDFs' });
     }
-    const system = [
-      'You are Buildwise AI. Provide accurate, structured construction bid comparisons.',
-      'Keep answers structured, specific, and concise where possible.',
-    ].join(' ');
+    const system = await getPromptText('system.analyze.context');
     const openai = ensureOpenAI();
     const messages = [
       { role: 'system', content: system },
@@ -89,6 +87,17 @@ async function compareTradeBids(req, res) {
       temperature: 0.2,
     });
     const text = completion?.choices?.[0]?.message?.content?.toString?.() || '';
+    try {
+      await AiLog.create({
+        userEmail: req?.user?.email || null,
+        mode: 'bid_compare',
+        prompt,
+        urls: value.urls,
+        model: completion?.model || 'gpt-4o-mini',
+        responseText: text,
+        usage: completion?.usage || undefined,
+      });
+    } catch (_e) {}
     return res.json({
       result: text,
       model: completion?.model || 'gpt-4o-mini',

@@ -19,6 +19,7 @@ import Terms from './pages/Terms.jsx'
 import Account from './pages/Account.jsx'
 import HomePlanning from './pages/HomePlanning.jsx'
 import HomeTools from './pages/HomeTools.jsx'
+import Prompts from './pages/Prompts.jsx'
 
 function App() {
   return (
@@ -43,6 +44,7 @@ function App() {
         <Route path="/onboarding" element={<Onboarding />} />
         <Route path="/templates" element={<Templates />} />
         <Route path="/templates/:id" element={<TemplateEditor />} />
+        <Route path="/prompts" element={<Prompts />} />
       </Route>
     </Routes>
   )

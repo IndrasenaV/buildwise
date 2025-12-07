@@ -221,6 +221,9 @@ function buildTradePrompt(tradeName, extraContext = '') {
 
 module.exports = {
   buildTradePrompt,
+  normalizeKey,
+  DEFAULT_PROMPT,
+  TRADE_PROMPTS,
 };
 
 

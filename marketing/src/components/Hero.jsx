@@ -11,17 +11,17 @@ export default function Hero() {
         <Grid container spacing={3} alignItems="center">
           <Grid item xs={12} md={7}>
             <Typography variant="h2" sx={{ fontSize: { xs: 34, md: 46 }, fontWeight: 800, mb: 1 }}>
-              BuildWise AI
+              Build with Confidence, Step by Step
             </Typography>
             <Typography color="text.secondary" sx={{ fontSize: 18, mb: 2 }}>
-              Your AI co‑pilot for building with confidence: analyze plans and bids, catch costly mistakes early, and guide every step with self‑checks.
+              Clear next steps tailored to your plans and preferences—so you always know what to do next. Less research, fewer surprises.
             </Typography>
             <Stack direction="row" spacing={1.5} sx={{ flexWrap: 'wrap', mb: 1.5 }}>
               <Button variant="contained" sx={{ color: '#0b1220' }} onClick={() => { window.location.hash = '#/register?plan=ai_assurance' }}>Start Free Trial</Button>
               <Button variant="outlined" onClick={() => document.getElementById('pricing').scrollIntoView({behavior:'smooth'})}>See pricing</Button>
             </Stack>
             <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
-              {['Plan and drawing analysis', 'Bid and contract assurance', 'Task guidance and quality checks', 'Optional onsite coordination'].map((label) => (
+              {['Phase‑aware guidance', 'Understands your plans and preferences', 'Actionable steps—not more homework', 'Bid & plan checks', 'Human support + onsite'].map((label) => (
                 <Chip key={label} label={label} variant="outlined" sx={{ borderColor: '#253154', color: 'text.secondary' }} />
               ))}
             </Stack>

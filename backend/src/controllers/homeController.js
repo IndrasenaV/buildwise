@@ -384,7 +384,10 @@ async function addDocument(req, res) {
                 houseType: result.houseType || '',
                 roofType: result.roofType || '',
                 exteriorType: result.exteriorType || '',
+                suggestions: Array.isArray(result.suggestions) ? result.suggestions : [],
+                suggestedTasks: Array.isArray(result.suggestedTasks) ? result.suggestedTasks : [],
                 raw: result.raw || '',
+                analyzed: true,
                 analyzedAt: new Date(),
               }
             }

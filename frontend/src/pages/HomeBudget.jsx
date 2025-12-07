@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
 import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
@@ -97,6 +97,7 @@ function TradesPie({ trades, size = 260 }) {
 
 export default function HomeBudget() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const [home, setHome] = useState(null)
   const [error, setError] = useState('')
 
@@ -182,6 +183,8 @@ export default function HomeBudget() {
             return (
               <div key={t._id}>
                 <ListItem
+                  onClick={() => navigate(`/homes/${id}/trades/${t._id}`)}
+                  sx={{ cursor: 'pointer' }}
                   secondaryAction={
                     overrun ? <Chip color="error" size="small" label={`Overrun ${fmt(variance)}`} /> : <Chip color="success" size="small" label="On Budget" />
                   }

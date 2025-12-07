@@ -154,6 +154,14 @@ export default function SideNavLayout() {
               </ListItemButton>
             )}
           </ListItem>
+          <ListItem disablePadding>
+            {userRoles.includes('sysadmin') && (
+              <ListItemButton onClick={() => go('/prompts')}>
+                <ListItemIcon><SettingsIcon /></ListItemIcon>
+                <ListItemText primary="Prompts" />
+              </ListItemButton>
+            )}
+          </ListItem>
         </List>
         {currentHomeId && (
           <>

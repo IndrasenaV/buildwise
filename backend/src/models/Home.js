@@ -27,6 +27,16 @@ const DocumentSchema = new mongoose.Schema(
       roofType: { type: String, default: '' },
       exteriorType: { type: String, default: '' },
       raw: { type: String, default: '' },
+      analyzed: { type: Boolean, default: false },
+      suggestions: [{ type: String }],
+      suggestedTasks: [
+        {
+          title: { type: String, default: '' },
+          description: { type: String, default: '' },
+          phaseKey: { type: String, enum: ['planning', 'preconstruction', 'exterior', 'interior'], default: 'planning' },
+          _id: false,
+        }
+      ],
       analyzedAt: { type: Date },
     },
     uploadedBy: {

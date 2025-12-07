@@ -60,7 +60,7 @@ export default function HomeBidDetail() {
   const [msgFiles, setMsgFiles] = useState([])
   const [preview, setPreview] = useState({ open: false, url: '', title: '' })
   const [aiOpen, setAiOpen] = useState(false)
-  const [aiPrompt, setAiPrompt] = useState('Summarize the key risks, assumptions, scope gaps, and any missing information across these trade documents. Highlight potential cost or schedule impacts and suggest follow-ups.')
+  const [aiPrompt, setAiPrompt] = useState('')
   const [aiLoading, setAiLoading] = useState(false)
   const [aiResult, setAiResult] = useState('')
   const [aiSelectedUrls, setAiSelectedUrls] = useState([])
@@ -1006,7 +1006,7 @@ export default function HomeBidDetail() {
         <DialogContent dividers>
           <Stack spacing={2}>
             <Typography variant="body2" color="text.secondary">
-              {`Select which documents to include (${aiSelectedUrls.length} selected of ${aiCandidateDocs.length}). Adjust the prompt below if needed:`}
+              {`Select which documents to include (${aiSelectedUrls.length} selected of ${aiCandidateDocs.length}). Add any additional guidance (optional):`}
             </Typography>
             <Stack direction="row" alignItems="center" spacing={1}>
               <Checkbox
@@ -1025,7 +1025,7 @@ export default function HomeBidDetail() {
               <Typography variant="body2">Include image files (pictures/diagrams)</Typography>
             </Stack>
             <TextField
-              label="Analysis prompt"
+              label="Additional guidance (optional)"
               multiline
               minRows={3}
               value={aiPrompt}
@@ -1067,7 +1067,7 @@ export default function HomeBidDetail() {
               setAiResult('')
               try {
                 const urls = aiSelectedUrls
-                const resp = await api.analyzeTrade({ homeId: id, tradeId: bidId, urls, prompt: aiPrompt })
+                const resp = await api.analyzeTrade({ homeId: id, tradeId: bidId, urls, prompt: aiPrompt, containsImages: aiIncludeImages })
                 setAiResult(resp.result || JSON.stringify(resp, null, 2))
               } catch (e) {
                 setAiResult(`Error: ${e.message}`)
