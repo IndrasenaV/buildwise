@@ -17,6 +17,7 @@ import ListSubheader from '@mui/material/ListSubheader'
 import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn'
 import RoofingIcon from '@mui/icons-material/Roofing'
 import DesignServicesIcon from '@mui/icons-material/DesignServices'
+import ArchitectureIcon from '@mui/icons-material/Architecture'
 import { api } from '../api/client'
 import DescriptionIcon from '@mui/icons-material/Description'
 import ContactsIcon from '@mui/icons-material/Contacts'
@@ -43,6 +44,7 @@ export default function SideNavLayout() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+  const [userRoles, setUserRoles] = useState([])
 
   useEffect(() => {
     try {
@@ -69,6 +71,14 @@ export default function SideNavLayout() {
     }
     return () => { mounted = false }
   }, [currentHomeId])
+
+  useEffect(() => {
+    let mounted = true
+    api.me()
+      .then((u) => { if (mounted) setUserRoles(Array.isArray(u?.roles) ? u.roles : []) })
+      .catch(() => { if (mounted) setUserRoles([]) })
+    return () => { mounted = false }
+  }, [])
 
   function go(path) {
     if (location.pathname !== path) navigate(path)
@@ -137,10 +147,12 @@ export default function SideNavLayout() {
             </ListItemButton>
           </ListItem>
           <ListItem disablePadding>
-            <ListItemButton onClick={() => go('/templates')}>
-              <ListItemIcon><DesignServicesOutlinedIcon /></ListItemIcon>
-              <ListItemText primary="Templates" />
-            </ListItemButton>
+            {userRoles.includes('sysadmin') && (
+              <ListItemButton onClick={() => go('/templates')}>
+                <ListItemIcon><DesignServicesOutlinedIcon /></ListItemIcon>
+                <ListItemText primary="Templates" />
+              </ListItemButton>
+            )}
           </ListItem>
         </List>
         {currentHomeId && (
@@ -152,7 +164,7 @@ export default function SideNavLayout() {
               </ListSubheader>
               <ListItem disablePadding>
                 <ListItemButton selected={location.pathname.includes('/planning')} onClick={() => go(`/homes/${currentHomeId}/planning`)}>
-                  <ListItemIcon><DesignServicesIcon /></ListItemIcon>
+                  <ListItemIcon><ArchitectureIcon /></ListItemIcon>
                   <ListItemText primary="Planning" />
                 </ListItemButton>
               </ListItem>

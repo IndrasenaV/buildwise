@@ -371,6 +371,29 @@ async function addDocument(req, res) {
       { arrayFilters: [{ 'o.category': doc.category, 'o._id': { $ne: String(doc._id) } }] }
     ).catch(() => {});
   }
+  // Fire-and-forget AI analysis for architecture docs; do not block response
+  if (doc.category && /^architecture_/.test(doc.category) && doc.url) {
+    (async () => {
+      try {
+        const result = await analyzeArchitectureUrls([doc.url]);
+        await Home.updateOne(
+          { _id: homeId },
+          {
+            $set: {
+              'documents.$[d].analysis': {
+                houseType: result.houseType || '',
+                roofType: result.roofType || '',
+                exteriorType: result.exteriorType || '',
+                raw: result.raw || '',
+                analyzedAt: new Date(),
+              }
+            }
+          },
+          { arrayFilters: [{ 'd._id': String(doc._id) }] }
+        );
+      } catch (_e) {}
+    })();
+  }
   return res.status(201).json({ home, document: doc });
 }
 

@@ -45,6 +45,33 @@ export default function HomeTools() {
   const [unschedOpen, setUnschedOpen] = useState(false)
   const [unschedBusy, setUnschedBusy] = useState(false)
   const [budgetOpen, setBudgetOpen] = useState(false)
+  const [convertOpen, setConvertOpen] = useState(false)
+  const [concreteOpen, setConcreteOpen] = useState(false)
+  const [paintOpen, setPaintOpen] = useState(false)
+  const [tileOpen, setTileOpen] = useState(false)
+  // Converter state
+  const [convType, setConvType] = useState('length') // length | area | volume
+  const [convFromUnit, setConvFromUnit] = useState('ft')
+  const [convToUnit, setConvToUnit] = useState('m')
+  const [convValue, setConvValue] = useState('')
+  const [convResult, setConvResult] = useState('')
+  // Concrete calc
+  const [concL, setConcL] = useState('') // feet
+  const [concW, setConcW] = useState('') // feet
+  const [concT, setConcT] = useState('') // inches
+  const [concResult, setConcResult] = useState(null)
+  // Paint calc
+  const [paintArea, setPaintArea] = useState('')
+  const [paintCoats, setPaintCoats] = useState('2')
+  const [paintCoverage, setPaintCoverage] = useState('350') // sq ft per gallon
+  const [paintResult, setPaintResult] = useState(null)
+  // Tile calc
+  const [tileRoomL, setTileRoomL] = useState('')
+  const [tileRoomW, setTileRoomW] = useState('')
+  const [tileLen, setTileLen] = useState('12')
+  const [tileWid, setTileWid] = useState('12')
+  const [tileWaste, setTileWaste] = useState('10')
+  const [tileResult, setTileResult] = useState(null)
 
   useEffect(() => {
     api.getHome(id).then(setHome).catch((e) => setError(e.message))
@@ -148,6 +175,58 @@ export default function HomeTools() {
           <Grid item xs={12} sm={6} md={4}>
             <Card variant="outlined">
               <CardContent>
+                <Typography variant="h6">Measurement Converter</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                  Convert length, area, or volume between common units (ft, in, m, cm, sq ft, cu yd).
+                </Typography>
+              </CardContent>
+              <CardActions>
+                <Button onClick={() => setConvertOpen(true)} size="small">Open</Button>
+              </CardActions>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={4}>
+            <Card variant="outlined">
+              <CardContent>
+                <Typography variant="h6">Concrete Calculator</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                  Estimate concrete volume for slabs (cubic yards and cubic meters).
+                </Typography>
+              </CardContent>
+              <CardActions>
+                <Button onClick={() => setConcreteOpen(true)} size="small">Open</Button>
+              </CardActions>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={4}>
+            <Card variant="outlined">
+              <CardContent>
+                <Typography variant="h6">Paint Calculator</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                  Estimate paint needed by area, coats, and coverage per gallon.
+                </Typography>
+              </CardContent>
+              <CardActions>
+                <Button onClick={() => setPaintOpen(true)} size="small">Open</Button>
+              </CardActions>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={4}>
+            <Card variant="outlined">
+              <CardContent>
+                <Typography variant="h6">Tile Calculator</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                  Calculate tile count needed with waste for a rectangular room.
+                </Typography>
+              </CardContent>
+              <CardActions>
+                <Button onClick={() => setTileOpen(true)} size="small">Open</Button>
+              </CardActions>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={4}>
+            <Card variant="outlined">
+              <CardContent>
                 <Typography variant="h6">Architecture Analysis</Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                   Upload a drawing (PDF/image) to extract house, roof, and exterior types.
@@ -240,6 +319,222 @@ export default function HomeTools() {
         </DialogActions>
       </Dialog>
 
+      {/* Measurement Converter Dialog */}
+      <Dialog open={convertOpen} onClose={() => setConvertOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Measurement Converter</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <FormControl fullWidth>
+              <InputLabel id="conv-type">Type</InputLabel>
+              <Select labelId="conv-type" label="Type" value={convType} onChange={(e) => {
+                const t = e.target.value; setConvType(t)
+                if (t === 'length') { setConvFromUnit('ft'); setConvToUnit('m') }
+                if (t === 'area') { setConvFromUnit('sqft'); setConvToUnit('sqm') }
+                if (t === 'volume') { setConvFromUnit('cuyd'); setConvToUnit('cum') }
+              }}>
+                <MenuItem value="length">Length</MenuItem>
+                <MenuItem value="area">Area</MenuItem>
+                <MenuItem value="volume">Volume</MenuItem>
+              </Select>
+            </FormControl>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+              <TextField label="Value" value={convValue} onChange={(e) => setConvValue(e.target.value)} fullWidth />
+              <FormControl fullWidth>
+                <InputLabel id="from-unit">From</InputLabel>
+                <Select labelId="from-unit" label="From" value={convFromUnit} onChange={(e) => setConvFromUnit(e.target.value)}>
+                  {convType === 'length' && <>
+                    <MenuItem value="ft">ft</MenuItem>
+                    <MenuItem value="in">in</MenuItem>
+                    <MenuItem value="m">m</MenuItem>
+                    <MenuItem value="cm">cm</MenuItem>
+                  </>}
+                  {convType === 'area' && <>
+                    <MenuItem value="sqft">sq ft</MenuItem>
+                    <MenuItem value="sqm">sq m</MenuItem>
+                  </>}
+                  {convType === 'volume' && <>
+                    <MenuItem value="cuyd">cu yd</MenuItem>
+                    <MenuItem value="cuft">cu ft</MenuItem>
+                    <MenuItem value="cum">cu m</MenuItem>
+                  </>}
+                </Select>
+              </FormControl>
+              <FormControl fullWidth>
+                <InputLabel id="to-unit">To</InputLabel>
+                <Select labelId="to-unit" label="To" value={convToUnit} onChange={(e) => setConvToUnit(e.target.value)}>
+                  {convType === 'length' && <>
+                    <MenuItem value="ft">ft</MenuItem>
+                    <MenuItem value="in">in</MenuItem>
+                    <MenuItem value="m">m</MenuItem>
+                    <MenuItem value="cm">cm</MenuItem>
+                  </>}
+                  {convType === 'area' && <>
+                    <MenuItem value="sqft">sq ft</MenuItem>
+                    <MenuItem value="sqm">sq m</MenuItem>
+                  </>}
+                  {convType === 'volume' && <>
+                    <MenuItem value="cuyd">cu yd</MenuItem>
+                    <MenuItem value="cuft">cu ft</MenuItem>
+                    <MenuItem value="cum">cu m</MenuItem>
+                  </>}
+                </Select>
+              </FormControl>
+            </Stack>
+            {convResult && <Typography variant="body2">Result: {convResult}</Typography>}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConvertOpen(false)}>Close</Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              const v = Number(convValue)
+              if (Number.isNaN(v)) { setConvResult('Invalid input'); return }
+              // Convert to SI base then to target
+              let base = v
+              if (convType === 'length') {
+                // base meters
+                const toM = (x, u) => u === 'ft' ? x * 0.3048 : u === 'in' ? x * 0.0254 : u === 'cm' ? x * 0.01 : x
+                const fromM = (m, u) => u === 'ft' ? m / 0.3048 : u === 'in' ? m / 0.0254 : u === 'cm' ? m / 0.01 : m
+                base = toM(v, convFromUnit)
+                const out = fromM(base, convToUnit)
+                setConvResult(`${out.toFixed(4)} ${convToUnit}`)
+              } else if (convType === 'area') {
+                // base square meters
+                const toSqM = (x, u) => u === 'sqft' ? x * 0.09290304 : x
+                const fromSqM = (m2, u) => u === 'sqft' ? m2 / 0.09290304 : m2
+                base = toSqM(v, convFromUnit)
+                const out = fromSqM(base, convToUnit)
+                setConvResult(`${out.toFixed(4)} ${convToUnit}`)
+              } else if (convType === 'volume') {
+                // base cubic meters
+                const toCuM = (x, u) => u === 'cuyd' ? x * 0.764554857984 : u === 'cuft' ? x * 0.028316846592 : x
+                const fromCuM = (m3, u) => u === 'cuyd' ? m3 / 0.764554857984 : u === 'cuft' ? m3 / 0.028316846592 : m3
+                base = toCuM(v, convFromUnit)
+                const out = fromCuM(base, convToUnit)
+                setConvResult(`${out.toFixed(4)} ${convToUnit}`)
+              }
+            }}
+          >
+            Convert
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Concrete Calculator Dialog */}
+      <Dialog open={concreteOpen} onClose={() => setConcreteOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Concrete Calculator (Slab)</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+              <TextField label="Length (ft)" value={concL} onChange={(e) => setConcL(e.target.value)} fullWidth />
+              <TextField label="Width (ft)" value={concW} onChange={(e) => setConcW(e.target.value)} fullWidth />
+              <TextField label="Thickness (in)" value={concT} onChange={(e) => setConcT(e.target.value)} fullWidth />
+            </Stack>
+            {concResult && (
+              <Paper variant="outlined" sx={{ p: 1.5 }}>
+                <Typography variant="body2">Cubic Yards: {concResult.cuyd}</Typography>
+                <Typography variant="body2">Cubic Meters: {concResult.cum}</Typography>
+              </Paper>
+            )}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConcreteOpen(false)}>Close</Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              const L = Number(concL), W = Number(concW), T = Number(concT)
+              if ([L,W,T].some((x) => Number.isNaN(x) || x <= 0)) { setConcResult(null); return }
+              const thicknessFt = T / 12
+              const cubicFeet = L * W * thicknessFt
+              const cuyd = cubicFeet / 27
+              const cum = cuyd * 0.764554857984
+              setConcResult({ cuyd: cuyd.toFixed(2), cum: cum.toFixed(2) })
+            }}
+          >
+            Calculate
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Paint Calculator Dialog */}
+      <Dialog open={paintOpen} onClose={() => setPaintOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Paint Calculator</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+              <TextField label="Area (sq ft)" value={paintArea} onChange={(e) => setPaintArea(e.target.value)} fullWidth />
+              <TextField label="Coats" value={paintCoats} onChange={(e) => setPaintCoats(e.target.value)} fullWidth />
+              <TextField label="Coverage (sq ft/gal)" value={paintCoverage} onChange={(e) => setPaintCoverage(e.target.value)} fullWidth />
+            </Stack>
+            {paintResult && (
+              <Paper variant="outlined" sx={{ p: 1.5 }}>
+                <Typography variant="body2">Exact Gallons: {paintResult.exact}</Typography>
+                <Typography variant="body2">Rounded (Gallons): {paintResult.rounded}</Typography>
+              </Paper>
+            )}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPaintOpen(false)}>Close</Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              const A = Number(paintArea), C = Math.max(1, Number(paintCoats)), Cov = Number(paintCoverage)
+              if ([A,C,Cov].some((x) => Number.isNaN(x) || x <= 0)) { setPaintResult(null); return }
+              const gallons = (A * C) / Cov
+              const rounded = Math.ceil(gallons)
+              setPaintResult({ exact: gallons.toFixed(2), rounded })
+            }}
+          >
+            Calculate
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Tile Calculator Dialog */}
+      <Dialog open={tileOpen} onClose={() => setTileOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Tile Calculator</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+              <TextField label="Room Length (ft)" value={tileRoomL} onChange={(e) => setTileRoomL(e.target.value)} fullWidth />
+              <TextField label="Room Width (ft)" value={tileRoomW} onChange={(e) => setTileRoomW(e.target.value)} fullWidth />
+            </Stack>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+              <TextField label="Tile Length (in)" value={tileLen} onChange={(e) => setTileLen(e.target.value)} fullWidth />
+              <TextField label="Tile Width (in)" value={tileWid} onChange={(e) => setTileWid(e.target.value)} fullWidth />
+              <TextField label="Waste (%)" value={tileWaste} onChange={(e) => setTileWaste(e.target.value)} fullWidth />
+            </Stack>
+            {tileResult && (
+              <Paper variant="outlined" sx={{ p: 1.5 }}>
+                <Typography variant="body2">Tiles Needed (incl. waste): {tileResult.tiles}</Typography>
+                <Typography variant="body2">Area (sq ft): {tileResult.area}</Typography>
+              </Paper>
+            )}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setTileOpen(false)}>Close</Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              const RL = Number(tileRoomL), RW = Number(tileRoomW)
+              const TL = Number(tileLen), TW = Number(tileWid)
+              const W = Number(tileWaste)
+              if ([RL,RW,TL,TW].some((x) => Number.isNaN(x) || x <= 0)) { setTileResult(null); return }
+              const roomSqFt = RL * RW
+              const tileSqFt = (TL/12) * (TW/12)
+              const baseTiles = roomSqFt / tileSqFt
+              const tilesWithWaste = baseTiles * (1 + (Number.isNaN(W) ? 0.1 : (W/100)))
+              setTileResult({ tiles: Math.ceil(tilesWithWaste), area: roomSqFt.toFixed(2) })
+            }}
+          >
+            Calculate
+          </Button>
+        </DialogActions>
+      </Dialog>
       {/* Embedded BidCompareDialog */}
       <BidCompareDialog
         open={compareOpen}

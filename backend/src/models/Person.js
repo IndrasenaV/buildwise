@@ -6,7 +6,7 @@ const PersonSchema = new mongoose.Schema(
     fullName: { type: String, required: true },
     phone: { type: String },
     passwordHash: { type: String }, // optional for system-created contacts
-    roles: [{ type: String, enum: ['builder', 'client', 'monitor'] }],
+    roles: [{ type: String, enum: ['user', 'sysadmin'], default: 'user' }],
     emailConfirmed: { type: Boolean, default: false },
     emailConfirmToken: { type: String, index: true },
     emailConfirmExpires: { type: Date },

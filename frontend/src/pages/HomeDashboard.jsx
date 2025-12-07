@@ -203,6 +203,36 @@ export default function HomeDashboard() {
       {error && <Alert severity="error">{error}</Alert>}
 
       <Paper variant="outlined" sx={{ p: 2 }}>
+        <Typography variant="h6" gutterBottom>Guided Tour</Typography>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr auto' }, alignItems: 'center', gap: 2 }}>
+          <Typography variant="body2" color="text.secondary">
+            {(() => {
+              const archDocs = (home.documents || []).filter(d => String(d.category || '').startsWith('architecture_'))
+              if (!archDocs.length) return 'Start by uploading your Architecture diagram in Planning.'
+              const final = archDocs.find(d => d.isFinal) || archDocs[0]
+              if (!(final?.analysis && (final.analysis.houseType || final.analysis.roofType || final.analysis.exteriorType))) {
+                return 'Run Architecture Analysis to auto-detect house, roof, and exterior types.'
+              }
+              return 'Review Architecture Analysis or proceed to set up trades and schedules.'
+            })()}
+          </Typography>
+          <Box sx={{ justifySelf: 'end' }}>
+            {(() => {
+              const archDocs = (home.documents || []).filter(d => String(d.category || '').startsWith('architecture_'))
+              if (!archDocs.length) {
+                return <Button variant="contained" size="small" onClick={() => navigate(`/homes/${id}/planning?openUpload=architecture_base`)}>Upload Architecture</Button>
+              }
+              const final = archDocs.find(d => d.isFinal) || archDocs[0]
+              if (!(final?.analysis && (final.analysis.houseType || final.analysis.roofType || final.analysis.exteriorType))) {
+                return <Button variant="contained" size="small" onClick={() => navigate(`/homes/${id}/planning`)}>Open Planning</Button>
+              }
+              return <Button variant="outlined" size="small" onClick={() => navigate(`/homes/${id}/planning`)}>View Analysis</Button>
+            })()}
+          </Box>
+        </Box>
+      </Paper>
+
+      <Paper variant="outlined" sx={{ p: 2 }}>
         <Typography variant="h6" gutterBottom>Overview</Typography>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 2 }}>
           <Box>

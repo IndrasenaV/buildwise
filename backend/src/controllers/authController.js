@@ -118,7 +118,7 @@ async function registerMarketing(req, res) {
   const person = existing
     ? await Person.findOneAndUpdate(
         { email: lower },
-        { $set: { fullName, passwordHash, emailConfirmed: false, emailConfirmToken: confirmToken, emailConfirmExpires: confirmExpires, agreedToTermsAt: now, agreedToTermsVersion: termsVersion || 'marketing', agreedToTermsIp: clientIp }, $addToSet: { roles: 'builder' } },
+        { $set: { fullName, passwordHash, emailConfirmed: false, emailConfirmToken: confirmToken, emailConfirmExpires: confirmExpires, agreedToTermsAt: now, agreedToTermsVersion: termsVersion || 'marketing', agreedToTermsIp: clientIp }, $addToSet: { roles: 'user' } },
         { new: true }
       )
     : await Person.create({
@@ -126,7 +126,7 @@ async function registerMarketing(req, res) {
         fullName,
         phone: '',
         passwordHash,
-        roles: ['builder'],
+        roles: ['user'],
         emailConfirmed: false,
         emailConfirmToken: confirmToken,
         emailConfirmExpires: confirmExpires,

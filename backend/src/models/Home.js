@@ -22,6 +22,13 @@ const DocumentSchema = new mongoose.Schema(
     category: { type: String, default: 'other' }, // e.g. contract | bid | invoice | picture | permit | architecture_*
     version: { type: Number, default: 1 }, // versioning for architecture docs
     isFinal: { type: Boolean, default: false }, // whether this version is marked final (per category)
+    analysis: {
+      houseType: { type: String, default: '' },
+      roofType: { type: String, default: '' },
+      exteriorType: { type: String, default: '' },
+      raw: { type: String, default: '' },
+      analyzedAt: { type: Date },
+    },
     uploadedBy: {
       email: { type: String, default: '' },
       fullName: { type: String, default: '' },
@@ -173,7 +180,8 @@ const ParticipantSchema = new mongoose.Schema(
     fullName: { type: String, default: '' },
     email: { type: String, required: true },
     phone: { type: String, default: '' },
-    role: { type: String, default: '' }, // e.g., partner, builder, coordinator, architect, interior_decorator, advisor
+    role: { type: String, default: '' }, // e.g., owner, builder, designer, coordinator
+    permission: { type: String, enum: ['admin', 'write', 'read'], default: 'read' },
   },
   { _id: false }
 );
@@ -182,11 +190,16 @@ const HomeSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
     address: { type: String },
+    // Deprecated fields (no longer used): clientName, client, monitors, builder
     clientName: { type: String },
-    client: { type: PersonLiteSchema }, // supersedes clientName when onboarding is used
+    client: { type: PersonLiteSchema },
     monitors: [PersonLiteSchema],
     builder: { type: PersonLiteSchema },
     participants: [ParticipantSchema],
+    subscription: {
+      planId: { type: String, default: '' }, // e.g., guide, ai_assurance
+      status: { type: String, enum: ['active', 'canceled', 'inactive', 'past_due', ''], default: '' }
+    },
     phases: [
       {
         key: { type: String, enum: PhaseKeyEnum, required: true },

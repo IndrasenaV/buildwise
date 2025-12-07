@@ -6,29 +6,23 @@ const { getTemplateById } = require('../templates');
 const { Template } = require('../models/Template');
 const mailer = require('../services/mailer');
 
-const personSchema = Joi.object({
-  fullName: Joi.string().required(),
-  email: Joi.string().email().required(),
-  phone: Joi.string().allow('').optional(),
-});
-
-const participantSchema = Joi.object({
-  fullName: Joi.string().allow('').optional(),
-  email: Joi.string().email().required(),
-  phone: Joi.string().allow('').optional(),
-  role: Joi.string().valid('partner', 'builder', 'coordinator', 'builder advisor', 'architect', 'interior decorator').required(),
-});
-
 const onboardingSchema = Joi.object({
-  client: personSchema.optional(),
-  monitors: Joi.array().items(personSchema).default([]),
-  builder: personSchema.optional(),
-  participants: Joi.array().items(participantSchema).default([]),
+  participants: Joi.array().items(Joi.object({
+    fullName: Joi.string().allow('').optional(),
+    email: Joi.string().email().required(),
+    phone: Joi.string().allow('').optional(),
+    role: Joi.string().allow('').optional(),
+    permission: Joi.string().valid('admin', 'write', 'read').optional(),
+  })).default([]),
   home: Joi.object({
     name: Joi.string().required(),
     address: Joi.string().allow('').optional(),
     withTemplates: Joi.boolean().default(true),
     templateId: Joi.string().allow('').optional(),
+    subscription: Joi.object({
+      planId: Joi.string().allow('').optional(),
+      status: Joi.string().valid('active','canceled','inactive','past_due','').optional(),
+    }).optional(),
   }).required(),
 });
 
@@ -86,93 +80,61 @@ async function onboardingCreate(req, res) {
   if (error) {
     return res.status(400).json({ message: 'Validation failed', details: error.details });
   }
-  const { client, monitors, builder, participants, home } = value;
+  const { participants, home } = value;
 
   // Upsert people
-  const ensurePerson = async (p, role) => {
+  const ensurePerson = async (p) => {
     const email = p.email.toLowerCase();
-    // First, upsert and add desired role
     const first = await Person.findOneAndUpdate(
       { email },
-      { $set: { fullName: p.fullName, phone: p.phone || '' }, $addToSet: { roles: role } },
+      { $set: { fullName: p.fullName, phone: p.phone || '' }, $addToSet: { roles: 'user' } },
       { upsert: true, new: true }
     );
-    // If promoting to client, remove monitor in a separate operation to avoid conflicting ops
-    if (role === 'client') {
-      await Person.updateOne({ email }, { $pull: { roles: 'monitor' } });
-      return await Person.findOne({ email });
-    }
     return first;
   };
 
-  let clientDoc = null;
-  let builderDoc = null;
-  const monitorDocs = [];
-  for (const m of monitors) {
-    // silently skip duplicates by email in the input
-    if (!monitorDocs.find((x) => x.email.toLowerCase() === m.email.toLowerCase())) {
-      monitorDocs.push(await ensurePerson(m, 'monitor'));
-    }
-  }
-  // Participants: upsert persons with appropriate global role mapping, and use them to fill missing client/builder
+  // Participants: upsert persons and build normalized list
   const normalizedParticipants = [];
   for (const p of participants) {
     const lower = p.email.toLowerCase();
     if (normalizedParticipants.find((x) => x.email === lower)) continue;
-    const role = p.role;
-    let globalRole = 'monitor';
-    if (role === 'partner') globalRole = 'client';
-    if (role === 'builder' || role === 'builder advisor') globalRole = 'builder';
-    const ensured = await ensurePerson(
-      { fullName: p.fullName || p.email, email: lower, phone: p.phone || '' },
-      globalRole
-    );
+    const ensured = await ensurePerson({ fullName: p.fullName || p.email, email: lower, phone: p.phone || '' });
     normalizedParticipants.push({
       fullName: ensured.fullName,
       email: ensured.email,
       phone: ensured.phone || '',
-      role: role,
+      role: p.role || '',
+      permission: p.permission || 'read',
     });
   }
-  // Derive client/builder if not explicitly provided
-  if (!client && normalizedParticipants.length) {
-    const partner = normalizedParticipants.find((p) => p.role === 'partner');
-    if (partner) {
-      clientDoc = await Person.findOne({ email: partner.email.toLowerCase() });
+  // Add owner = current user with admin permission
+  const actorEmail = (req?.user?.email || '').toLowerCase();
+  if (actorEmail) {
+    const me = await ensurePerson({ fullName: req?.user?.fullName || actorEmail, email: actorEmail, phone: '' });
+    if (!normalizedParticipants.find((x) => x.email === me.email)) {
+      normalizedParticipants.unshift({
+        fullName: me.fullName,
+        email: me.email,
+        phone: me.phone || '',
+        role: 'owner',
+        permission: 'admin',
+      });
+    } else {
+      // upgrade to admin if already present
+      normalizedParticipants.forEach((x) => { if (x.email === me.email) x.permission = 'admin'; });
     }
   }
-  if (!builder && normalizedParticipants.length) {
-    const b = normalizedParticipants.find((p) => p.role === 'builder') || normalizedParticipants.find((p) => p.role === 'builder advisor');
-    if (b) {
-      builderDoc = await Person.findOne({ email: b.email.toLowerCase() });
-    }
-  }
-  // If still missing, but provided directly, use those
-  if (!clientDoc && client) clientDoc = await ensurePerson(client, 'client');
-  if (!builderDoc && builder) builderDoc = await ensurePerson(builder, 'builder');
 
   // Create Home document embedding snapshots of people
   const trades = home.withTemplates ? await buildBidsFromTemplate(home.templateId) : [];
   const createdHome = await Home.create({
     name: home.name,
     address: home.address || '',
-    clientName: clientDoc ? clientDoc.fullName : '',
-    client: clientDoc ? {
-      fullName: clientDoc.fullName,
-      email: clientDoc.email,
-      phone: clientDoc.phone || '',
-    } : undefined,
-    builder: builderDoc ? {
-      fullName: builderDoc.fullName,
-      email: builderDoc.email,
-      phone: builderDoc.phone || '',
-    } : undefined,
-    monitors: monitorDocs.map((md) => ({
-      fullName: md.fullName,
-      email: md.email,
-      phone: md.phone || '',
-    })),
     participants: normalizedParticipants,
+    subscription: {
+      planId: home.subscription?.planId || '',
+      status: home.subscription?.status || '',
+    },
     phases: [
       { key: 'planning', notes: '' },
       { key: 'preconstruction', notes: '' },

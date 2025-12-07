@@ -471,5 +471,74 @@ async function analyzeArchitecture(req, res) {
   }
 }
 
- module.exports = { analyzeUrl, analyzeFiles: analyzeFilesDirectToOpenAI, analyzeTradeContext, analyzeArchitecture };
+async function analyzeArchitectureUrls(urls, model) {
+  // Reuse core logic but return normalized fields only
+  const req = { body: { urls, model }, user: {} };
+  const openai = ensureOpenAI(); // ensure key present early
+  // Use the same internal steps as analyzeArchitecture without logging/res wrapper
+  // Extract text + detect image URLs
+  const imageUrlRegex = /\.(png|jpe?g|webp|gif)$/i;
+  let combined = '';
+  const imageUrls = [];
+  for (let i = 0; i < urls.length; i++) {
+    const u = urls[i];
+    if (imageUrlRegex.test(u)) {
+      imageUrls.push(u);
+      continue;
+    }
+    try {
+      const text = await extractTextFromUrl(u);
+      if (text && text.trim()) {
+        const header = `\n\n--- Document ${i + 1}: ${u} ---\n`;
+        combined += `${header}${text}`;
+        if (combined.length > 180_000) break;
+      }
+    } catch (_e) {}
+  }
+  const usedModel = model || (imageUrls.length > 0 ? 'gpt-4o' : 'gpt-4o-mini');
+  const system = 'You are Buildwise AI. Return ONLY raw JSON when asked. No prose, no code fences.';
+  const instruction = [
+    'Extract home characteristics from the provided architectural drawings/blueprints or images.',
+    'Respond with a JSON object with keys:',
+    'houseType (one of: single_family, townhome, pool, airport_hangar or empty string),',
+    'roofType (one of: shingles, concrete_tile, flat_roof, metal_roof, other or empty string),',
+    'exteriorType (one of: brick, stucco, siding, other or empty string).',
+    'If unsure for any key, use empty string. Do NOT include code fences or explanations.',
+  ].join(' ');
+  let completion;
+  if (imageUrls.length > 0) {
+    const userContent = [{ type: 'text', text: instruction }];
+    if (combined.trim()) {
+      userContent.push({ type: 'text', text: `Relevant document text:\n${combined.slice(0, 180_000)}` });
+    }
+    for (const img of imageUrls.slice(0, 10)) {
+      userContent.push({ type: 'image_url', image_url: { url: img } });
+    }
+    completion = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: userContent },
+      ],
+      temperature: 0.1,
+    });
+  } else {
+    completion = await openai.chat.completions.create({
+      model: usedModel,
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: `${instruction}\n${combined.trim() ? `Relevant document text:\n${combined.slice(0, 180_000)}` : ''}`.trim() },
+      ],
+      temperature: 0.1,
+    });
+  }
+  const raw = completion?.choices?.[0]?.message?.content?.toString?.() || '';
+  const parsed = parseJsonLoose(raw) || {};
+  const houseType = normalizeHouseType(parsed.houseType);
+  const roofType = normalizeRoofType(parsed.roofType);
+  const exteriorType = normalizeExteriorType(parsed.exteriorType);
+  return { houseType, roofType, exteriorType, raw, model: completion?.model || usedModel };
+}
+
+module.exports = { analyzeUrl, analyzeFiles: analyzeFilesDirectToOpenAI, analyzeTradeContext, analyzeArchitecture, analyzeArchitectureUrls };
 

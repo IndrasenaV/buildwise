@@ -19,9 +19,11 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import PageHeader from '../components/PageHeader.jsx'
 import UploadDocumentDialog from '../components/UploadDocumentDialog.jsx'
 import Link from '@mui/material/Link'
+import { useLocation } from 'react-router-dom'
 
 export default function HomePlanning() {
   const { id } = useParams()
+  const location = useLocation()
   const navigate = useNavigate()
   const [home, setHome] = useState(null)
   const [preview, setPreview] = useState({ open: false, url: '', title: '' })
@@ -32,6 +34,14 @@ export default function HomePlanning() {
   useEffect(() => {
     api.getHome(id).then(setHome).catch(() => {})
   }, [id])
+  useEffect(() => {
+    const params = new URLSearchParams(location.search || '')
+    const openUpload = params.get('openUpload')
+    if (openUpload) {
+      setUploadForCategory(openUpload)
+      setUploadOpen(true)
+    }
+  }, [location.search])
 
   function openPreview(url, title) {
     window.open(url, '_blank', 'noopener,noreferrer')
@@ -80,6 +90,12 @@ export default function HomePlanning() {
         {finalItem && (
           <Typography variant="body2" sx={{ mb: 0.5 }}>
             Final: v{finalItem.version || '—'} — {finalItem.title || finalItem.fileName || 'Document'}
+            {(finalItem.analysis && (finalItem.analysis.houseType || finalItem.analysis.roofType || finalItem.analysis.exteriorType)) && (
+              <span style={{ display: 'inline-block', marginLeft: 8, color: '#90caf9' }}>
+                Detected — House: {finalItem.analysis.houseType || '—'}, Roof: {finalItem.analysis.roofType || '—'}, Exterior: {finalItem.analysis.exteriorType || '—'}
+                {finalItem.analysis.analyzedAt ? ` (at ${new Date(finalItem.analysis.analyzedAt).toLocaleString()})` : ''}
+              </span>
+            )}
           </Typography>
         )}
         <Table size="small">
@@ -87,6 +103,7 @@ export default function HomePlanning() {
             <TableRow>
               <TableCell>Version</TableCell>
               <TableCell>Title</TableCell>
+              {catKey.startsWith('architecture_') && <TableCell>Analysis</TableCell>}
               <TableCell>Uploaded</TableCell>
               <TableCell>Final</TableCell>
               <TableCell align="right">Actions</TableCell>
@@ -101,6 +118,13 @@ export default function HomePlanning() {
                 <TableRow key={d._id}>
                   <TableCell>{d.version || '—'}</TableCell>
                   <TableCell sx={{ wordBreak: 'break-all' }}>{d.title || name}</TableCell>
+                  {catKey.startsWith('architecture_') && (
+                    <TableCell>
+                      <Typography variant="caption">
+                        {d.analysis ? `House: ${d.analysis.houseType || '—'}, Roof: ${d.analysis.roofType || '—'}, Ext: ${d.analysis.exteriorType || '—'}` : '—'}
+                      </Typography>
+                    </TableCell>
+                  )}
                   <TableCell>{uploadedAt || '—'}</TableCell>
                   <TableCell>{isFinal ? 'Yes' : 'No'}</TableCell>
                   <TableCell align="right">
@@ -114,6 +138,23 @@ export default function HomePlanning() {
                         <DownloadIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
+                    {catKey.startsWith('architecture_') && (
+                      <Tooltip title="Analyze">
+                        <span>
+                          <IconButton
+                            size="small"
+                            onClick={async () => {
+                              try {
+                                const updated = await api.analyzeArchitectureDoc(id, d._id)
+                                setHome(updated)
+                              } catch {}
+                            }}
+                          >
+                            ⚙
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                    )}
                     {!isFinal && ['architecture_base','architecture_structural','architecture_foundation','architecture_mep'].includes(catKey) && (
                       <Tooltip title="Mark as Final">
                         <span>
