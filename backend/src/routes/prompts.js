@@ -34,15 +34,18 @@ const upsertSchema = Joi.object({
   text: Joi.string().min(1).required(),
   description: Joi.string().allow('').optional(),
   contextConfig: Joi.any().optional(),
+  model: Joi.string().allow('').optional(),
+  supportsImages: Joi.boolean().optional(),
+  outputJsonSchema: Joi.string().allow('').optional(),
 });
 
 router.post('/', requireAuth, requireSysadmin, async (req, res) => {
   const { value, error } = upsertSchema.validate(req.body || {}, { abortEarly: false });
   if (error) return res.status(400).json({ message: 'Validation failed', details: error.details });
-  const { key, text, description, contextConfig } = value;
+  const { key, text, description, contextConfig, model, supportsImages, outputJsonSchema } = value;
   const updated = await Prompt.findOneAndUpdate(
     { key },
-    { $set: { text, description: description || '', contextConfig: contextConfig ?? null } },
+    { $set: { text, description: description || '', contextConfig: contextConfig ?? null, model: model || '', supportsImages: Boolean(supportsImages), outputJsonSchema: outputJsonSchema || '' } },
     { upsert: true, new: true }
   );
   res.status(201).json(updated);
@@ -54,12 +57,15 @@ router.patch('/:key', requireAuth, requireSysadmin, async (req, res) => {
     text: Joi.string().min(1).required(),
     description: Joi.string().allow('').optional(),
     contextConfig: Joi.any().optional(),
+    model: Joi.string().allow('').optional(),
+    supportsImages: Joi.boolean().optional(),
+    outputJsonSchema: Joi.string().allow('').optional(),
   });
   const { value, error } = schema.validate(req.body || {}, { abortEarly: false });
   if (error) return res.status(400).json({ message: 'Validation failed', details: error.details });
   const updated = await Prompt.findOneAndUpdate(
     { key },
-    { $set: { text: value.text, description: value.description || '', contextConfig: value.contextConfig ?? null } },
+    { $set: { text: value.text, description: value.description || '', contextConfig: value.contextConfig ?? null, model: value.model || '', supportsImages: Boolean(value.supportsImages), outputJsonSchema: value.outputJsonSchema || '' } },
     { new: true }
   );
   if (!updated) return res.status(404).json({ message: 'Prompt not found' });

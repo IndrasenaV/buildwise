@@ -20,13 +20,19 @@ import AddIcon from '@mui/icons-material/Add'
 import Checkbox from '@mui/material/Checkbox'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import MenuItem from '@mui/material/MenuItem'
+import Table from '@mui/material/Table'
+import TableHead from '@mui/material/TableHead'
+import TableBody from '@mui/material/TableBody'
+import TableRow from '@mui/material/TableRow'
+import TableCell from '@mui/material/TableCell'
 
 export default function Prompts() {
   const [query, setQuery] = useState('')
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [editor, setEditor] = useState({ open: false, mode: 'create', key: '', text: '', description: '', contextConfig: { includes: {} } })
+  const [editor, setEditor] = useState({ open: false, mode: 'create', key: '', text: '', description: '', contextConfig: { includes: {} }, model: '', supportsImages: false, outputJsonSchema: '' })
+  const MODEL_OPTIONS = ['', 'gpt-4o-mini', 'gpt-4o']
 
   async function load() {
     setLoading(true)
@@ -48,12 +54,12 @@ export default function Prompts() {
     setError('')
     try {
       if (editor.mode === 'create') {
-        const body = { key: editor.key.trim(), text: editor.text, description: editor.description || '', contextConfig: editor.contextConfig || null }
+        const body = { key: editor.key.trim(), text: editor.text, description: editor.description || '', contextConfig: editor.contextConfig || null, model: editor.model || '', supportsImages: Boolean(editor.supportsImages), outputJsonSchema: editor.outputJsonSchema || '' }
         await api.upsertPrompt(body)
       } else {
-        await api.updatePrompt(editor.key, { text: editor.text, description: editor.description || '', contextConfig: editor.contextConfig || null })
+        await api.updatePrompt(editor.key, { text: editor.text, description: editor.description || '', contextConfig: editor.contextConfig || null, model: editor.model || '', supportsImages: Boolean(editor.supportsImages), outputJsonSchema: editor.outputJsonSchema || '' })
       }
-      setEditor({ open: false, mode: 'create', key: '', text: '', description: '', contextConfig: { includes: {} } })
+      setEditor({ open: false, mode: 'create', key: '', text: '', description: '', contextConfig: { includes: {} }, model: '', supportsImages: false, outputJsonSchema: '' })
       await load()
     } catch (e) {
       setError(e.message)
@@ -86,36 +92,55 @@ export default function Prompts() {
           <Button
             variant="contained"
             startIcon={<AddIcon />}
-            onClick={() => setEditor({ open: true, mode: 'create', key: '', text: '', description: '' })}
+            onClick={() => setEditor({ open: true, mode: 'create', key: '', text: '', description: '', contextConfig: { includes: {} }, model: '', supportsImages: false, outputJsonSchema: '' })}
           >
             New Prompt
           </Button>
         </Stack>
-        <List dense disablePadding sx={{ mt: 2 }}>
-          {filtered.map((p, idx) => (
-            <div key={p._id || p.key}>
-              <ListItem
-                secondaryAction={
-                  <Stack direction="row" spacing={1}>
-                    <IconButton aria-label="edit" size="small" onClick={() => setEditor({ open: true, mode: 'edit', key: p.key, text: p.text, description: p.description || '', contextConfig: p.contextConfig || { includes: {} } })}>
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton aria-label="delete" size="small" onClick={() => handleDelete(p.key)}>
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Stack>
-                }
-              >
-                <ListItemText
-                  primary={p.key}
-                  secondary={<span>{p.description || '—'} {p.updatedAt ? `• Updated ${new Date(p.updatedAt).toLocaleString()}` : ''}</span>}
-                />
-              </ListItem>
-              {idx < filtered.length - 1 && <Divider component="li" />}
-            </div>
-          ))}
-          {!filtered.length && <Typography variant="body2" color="text.secondary">No prompts.</Typography>}
-        </List>
+        <Paper variant="outlined" sx={{ mt: 2, overflowX: 'auto' }}>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 600 }}>Key</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Description</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Model</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Images</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Updated</TableCell>
+                <TableCell sx={{ fontWeight: 600 }} align="right">Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filtered.map((p) => (
+                <TableRow key={p._id || p.key} hover>
+                  <TableCell>{p.key}</TableCell>
+                  <TableCell sx={{ maxWidth: 420 }}>
+                    <Typography variant="body2" noWrap title={p.description || ''}>{p.description || '—'}</Typography>
+                  </TableCell>
+                  <TableCell>{p.model || 'Auto'}</TableCell>
+                  <TableCell>{p.supportsImages ? 'Yes' : 'No'}</TableCell>
+                  <TableCell>{p.updatedAt ? new Date(p.updatedAt).toLocaleString() : '—'}</TableCell>
+                  <TableCell align="right">
+                    <Stack direction="row" spacing={1} justifyContent="flex-end">
+                      <IconButton aria-label="edit" size="small" onClick={() => setEditor({ open: true, mode: 'edit', key: p.key, text: p.text, description: p.description || '', contextConfig: p.contextConfig || { includes: {} }, model: p.model || '', supportsImages: Boolean(p.supportsImages), outputJsonSchema: p.outputJsonSchema || '' })}>
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton aria-label="delete" size="small" onClick={() => handleDelete(p.key)}>
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Stack>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {!filtered.length && (
+                <TableRow>
+                  <TableCell colSpan={6}>
+                    <Typography variant="body2" color="text.secondary">No prompts.</Typography>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </Paper>
       </Paper>
       <Dialog open={editor.open} onClose={() => setEditor((e) => ({ ...e, open: false }))} fullWidth maxWidth="md">
         <DialogTitle>{editor.mode === 'create' ? 'Create Prompt' : `Edit Prompt: ${editor.key}`}</DialogTitle>
@@ -135,6 +160,26 @@ export default function Prompts() {
               onChange={(e) => setEditor((v) => ({ ...v, description: e.target.value }))}
               fullWidth
             />
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+              <TextField
+                label="Preferred Model"
+                select
+                value={editor.model}
+                onChange={(e) => setEditor((v) => ({ ...v, model: e.target.value }))}
+                helperText="Choose a model or leave Auto to use defaults"
+                fullWidth
+              >
+                {MODEL_OPTIONS.map((m) => (
+                  <MenuItem key={m || 'auto'} value={m}>
+                    {m || 'Auto'}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <FormControlLabel
+                control={<Checkbox checked={Boolean(editor.supportsImages)} onChange={(e) => setEditor((v) => ({ ...v, supportsImages: e.target.checked }))} />}
+                label="Supports Images"
+              />
+            </Stack>
             <TextField
               label="Text"
               value={editor.text}
@@ -142,6 +187,15 @@ export default function Prompts() {
               fullWidth
               multiline
               minRows={8}
+            />
+            <TextField
+              label="Expected JSON Output (example/schema)"
+              value={editor.outputJsonSchema}
+              onChange={(e) => setEditor((v) => ({ ...v, outputJsonSchema: e.target.value }))}
+              fullWidth
+              multiline
+              minRows={4}
+              placeholder='{"field1":"string","field2":123}'
             />
             <ContextEditor value={editor.contextConfig} onChange={(cfg) => setEditor((v) => ({ ...v, contextConfig: cfg }))} />
           </Stack>

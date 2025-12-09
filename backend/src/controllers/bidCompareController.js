@@ -55,7 +55,17 @@ async function compareTradeBids(req, res) {
     if (!home) return res.status(404).json({ message: 'Home not found' });
     const trade = (home.trades || []).find((t) => String(t._id) === String(bidId));
     if (!trade) return res.status(404).json({ message: 'Trade not found on home' });
-    const prompt = await getTradePrompt(trade.name || trade.category || '', value.extraContext || '');
+    let prompt = '';
+    if (trade.promptBaseKey && String(trade.promptBaseKey).trim()) {
+      const base = String(trade.promptBaseKey).trim().toLowerCase();
+      const key = base.includes('.') ? base : `compare.trade.${base}`;
+      prompt = await getPromptText(key);
+      if (value.extraContext && value.extraContext.trim()) {
+        prompt = `${prompt}\n\nExtra context:\n${value.extraContext.trim()}`;
+      }
+    } else {
+      prompt = await getTradePrompt(trade.name || trade.category || '', value.extraContext || '');
+    }
     // Extract text from each URL (cap combined length)
     let combined = '';
     for (let i = 0; i < value.urls.length; i++) {

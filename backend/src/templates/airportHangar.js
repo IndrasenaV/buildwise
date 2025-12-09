@@ -142,30 +142,30 @@ function checksFor(nameRaw) {
 
 const AIRPORT_HANGAR_TRADES = [
   // Preconstruction
-  { name: 'Land Survey', phaseKeys: ['preconstruction'], tasks: [], qualityChecks: [] },
-  { name: 'Geotechnical / Soil Test', phaseKeys: ['preconstruction'], tasks: [], qualityChecks: [] },
-  { name: 'Structural Engineering (Steel)', phaseKeys: ['preconstruction'], tasks: [], qualityChecks: [] },
-  { name: 'Permitting / Airport Authority Approvals', phaseKeys: ['preconstruction'], tasks: tasksFor('Permitting / Airport Authority Approvals'), qualityChecks: [] },
-  { name: 'SWPPP / Storm Prevention', phaseKeys: ['preconstruction'], tasks: [], qualityChecks: [] },
-  { name: 'Builder Risk Insurance', phaseKeys: ['preconstruction'], tasks: [], qualityChecks: [] },
+  { name: 'Land Survey', phaseKeys: ['preconstruction'], promptBaseKey: 'land_survey', tasks: [], qualityChecks: [] },
+  { name: 'Geotechnical / Soil Test', phaseKeys: ['preconstruction'], promptBaseKey: 'soil_test', tasks: [], qualityChecks: [] },
+  { name: 'Structural Engineering (Steel)', phaseKeys: ['preconstruction'], promptBaseKey: 'structural_engineer', tasks: [], qualityChecks: [] },
+  { name: 'Permitting / Airport Authority Approvals', phaseKeys: ['preconstruction'], promptBaseKey: 'airport_permitting', tasks: tasksFor('Permitting / Airport Authority Approvals'), qualityChecks: [] },
+  { name: 'SWPPP / Storm Prevention', phaseKeys: ['preconstruction'], promptBaseKey: 'swppp', tasks: [], qualityChecks: [] },
+  { name: 'Builder Risk Insurance', phaseKeys: ['preconstruction'], promptBaseKey: 'builder_risk_insurance', tasks: [], qualityChecks: [] },
 
   // Exterior / Shell
-  { name: 'Foundation (Slab / Footings)', phaseKeys: ['exterior'], tasks: tasksFor('Foundation (Slab / Footings)'), qualityChecks: checksFor('Foundation (Slab / Footings)') },
-  { name: 'Steel Erection', phaseKeys: ['exterior'], tasks: tasksFor('Steel Erection'), qualityChecks: checksFor('Steel Erection') },
-  { name: 'Roofing (Metal Panels)', phaseKeys: ['exterior'], tasks: tasksFor('Roofing (Metal Panels)'), qualityChecks: checksFor('Roofing (Metal Panels)') },
-  { name: 'Exterior Skin (Metal Panels / Insulated Panels)', phaseKeys: ['exterior'], tasks: tasksFor('Exterior Skin (Metal Panels / Insulated Panels)'), qualityChecks: [] },
-  { name: 'Hangar Door System', phaseKeys: ['exterior'], tasks: tasksFor('Hangar Door System'), qualityChecks: [] },
-  { name: 'Windows / Man Doors', phaseKeys: ['exterior'], tasks: [], qualityChecks: [] },
-  { name: 'Apron / Flatwork (Concrete Paving)', phaseKeys: ['exterior'], tasks: [], qualityChecks: [] },
-  { name: 'Site Utilities', phaseKeys: ['exterior'], tasks: [], qualityChecks: [] },
-  { name: 'Gutters / Downspouts', phaseKeys: ['exterior'], tasks: [], qualityChecks: [] },
+  { name: 'Foundation (Slab / Footings)', phaseKeys: ['exterior'], promptBaseKey: 'foundation', tasks: tasksFor('Foundation (Slab / Footings)'), qualityChecks: checksFor('Foundation (Slab / Footings)') },
+  { name: 'Steel Erection', phaseKeys: ['exterior'], promptBaseKey: 'steel_erection', tasks: tasksFor('Steel Erection'), qualityChecks: checksFor('Steel Erection') },
+  { name: 'Roofing (Metal Panels)', phaseKeys: ['exterior'], promptBaseKey: 'metal_roofing', tasks: tasksFor('Roofing (Metal Panels)'), qualityChecks: checksFor('Roofing (Metal Panels)') },
+  { name: 'Exterior Skin (Metal Panels / Insulated Panels)', phaseKeys: ['exterior'], promptBaseKey: 'exterior_skin', tasks: tasksFor('Exterior Skin (Metal Panels / Insulated Panels)'), qualityChecks: [] },
+  { name: 'Hangar Door System', phaseKeys: ['exterior'], promptBaseKey: 'hangar_door_system', tasks: tasksFor('Hangar Door System'), qualityChecks: [] },
+  { name: 'Windows / Man Doors', phaseKeys: ['exterior'], promptBaseKey: 'windows_doors', tasks: [], qualityChecks: [] },
+  { name: 'Apron / Flatwork (Concrete Paving)', phaseKeys: ['exterior'], promptBaseKey: 'apron_flatwork', tasks: [], qualityChecks: [] },
+  { name: 'Site Utilities', phaseKeys: ['exterior'], promptBaseKey: 'site_utilities', tasks: [], qualityChecks: [] },
+  { name: 'Gutters / Downspouts', phaseKeys: ['exterior'], promptBaseKey: 'gutters_downspouts', tasks: [], qualityChecks: [] },
 
   // MEP / Interior (as applicable)
-  { name: 'Electrical (Lighting / Power)', phaseKeys: ['preconstruction', 'interior'], tasks: tasksFor('Electrical (Lighting / Power)'), qualityChecks: [] },
-  { name: 'Plumbing (Floor Drains / Restrooms)', phaseKeys: ['preconstruction', 'interior'], tasks: tasksFor('Plumbing (Floor Drains / Restrooms)'), qualityChecks: [] },
-  { name: 'HVAC / Ventilation', phaseKeys: ['preconstruction', 'interior'], tasks: tasksFor('HVAC / Ventilation'), qualityChecks: [] },
-  { name: 'Fire Sprinkler / Suppression', phaseKeys: ['interior'], tasks: [], qualityChecks: [] },
-  { name: 'Interior Build-out (Office / Restrooms)', phaseKeys: ['interior'], tasks: [], qualityChecks: [] },
+  { name: 'Electrical (Lighting / Power)', phaseKeys: ['preconstruction', 'interior'], promptBaseKey: 'electrical', tasks: tasksFor('Electrical (Lighting / Power)'), qualityChecks: [] },
+  { name: 'Plumbing (Floor Drains / Restrooms)', phaseKeys: ['preconstruction', 'interior'], promptBaseKey: 'plumbing', tasks: tasksFor('Plumbing (Floor Drains / Restrooms)'), qualityChecks: [] },
+  { name: 'HVAC / Ventilation', phaseKeys: ['preconstruction', 'interior'], promptBaseKey: 'hvac', tasks: tasksFor('HVAC / Ventilation'), qualityChecks: [] },
+  { name: 'Fire Sprinkler / Suppression', phaseKeys: ['interior'], promptBaseKey: 'fire_sprinkler', tasks: [], qualityChecks: [] },
+  { name: 'Interior Build-out (Office / Restrooms)', phaseKeys: ['interior'], promptBaseKey: 'interior_build_out', tasks: [], qualityChecks: [] },
 ];
 
 module.exports = { AIRPORT_HANGAR_TRADES };

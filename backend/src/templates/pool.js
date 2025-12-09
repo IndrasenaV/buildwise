@@ -150,22 +150,22 @@ function checksFor(nameRaw) {
 
 const POOL_TRADES = [
   // Preconstruction
-  { name: 'Pool Design / Engineering', phaseKeys: ['preconstruction'], tasks: tasksFor('Pool Design / Engineering'), qualityChecks: [] },
-  { name: 'Permitting (Pool)', phaseKeys: ['preconstruction'], tasks: tasksFor('Permitting (Pool)'), qualityChecks: [] },
-  { name: 'Utility Locates / Survey', phaseKeys: ['preconstruction'], tasks: [], qualityChecks: [] },
+  { name: 'Pool Design / Engineering', phaseKeys: ['preconstruction'], promptBaseKey: 'pool_design_engineering', tasks: tasksFor('Pool Design / Engineering'), qualityChecks: [] },
+  { name: 'Permitting (Pool)', phaseKeys: ['preconstruction'], promptBaseKey: 'pool_permitting', tasks: tasksFor('Permitting (Pool)'), qualityChecks: [] },
+  { name: 'Utility Locates / Survey', phaseKeys: ['preconstruction'], promptBaseKey: 'pool_utility_locates', tasks: [], qualityChecks: [] },
 
   // Exterior Construction
-  { name: 'Excavation', phaseKeys: ['exterior'], tasks: tasksFor('Excavation'), qualityChecks: [] },
-  { name: 'Steel / Rebar', phaseKeys: ['exterior'], tasks: tasksFor('Steel / Rebar'), qualityChecks: checksFor('Steel / Rebar') },
-  { name: 'Plumbing (Pool Lines / Equipment Pads)', phaseKeys: ['preconstruction', 'exterior'], tasks: tasksFor('Plumbing (Pool Lines / Equipment Pads)'), qualityChecks: [] },
-  { name: 'Electrical (Bonding / Equipment Power)', phaseKeys: ['preconstruction', 'exterior'], tasks: tasksFor('Electrical (Bonding / Equipment Power)'), qualityChecks: checksFor('Electrical (Bonding / Equipment Power)') },
-  { name: 'Gunite / Shotcrete', phaseKeys: ['exterior'], tasks: tasksFor('Gunite / Shotcrete'), qualityChecks: [] },
-  { name: 'Tile / Coping', phaseKeys: ['exterior'], tasks: tasksFor('Tile / Coping'), qualityChecks: [] },
-  { name: 'Deck / Flatwork', phaseKeys: ['exterior'], tasks: tasksFor('Deck / Flatwork'), qualityChecks: [] },
-  { name: 'Equipment Install (Pumps / Filters / Heaters)', phaseKeys: ['exterior'], tasks: tasksFor('Equipment Install (Pumps / Filters / Heaters)'), qualityChecks: [] },
-  { name: 'Fencing (Code Requirements)', phaseKeys: ['exterior'], tasks: tasksFor('Fencing (Code Requirements)'), qualityChecks: checksFor('Fencing (Code Requirements)') },
-  { name: 'Startup / Balancing', phaseKeys: ['exterior'], tasks: tasksFor('Startup / Balancing'), qualityChecks: [] },
-  { name: 'Final Inspection', phaseKeys: ['exterior'], tasks: tasksFor('Final Inspection'), qualityChecks: [] },
+  { name: 'Excavation', phaseKeys: ['exterior'], promptBaseKey: 'pool_excavation', tasks: tasksFor('Excavation'), qualityChecks: [] },
+  { name: 'Steel / Rebar', phaseKeys: ['exterior'], promptBaseKey: 'pool_steel_rebar', tasks: tasksFor('Steel / Rebar'), qualityChecks: checksFor('Steel / Rebar') },
+  { name: 'Plumbing (Pool Lines / Equipment Pads)', phaseKeys: ['preconstruction', 'exterior'], promptBaseKey: 'pool_plumbing', tasks: tasksFor('Plumbing (Pool Lines / Equipment Pads)'), qualityChecks: [] },
+  { name: 'Electrical (Bonding / Equipment Power)', phaseKeys: ['preconstruction', 'exterior'], promptBaseKey: 'pool_electrical', tasks: tasksFor('Electrical (Bonding / Equipment Power)'), qualityChecks: checksFor('Electrical (Bonding / Equipment Power)') },
+  { name: 'Gunite / Shotcrete', phaseKeys: ['exterior'], promptBaseKey: 'pool_gunite_shotcrete', tasks: tasksFor('Gunite / Shotcrete'), qualityChecks: [] },
+  { name: 'Tile / Coping', phaseKeys: ['exterior'], promptBaseKey: 'pool_tile_coping', tasks: tasksFor('Tile / Coping'), qualityChecks: [] },
+  { name: 'Deck / Flatwork', phaseKeys: ['exterior'], promptBaseKey: 'pool_deck_flatwork', tasks: tasksFor('Deck / Flatwork'), qualityChecks: [] },
+  { name: 'Equipment Install (Pumps / Filters / Heaters)', phaseKeys: ['exterior'], promptBaseKey: 'pool_equipment_install', tasks: tasksFor('Equipment Install (Pumps / Filters / Heaters)'), qualityChecks: [] },
+  { name: 'Fencing (Code Requirements)', phaseKeys: ['exterior'], promptBaseKey: 'pool_fencing', tasks: tasksFor('Fencing (Code Requirements)'), qualityChecks: checksFor('Fencing (Code Requirements)') },
+  { name: 'Startup / Balancing', phaseKeys: ['exterior'], promptBaseKey: 'pool_startup_balancing', tasks: tasksFor('Startup / Balancing'), qualityChecks: [] },
+  { name: 'Final Inspection', phaseKeys: ['exterior'], promptBaseKey: 'pool_final_inspection', tasks: tasksFor('Final Inspection'), qualityChecks: [] },
 ];
 
 module.exports = { POOL_TRADES };

@@ -2,6 +2,7 @@
 require('dotenv').config();
 const { connectToDatabase } = require('../config/db');
 const { Template } = require('../models/Template');
+const { normalizeKey, TRADE_PROMPTS } = require('../services/bidComparisonPrompts');
 
 async function main() {
   await connectToDatabase();
@@ -48,20 +49,26 @@ async function main() {
       description: c.description,
       version: nextVersion,
       status: 'frozen', // import baseline as immutable; create new versions for edits
-      trades: (c.trades || []).map((t) => ({
-        name: t.name,
-        phaseKeys: t.phaseKeys || [],
-        tasks: (t.tasks || []).map((tk) => ({
-          title: tk.title,
-          description: tk.description || '',
-          phaseKey: tk.phaseKey,
-        })),
-        qualityChecks: (t.qualityChecks || []).map((qc) => ({
-          phaseKey: qc.phaseKey,
-          title: qc.title,
-          notes: qc.notes || '',
-        })),
-      })),
+      trades: (c.trades || []).map((t) => {
+        // Use promptBaseKey directly from template definitions (no derivation)
+        const base = String(t.promptBaseKey || '').trim();
+        return {
+          name: t.name,
+          phaseKeys: t.phaseKeys || [],
+          // Set promptBaseKey for all trades so prompts can be added later in DB
+          promptBaseKey: base,
+          tasks: (t.tasks || []).map((tk) => ({
+            title: tk.title,
+            description: tk.description || '',
+            phaseKey: tk.phaseKey,
+          })),
+          qualityChecks: (t.qualityChecks || []).map((qc) => ({
+            phaseKey: qc.phaseKey,
+            title: qc.title,
+            notes: qc.notes || '',
+          })),
+        };
+      }),
     });
     console.log(`Seeded ${c.templateKey} v${created.version} (frozen)`);
     createdCount += 1; 

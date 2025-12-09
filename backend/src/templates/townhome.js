@@ -136,6 +136,62 @@ function getQualityChecksForBidNameLocal(bidName) {
   return checks;
 }
 
+// Hard-coded prompt base keys (reuse where applicable from single family)
+const PROMPT_BASE_BY_NAME = {
+  'Lot': 'lot',
+  'Builder Fee': 'builder_fee',
+  'Designer': 'designer',
+  'Architect': 'architect',
+  'Soil Test': 'soil_test',
+  'Structural Engineering': 'structural_engineer',
+  'Land Survey': 'land_survey',
+  'House Permit (City)': 'permit_city',
+  'SWPPP / Storm Prevention': 'swppp',
+  'Builder Risk Insurance': 'builder_risk_insurance',
+  'Water Meter': 'water_meter',
+  'Termite Control': 'termite_control',
+  'Site Services - Portable Toilet': 'portable_toilet',
+  'Site Fence': 'site_fence',
+  'Landscape Design': 'landscape_design',
+  'Retaining Wall': 'retaining_wall',
+  'Foundation': 'foundation',
+  'Lot Cleaning / Concrete Wash': 'lot_cleaning',
+  'Framing': 'framing',
+  'Steel I-Beams (Framing)': 'steel_beams',
+  'Lumber Package': 'lumber_package',
+  'Framing Fixes / Extra Lumber': 'framing_fixes',
+  'Roof Contractor': 'roofing',
+  'Stucco': 'stucco',
+  'Stone Work': 'stone_work',
+  'Windows (Pella / Iron)': 'windows',
+  'Exterior Trim Paint': 'exterior_paint',
+  'Flatwork (Concrete)': 'flatwork',
+  'Gutters': 'gutters',
+  'Landscaping': 'landscaping',
+  'Garages': 'garages',
+  'Pool': 'pool',
+  'Electrical': 'electrical',
+  'Plumbing': 'plumbing',
+  'HVAC': 'hvac',
+  'Fire Sprinkler': 'fire_sprinkler',
+  'Insulation': 'insulation',
+  'Drywalls': 'drywall',
+  'Paint (Interior)': 'interior_paint',
+  'Hardwood Flooring': 'hardwood_flooring',
+  'Bathroom Tiles': 'bathroom_tile',
+  'Cabinets': 'cabinets',
+  'Countertops': 'countertops',
+  'Interior Doors': 'interior_doors',
+  'Stairs': 'stairs',
+  'Trim Work (Material/Labor)': 'trim_work',
+  'Faucets / Fixtures': 'faucets_fixtures',
+  'Fireplace': 'fireplace',
+  'Security Camera': 'security_cameras',
+  'Appliances': 'appliances',
+  'Appliance Install': 'appliance_install',
+  'Door Installation': 'door_installation',
+};
+
 const TOWNHOME_TRADES = (DEFAULT_BIDS || [])
   .filter((b) => {
     const n = b.name.toLowerCase();
@@ -144,6 +200,7 @@ const TOWNHOME_TRADES = (DEFAULT_BIDS || [])
   .map((b) => ({
     name: b.name,
     phaseKeys: b.phaseKeys,
+    promptBaseKey: PROMPT_BASE_BY_NAME[b.name] || '',
     tasks: getTasksForBidNameLocal(b.name),
     qualityChecks: getQualityChecksForBidNameLocal(b.name),
   }));

@@ -223,6 +223,8 @@ async function analyzeTradeContext(req, res) {
     taskId: Joi.string().allow('').optional(),
     urls: Joi.array().items(Joi.string().uri()).optional(),
     prompt: Joi.string().allow('').optional(),
+    promptKey: Joi.string().allow('').optional(),
+    action: Joi.string().valid('analyze', 'compare', 'task', 'general').optional(),
     model: Joi.string().optional(),
     containsImage: Joi.boolean().optional(),
     containsImages: Joi.boolean().optional(),
@@ -231,7 +233,7 @@ async function analyzeTradeContext(req, res) {
   if (error) {
     return res.status(400).json({ message: 'Validation failed', details: error.details });
   }
-  const { homeId, tradeId, taskId, urls = [], prompt, model } = value;
+  const { homeId, tradeId, taskId, urls = [], prompt, promptKey, action, model } = value;
   const wantImages = Boolean(value.containsImage || value.containsImages);
   try {
     const openai = ensureOpenAI();
@@ -266,11 +268,22 @@ async function analyzeTradeContext(req, res) {
       }
     }
     let tradePrompt = '';
-    if (tradeId) {
+    if (promptKey && promptKey.trim()) {
+      tradePrompt = await getPromptText(promptKey.trim());
+    } else if (tradeId) {
       const home = await Home.findById(homeId).lean();
       const trade = (home?.trades || []).find((t) => String(t._id) === String(tradeId));
       if (trade) {
-        tradePrompt = await getTradePrompt(trade.name || trade.category || '', '');
+        const act = (action || 'analyze').toLowerCase();
+        if (trade.promptBaseKey && String(trade.promptBaseKey).trim()) {
+          const base = String(trade.promptBaseKey).trim().toLowerCase();
+          const key = base.includes('.') ? base : `${act}.trade.${base}`;
+          tradePrompt = await getPromptText(key);
+        } else if (trade.promptKey && String(trade.promptKey).trim()) {
+          tradePrompt = await getPromptText(String(trade.promptKey).trim());
+        } else {
+          tradePrompt = await getTradePrompt(trade.name || trade.category || '', '');
+        }
       }
     }
     const system = (await getPromptText('system.analyze.context')) || (await getPromptText('system.analyze'));

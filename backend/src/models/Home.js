@@ -114,6 +114,8 @@ const TradeSchema = new mongoose.Schema(
     _id: { type: String, default: uuidv4 },
     name: { type: String, required: true }, // e.g. Electrical, Plumbing, HVAC
     category: { type: String }, // free-form or controlled by UI
+    // optional base key to derive prompts by action, e.g., 'bid.trade.electrical'
+    promptBaseKey: { type: String, default: '' },
     phaseKeys: [{ type: String, enum: PhaseKeyEnum, required: true }],
     vendor: {
       name: String,

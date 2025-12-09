@@ -27,6 +27,9 @@ const TemplateTradeSchema = new mongoose.Schema(
     _id: { type: String, default: uuidv4 },
     name: { type: String, required: true },
     phaseKeys: [{ type: String, enum: PhaseKeyEnum, required: true }],
+    // Base prompt key (e.g., 'bid.trade.electrical'); actions like '.analyze' or '.compare' will be derived at runtime
+    promptBaseKey: { type: String, default: '' },
+    promptKey: { type: String, default: '' },
     tasks: [TemplateTaskSchema],
     qualityChecks: [TemplateQualityCheckSchema],
   },

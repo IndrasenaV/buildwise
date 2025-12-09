@@ -61,10 +61,19 @@ export default function HomeBidDetail() {
   const [preview, setPreview] = useState({ open: false, url: '', title: '' })
   const [aiOpen, setAiOpen] = useState(false)
   const [aiPrompt, setAiPrompt] = useState('')
+  const [aiPromptKey, setAiPromptKey] = useState('')
   const [aiLoading, setAiLoading] = useState(false)
   const [aiResult, setAiResult] = useState('')
   const [aiSelectedUrls, setAiSelectedUrls] = useState([])
   const [aiIncludeImages, setAiIncludeImages] = useState(false)
+  // Assistant (Alex) unified actions dialog
+  const [assistantOpen, setAssistantOpen] = useState(false)
+  const [assistantAction, setAssistantAction] = useState('analyze') // analyze | compare | summarize | research
+  const [assistantPrompt, setAssistantPrompt] = useState('')
+  const [assistantIncludeImages, setAssistantIncludeImages] = useState(false)
+  const [assistantSelectedUrls, setAssistantSelectedUrls] = useState([])
+  const [assistantLoading, setAssistantLoading] = useState(false)
+  const [assistantResult, setAssistantResult] = useState('')
   // Task modal state (same format as Progress by phase pages)
   const [taskModal, setTaskModal] = useState({ open: false, bidId: '', task: null })
   const [taskEdit, setTaskEdit] = useState({ title: '', description: '' })
@@ -128,6 +137,7 @@ export default function HomeBidDetail() {
   const bidPdfDocs = useMemo(() => (bidDocs || []).filter((d) => /\.pdf($|[\?#])/i.test(d?.url || '')), [bidDocs])
   const bidImageDocs = useMemo(() => (bidDocs || []).filter((d) => /\.(png|jpg|jpeg|webp|gif)$/i.test(d?.url || '')), [bidDocs])
   const aiCandidateDocs = useMemo(() => aiIncludeImages ? [...bidPdfDocs, ...bidImageDocs] : bidPdfDocs, [aiIncludeImages, bidPdfDocs, bidImageDocs])
+  const assistantCandidateDocs = useMemo(() => assistantIncludeImages ? [...bidPdfDocs, ...bidImageDocs] : bidPdfDocs, [assistantIncludeImages, bidPdfDocs, bidImageDocs])
   const invoices = useMemo(() => (bid?.invoices || []), [bid])
   const paidSum = useMemo(() => invoices.filter(i => i.paid).reduce((s, i) => s + (Number(i.amount) || 0), 0), [invoices])
   const outstanding = useMemo(() => Math.max((Number(bid?.totalPrice ?? 0)) - paidSum, 0), [bid, paidSum])
@@ -557,8 +567,7 @@ export default function HomeBidDetail() {
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems="center" justifyContent="space-between">
           <Typography variant="subtitle1">Documents</Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Button variant="outlined" onClick={() => setCompareOpen(true)}>Compare Bids</Button>
-            <Button variant="outlined" onClick={() => { setAiResult(''); setAiOpen(true) }}>Analyze with AI</Button>
+            <Button variant="outlined" onClick={() => setAssistantOpen(true)}>Ask Alex</Button>
             <Button variant="contained" onClick={() => setDocDialogOpen(true)}>Upload</Button>
           </Box>
         </Stack>
@@ -846,6 +855,161 @@ export default function HomeBidDetail() {
         </DialogActions>
       </Dialog>
 
+      {/* Assistant (Alex) Dialog */}
+      <Dialog open={assistantOpen} onClose={() => setAssistantOpen(false)} fullWidth maxWidth="md">
+        <DialogTitle>Chat with Alex</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2}>
+            <Typography variant="body2" color="text.secondary">
+              What would you like Alex to help with?
+            </Typography>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+              <Chip
+                label="Analyze Bids"
+                color={assistantAction === 'analyze' ? 'primary' : 'default'}
+                onClick={() => setAssistantAction('analyze')}
+                clickable
+              />
+              <Chip
+                label="Compare Bids"
+                color={assistantAction === 'compare' ? 'primary' : 'default'}
+                onClick={() => setAssistantAction('compare')}
+                clickable
+              />
+              <Chip
+                label="Summarize Trade Context"
+                color={assistantAction === 'summarize' ? 'primary' : 'default'}
+                onClick={() => setAssistantAction('summarize')}
+                clickable
+              />
+              <Chip
+                label="Ask a Question / Research"
+                color={assistantAction === 'research' ? 'primary' : 'default'}
+                onClick={() => setAssistantAction('research')}
+                clickable
+              />
+            </Stack>
+            {assistantAction === 'analyze' && (
+              <Stack spacing={2}>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <Checkbox
+                    checked={assistantIncludeImages}
+                    onChange={(e) => {
+                      const on = e.target.checked
+                      setAssistantIncludeImages(on)
+                      if (!on) {
+                        setAssistantSelectedUrls((prev) => prev.filter(u => /\.pdf($|[\\?#])/i.test(u)))
+                      } else {
+                        const all = (assistantCandidateDocs || []).map(d => d.url).filter(Boolean)
+                        setAssistantSelectedUrls(all)
+                      }
+                    }}
+                  />
+                  <Typography variant="body2">Include image files (pictures/diagrams)</Typography>
+                </Stack>
+                <Box sx={{ maxHeight: 260, overflow: 'auto', border: '1px solid', borderColor: 'divider', p: 1, borderRadius: 1 }}>
+                  {assistantCandidateDocs.map((d, idx) => (
+                    <div key={d._id || `${idx}`}>
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Checkbox
+                          size="small"
+                          checked={assistantSelectedUrls.includes(d.url)}
+                          onChange={() =>
+                            setAssistantSelectedUrls((arr) => (arr.includes(d.url) ? arr.filter((x) => x !== d.url) : [...arr, d.url]))
+                          }
+                        />
+                        <Typography variant="caption" display="block" noWrap title={d.title || d.url}>
+                          {d.title || d.url}
+                        </Typography>
+                      </Stack>
+                    </div>
+                  ))}
+                  {!assistantCandidateDocs.length && <Typography variant="caption" color="text.secondary">No documents attached to this trade.</Typography>}
+                </Box>
+                <TextField
+                  label="Additional guidance (optional)"
+                  multiline
+                  minRows={3}
+                  value={assistantPrompt}
+                  onChange={(e) => setAssistantPrompt(e.target.value)}
+                  fullWidth
+                />
+              </Stack>
+            )}
+            {assistantAction === 'summarize' && (
+              <Typography variant="body2" color="text.secondary">
+                Alex will summarize recent messages, documents, and context for this trade.
+              </Typography>
+            )}
+            {assistantAction === 'research' && (
+              <TextField
+                label="Ask Alex a question"
+                placeholder="e.g., What building code considerations should we double-check for this scope?"
+                value={assistantPrompt}
+                onChange={(e) => setAssistantPrompt(e.target.value)}
+                multiline
+                minRows={3}
+                fullWidth
+              />
+            )}
+            {assistantResult ? (
+              <Box sx={{ border: '1px solid', borderColor: 'divider', p: 1 }}>
+                <Typography variant="subtitle2" sx={{ mb: 1 }}>Alex</Typography>
+                <Box component="pre" sx={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>{assistantResult}</Box>
+              </Box>
+            ) : null}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAssistantOpen(false)} disabled={assistantLoading}>Close</Button>
+          <Button
+            variant="contained"
+            disabled={assistantLoading || (assistantAction === 'analyze' && assistantSelectedUrls.length === 0) || (assistantAction === 'research' && !assistantPrompt.trim())}
+            onClick={async () => {
+              if (assistantAction === 'compare') {
+                setAssistantOpen(false)
+                setCompareOpen(true)
+                return
+              }
+              setAssistantLoading(true)
+              setAssistantResult('')
+              try {
+                if (assistantAction === 'analyze') {
+                  const urls = assistantSelectedUrls
+                  const promptKey = (bid?.promptBaseKey && String(bid.promptBaseKey).trim())
+                    ? `bid.trade.${String(bid.promptBaseKey).trim()}`
+                    : undefined
+                  const resp = await api.analyzeTrade(
+                    {
+                      homeId: id,
+                      tradeId: bidId,
+                      urls,
+                      prompt: assistantPrompt,
+                      action: 'analyze',
+                      containsImages: assistantIncludeImages,
+                      ...(promptKey ? { promptKey } : {})
+                    }
+                  )
+                  setAssistantResult(resp.result || JSON.stringify(resp, null, 2))
+                } else if (assistantAction === 'summarize') {
+                  const resp = await api.analyzeTrade({ homeId: id, tradeId: bidId, action: 'general' })
+                  setAssistantResult(resp.result || JSON.stringify(resp, null, 2))
+                } else if (assistantAction === 'research') {
+                  const resp = await api.analyzeTrade({ homeId: id, tradeId: bidId, prompt: assistantPrompt, action: 'general' })
+                  setAssistantResult(resp.result || JSON.stringify(resp, null, 2))
+                }
+              } catch (e) {
+                setAssistantResult(`Error: ${e.message}`)
+              } finally {
+                setAssistantLoading(false)
+              }
+            }}
+          >
+            {assistantLoading ? <CircularProgress size={20} /> : (assistantAction === 'compare' ? 'Open Compare' : 'Run')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Task Details Dialog (same format as Progress by phase pages) */}
       <Dialog open={taskModal.open} onClose={closeTask} fullWidth maxWidth="sm">
         <DialogTitle>Task Details</DialogTitle>
@@ -1067,7 +1231,7 @@ export default function HomeBidDetail() {
               setAiResult('')
               try {
                 const urls = aiSelectedUrls
-                const resp = await api.analyzeTrade({ homeId: id, tradeId: bidId, urls, prompt: aiPrompt, containsImages: aiIncludeImages })
+                const resp = await api.analyzeTrade({ homeId: id, tradeId: bidId, urls, prompt: aiPrompt, action: 'analyze', containsImages: aiIncludeImages })
                 setAiResult(resp.result || JSON.stringify(resp, null, 2))
               } catch (e) {
                 setAiResult(`Error: ${e.message}`)

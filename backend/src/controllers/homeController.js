@@ -53,6 +53,8 @@ async function buildInitialTemplates(preferredTemplateId) {
     return {
       _id: uuidv4(),
       name: b.name,
+      promptBaseKey: b.promptBaseKey || '',
+      promptKey: b.promptKey || '',
       phaseKeys: b.phaseKeys,
       vendor: {},
       tasks,

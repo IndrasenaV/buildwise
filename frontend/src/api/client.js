@@ -225,10 +225,10 @@ export const api = {
   // AI analyze: upload files (by URL) and let OpenAI read them directly (supports PDFs with diagrams)
   analyzeDocuments: ({ urls, prompt }) =>
     apiRequest('/ai/analyze-files', { method: 'POST', body: JSON.stringify({ urls, prompt }) }),
-  analyzeTrade: ({ homeId, tradeId, taskId, urls, prompt, containsImages }) =>
+  analyzeTrade: ({ homeId, tradeId, taskId, urls, prompt, promptKey, action, containsImages }) =>
     apiRequest('/ai/analyze-trade', {
       method: 'POST',
-      body: JSON.stringify({ homeId, tradeId, taskId, urls, prompt, containsImages })
+      body: JSON.stringify({ homeId, tradeId, taskId, urls, prompt, promptKey, action, containsImages })
     }),
   analyzeArchitecture: ({ urls }) =>
     apiRequest('/ai/analyze-architecture', { method: 'POST', body: JSON.stringify({ urls }) }),
