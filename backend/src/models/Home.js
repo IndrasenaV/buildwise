@@ -37,6 +37,68 @@ const DocumentSchema = new mongoose.Schema(
           _id: false,
         }
       ],
+      // New enriched sections
+      roomAnalysis: [
+        {
+          _id: false,
+          name: { type: String, default: '' },
+          level: { type: String, default: '' }, // e.g., ground, first, basement
+          areaSqFt: { type: Number, default: 0 },
+          dimensions: {
+            lengthFt: { type: Number, default: 0 },
+            widthFt: { type: Number, default: 0 },
+          },
+          windows: { type: Number, default: 0 },
+          doors: { type: Number, default: 0 },
+          notes: { type: String, default: '' },
+        }
+      ],
+      costAnalysis: {
+        summary: { type: String, default: '' },
+        highImpactItems: [
+          {
+            _id: false,
+            item: { type: String, default: '' },
+            rationale: { type: String, default: '' },
+            estCostImpact: { type: String, default: '' }, // e.g., +$5k, -$2k, or qualitative
+          }
+        ],
+        valueEngineeringIdeas: [
+          {
+            _id: false,
+            idea: { type: String, default: '' },
+            estSavings: { type: String, default: '' }, // e.g., ~$3k
+            trade: { type: String, default: '' },
+          }
+        ],
+      },
+      accessibilityComfort: {
+        metrics: {
+          avgDoorWidthIn: { type: Number, default: 0 },
+          minHallwayWidthIn: { type: Number, default: 0 },
+          bathroomTurnRadiusIn: { type: Number, default: 0 },
+          stepFreeEntries: { type: Number, default: 0 },
+          naturalLightScore: { type: Number, default: 0 }, // 0-100
+          thermalZoningScore: { type: Number, default: 0 }, // 0-100
+        },
+        issues: [
+          {
+            _id: false,
+            area: { type: String, default: '' },
+            issue: { type: String, default: '' },
+            severity: { type: String, default: '' }, // low | medium | high
+            recommendation: { type: String, default: '' },
+          }
+        ],
+      },
+      optimizationSuggestions: [
+        {
+          _id: false,
+          title: { type: String, default: '' },
+          description: { type: String, default: '' },
+          impact: { type: String, default: '' }, // low | medium | high
+        }
+      ],
       analyzedAt: { type: Date },
     },
     uploadedBy: {
@@ -174,6 +236,29 @@ const TradeSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const PlanningStepSchema = new mongoose.Schema(
+  {
+    _id: { type: String, default: uuidv4 },
+    title: { type: String, required: true },
+    done: { type: Boolean, default: false },
+    notes: { type: String, default: '' },
+    dueDate: { type: Date },
+    assignee: { type: String, default: '' },
+  },
+  { _id: false }
+);
+
+const PlanningSectionSchema = new mongoose.Schema(
+  {
+    title: { type: String, default: '' },
+    status: { type: String, enum: ['todo', 'in_progress', 'done'], default: 'todo' },
+    steps: [PlanningStepSchema],
+    notes: { type: String, default: '' },
+    updatedAt: { type: Date, default: Date.now },
+  },
+  { _id: false }
+);
+
 const ScheduleSchema = new mongoose.Schema(
   {
     _id: { type: String, default: uuidv4 },
@@ -222,6 +307,29 @@ const HomeSchema = new mongoose.Schema(
     trades: [TradeSchema],
     // Back-compat field for older documents (read-only usage in controllers)
     bids: [TradeSchema],
+    // Cross-trade planning tracked at the root (outside individual trades)
+    planning: {
+      architecture: {
+        type: PlanningSectionSchema,
+        default: { title: 'Architecture Planning', status: 'todo', steps: [], notes: '' },
+      },
+      windows_doors: {
+        type: PlanningSectionSchema,
+        default: { title: 'Windows & Doors Planning', status: 'todo', steps: [], notes: '' },
+      },
+      hardwood_tiles: {
+        type: PlanningSectionSchema,
+        default: { title: 'Hardwood & Tiles Planning', status: 'todo', steps: [], notes: '' },
+      },
+      electrical: {
+        type: PlanningSectionSchema,
+        default: { title: 'Electrical Planning', status: 'todo', steps: [], notes: '' },
+      },
+      plumbing: {
+        type: PlanningSectionSchema,
+        default: { title: 'Plumbing Planning', status: 'todo', steps: [], notes: '' },
+      },
+    },
     schedules: [ScheduleSchema],
     documents: [DocumentSchema],
     createdAt: { type: Date, default: Date.now },

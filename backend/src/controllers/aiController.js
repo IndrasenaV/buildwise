@@ -7,7 +7,7 @@ const path = require('node:path');
 const { AiLog } = require('../models/AiLog');
 const { Message } = require('../models/Message');
 const { Home } = require('../models/Home');
-const { getPromptText, getTradePrompt } = require('../services/promptService');
+const { getPromptText, getTradePrompt, getPrompt } = require('../services/promptService');
 
 const analyzeSchema = Joi.object({
   // Allow either a single URL or an array of URLs
@@ -143,11 +143,15 @@ async function analyzeFilesDirectToOpenAI(req, res) {
     const imageUrlRegex = /\.(png|jpe?g|webp|gif)$/i;
     let combined = '';
     const imageUrls = [];
+    const pdfUrls = [];
     for (let i = 0; i < urls.length; i++) {
       const u = urls[i];
       if (imageUrlRegex.test(u)) {
         imageUrls.push(u);
         continue;
+      }
+      if (/\.pdf($|[\?#])/i.test(u)) {
+        pdfUrls.push(u);
       }
       try {
         const text = await extractTextFromUrl(u);
@@ -160,13 +164,21 @@ async function analyzeFilesDirectToOpenAI(req, res) {
         combined += `\n\n--- Document ${i + 1}: ${u} (could not retrieve: ${e.message}) ---\n`;
       }
     }
-    if (!combined.trim() && imageUrls.length === 0) {
+    // Try converting PDFs to images so vision models can reason over diagrams
+    let convertedImageUrls = [];
+    if (pdfUrls.length) {
+      try {
+        convertedImageUrls = await convertPdfUrlsToImages(pdfUrls);
+      } catch (_e) { try { console.log('[AI] analyze-files pdf conversion failed'); } catch {} }
+    }
+    const allImageUrls = [...imageUrls, ...convertedImageUrls];
+    if (!combined.trim() && allImageUrls.length === 0) {
       return res.status(415).json({ message: 'Unsupported or empty content at URL(s)' });
     }
-    const usedModel = model || (imageUrls.length > 0 ? 'gpt-4o' : 'gpt-4o-mini');
+    const usedModel = model || (allImageUrls.length > 0 ? 'gpt-4o' : 'gpt-4o-mini');
     const system = await getPromptText('system.analyze');
     let completion;
-    if (imageUrls.length === 0) {
+    if (allImageUrls.length === 0) {
       // Text/PDF-only flow: use plain string messages to avoid any parsing ambiguities
       const userPrompt = promptKey ? await getPromptText(promptKey) : bodyPrompt;
       completion = await openai.chat.completions.create({
@@ -185,7 +197,7 @@ async function analyzeFilesDirectToOpenAI(req, res) {
       if (combined.trim()) {
         userContent.push({ type: 'text', text: `Relevant document text:\n${combined.slice(0, 200000)}` });
       }
-      for (const img of imageUrls.slice(0, 10)) {
+      for (const img of allImageUrls.slice(0, 10)) {
         userContent.push({ type: 'image_url', image_url: { url: img } });
       }
       completion = await openai.chat.completions.create({
@@ -251,11 +263,15 @@ async function analyzeTradeContext(req, res) {
     let docsText = '';
     const imageUrlRegex = /\.(png|jpe?g|webp|gif)$/i;
     const imageUrls = [];
+    const pdfUrls = [];
     for (let i = 0; i < Math.min(urls.length, 10); i++) {
       const u = urls[i];
       try {
         if (wantImages && imageUrlRegex.test(u)) {
           imageUrls.push(u);
+        }
+        if (wantImages && /\.pdf($|[\?#])/i.test(u)) {
+          pdfUrls.push(u);
         }
         const t = await extractTextFromUrl(u);
         if (t && t.trim()) {
@@ -267,6 +283,14 @@ async function analyzeTradeContext(req, res) {
         docsText += `\n\n--- Attachment ${i + 1}: ${u} (could not retrieve: ${e.message}) ---\n`;
       }
     }
+    // Attempt to convert PDFs to images if vision is desired
+    let convertedImageUrls = [];
+    if (wantImages && pdfUrls.length) {
+      try {
+        convertedImageUrls = await convertPdfUrlsToImages(pdfUrls);
+      } catch (_e) { try { console.log('[AI] trade pdf conversion failed'); } catch {} }
+    }
+    const allImageUrls = [...imageUrls, ...convertedImageUrls];
     let tradePrompt = '';
     if (promptKey && promptKey.trim()) {
       tradePrompt = await getPromptText(promptKey.trim());
@@ -288,13 +312,13 @@ async function analyzeTradeContext(req, res) {
     }
     const system = (await getPromptText('system.analyze.context')) || (await getPromptText('system.analyze'));
     let completion;
-    if (wantImages && imageUrls.length > 0) {
+    if (wantImages && allImageUrls.length > 0) {
       const userContent = [];
       if (tradePrompt) userContent.push({ type: 'text', text: `Trade guidance:\n${tradePrompt}` });
       if (prompt && prompt.trim()) userContent.push({ type: 'text', text: `User notes:\n${prompt.trim()}` });
       if (msgText.trim()) userContent.push({ type: 'text', text: `Recent project messages:\n${msgText.slice(0, 50_000)}` });
       if (docsText.trim()) userContent.push({ type: 'text', text: `Relevant document text:\n${docsText.slice(0, 150_000)}` });
-      for (const img of imageUrls.slice(0, 10)) {
+      for (const img of allImageUrls.slice(0, 10)) {
         userContent.push({ type: 'image_url', image_url: { url: img } });
       }
       completion = await openai.chat.completions.create({
@@ -398,11 +422,15 @@ async function analyzeArchitecture(req, res) {
     const imageUrlRegex = /\.(png|jpe?g|webp|gif)$/i;
     let combined = '';
     const imageUrls = [];
+    const pdfUrls = [];
     for (let i = 0; i < urls.length; i++) {
       const u = urls[i];
       if (imageUrlRegex.test(u)) {
         imageUrls.push(u);
         continue;
+      }
+      if (/\.pdf($|[\?#])/i.test(u)) {
+        pdfUrls.push(u);
       }
       try {
         const text = await extractTextFromUrl(u);
@@ -413,33 +441,55 @@ async function analyzeArchitecture(req, res) {
         }
       } catch (_e) {}
     }
-    const usedModel = model || (imageUrls.length > 0 ? 'gpt-4o' : 'gpt-4o-mini');
+    // Load DB prompt config
     const system = await getPromptText('system.jsonOnly');
-    const instruction = await getPromptText('architecture.analyze');
+    const promptDoc = await getPrompt('architecture.analyze');
+    const supportsImages = !!promptDoc.supportsImages;
+    const preferredModel = String(promptDoc.model || '').trim();
+    // Optionally convert PDFs to images if supported
+    let convertedImageUrls = [];
+    if (supportsImages && pdfUrls.length) {
+      try {
+        convertedImageUrls = await convertPdfUrlsToImages(pdfUrls);
+      } catch (e) { try { console.log('[AI] pdf conversion failed', e?.message || e) } catch {} }
+    }
+    const allImageUrls = [...imageUrls, ...convertedImageUrls];
+    const usedModel = model || (preferredModel || (allImageUrls.length > 0 ? 'gpt-4o' : 'gpt-4o-mini'));
+    const instruction = promptDoc.text;
+    // Console visibility for debugging
+    try {
+      console.log('[AI] architecture.analyze',
+        { supportsImages, preferredModel, requestModel: model || null, resolvedModel: usedModel,
+          pdfCount: pdfUrls.length, imageCount: imageUrls.length, convertedFromPdfCount: convertedImageUrls.length,
+          totalImagesSent: allImageUrls.length });
+    } catch {}
     let completion;
-    if (imageUrls.length > 0) {
+    let messagesToSend = [];
+    if (allImageUrls.length > 0) {
       const userContent = [{ type: 'text', text: instruction }];
       if (combined.trim()) {
         userContent.push({ type: 'text', text: `Relevant document text:\n${combined.slice(0, 180_000)}` });
       }
-      for (const img of imageUrls.slice(0, 10)) {
+      for (const img of allImageUrls) {
         userContent.push({ type: 'image_url', image_url: { url: img } });
       }
+      messagesToSend = [
+        { role: 'system', content: system },
+        { role: 'user', content: userContent },
+      ];
       completion = await openai.chat.completions.create({
-        model: 'gpt-4o',
-        messages: [
-          { role: 'system', content: system },
-          { role: 'user', content: userContent },
-        ],
+        model: usedModel || 'gpt-4o',
+        messages: messagesToSend,
         temperature: 0.1,
       });
     } else {
+      messagesToSend = [
+        { role: 'system', content: system },
+        { role: 'user', content: `${instruction}\n${combined.trim() ? `Relevant document text:\n${combined.slice(0, 180_000)}` : ''}`.trim() },
+      ];
       completion = await openai.chat.completions.create({
         model: usedModel,
-        messages: [
-          { role: 'system', content: system },
-          { role: 'user', content: `${instruction}\n${combined.trim() ? `Relevant document text:\n${combined.slice(0, 180_000)}` : ''}`.trim() },
-        ],
+        messages: messagesToSend,
         temperature: 0.1,
       });
     }
@@ -465,11 +515,29 @@ async function analyzeArchitecture(req, res) {
         prompt: instruction,
         urls,
         model: completion?.model || usedModel,
+        requestMessages: messagesToSend,
         responseText: raw,
         usage: completion?.usage || undefined,
       });
     } catch (_e) {}
-    return res.json({ houseType, roofType, exteriorType, suggestions, suggestedTasks, raw, model: completion?.model || usedModel });
+    // Normalize enriched sections
+    const roomAnalysis = Array.isArray(parsed.roomAnalysis) ? parsed.roomAnalysis : [];
+    const costAnalysis = typeof parsed.costAnalysis === 'object' && parsed.costAnalysis ? parsed.costAnalysis : { summary: '', highImpactItems: [], valueEngineeringIdeas: [] };
+    const accessibilityComfort = typeof parsed.accessibilityComfort === 'object' && parsed.accessibilityComfort ? parsed.accessibilityComfort : { metrics: {}, issues: [] };
+    const optimizationSuggestions = Array.isArray(parsed.optimizationSuggestions) ? parsed.optimizationSuggestions : [];
+    return res.json({
+      houseType,
+      roofType,
+      exteriorType,
+      suggestions,
+      suggestedTasks,
+      roomAnalysis,
+      costAnalysis,
+      accessibilityComfort,
+      optimizationSuggestions,
+      raw,
+      model: completion?.model || usedModel
+    });
   } catch (e) {
     return res.status(500).json({ message: e.message || 'Architecture analysis failed' });
   }
@@ -499,40 +567,58 @@ async function analyzeArchitectureUrls(urls, model) {
       }
     } catch (_e) {}
   }
-  const usedModel = model || (imageUrls.length > 0 ? 'gpt-4o' : 'gpt-4o-mini');
-  const system = 'You are Buildwise AI. Return ONLY raw JSON when asked. No prose, no code fences.';
-  const instruction = [
-    'Extract home characteristics from the provided architectural drawings/blueprints or images.',
-    'Respond with a JSON object with keys:',
-    'houseType (one of: single_family, townhome, pool, airport_hangar or empty string),',
-    'roofType (one of: shingles, concrete_tile, flat_roof, metal_roof, other or empty string),',
-    'exteriorType (one of: brick, stucco, siding, other or empty string).',
-    'If unsure for any key, use empty string. Do NOT include code fences or explanations.',
-  ].join(' ');
+  // Load prompt metadata
+  const system = await getPromptText('system.jsonOnly');
+  const promptDoc = await getPrompt('architecture.analyze');
+  const supportsImages = !!promptDoc.supportsImages;
+  const preferredModel = String(promptDoc.model || '').trim();
+  // Attempt to convert PDFs to images if supported
+  let convertedImageUrls = [];
+  if (supportsImages && imageUrls.length === 0) {
+    // If we only had PDFs (no original images), try conversion
+    const pdfCandidates = urls.filter((u) => /\.pdf($|[\?#])/i.test(u));
+    if (pdfCandidates.length) {
+      try {
+        convertedImageUrls = await convertPdfUrlsToImages(pdfCandidates);
+      } catch (e) { try { console.log('[AI] pdf conversion failed', e?.message || e) } catch {} }
+    }
+  }
+  const allImageUrls = [...imageUrls, ...convertedImageUrls];
+  const usedModel = model || (preferredModel || (allImageUrls.length > 0 ? 'gpt-4o' : 'gpt-4o-mini'));
+  const instruction = promptDoc.text;
+  try {
+    console.log('[AI] architecture.analyzeUrls',
+      { supportsImages, preferredModel, requestModel: model || null, resolvedModel: usedModel,
+        originalImageCount: imageUrls.length, convertedFromPdfCount: convertedImageUrls.length,
+        totalImagesSent: allImageUrls.length, urlCount: urls.length });
+  } catch {}
   let completion;
-  if (imageUrls.length > 0) {
+  let messagesToSend = [];
+  if (allImageUrls.length > 0) {
     const userContent = [{ type: 'text', text: instruction }];
     if (combined.trim()) {
       userContent.push({ type: 'text', text: `Relevant document text:\n${combined.slice(0, 180_000)}` });
     }
-    for (const img of imageUrls.slice(0, 10)) {
+    for (const img of allImageUrls) {
       userContent.push({ type: 'image_url', image_url: { url: img } });
     }
+    messagesToSend = [
+      { role: 'system', content: system },
+      { role: 'user', content: userContent },
+    ];
     completion = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: userContent },
-      ],
+      model: usedModel || 'gpt-4o',
+      messages: messagesToSend,
       temperature: 0.1,
     });
   } else {
+    messagesToSend = [
+      { role: 'system', content: system },
+      { role: 'user', content: `${instruction}\n${combined.trim() ? `Relevant document text:\n${combined.slice(0, 180_000)}` : ''}`.trim() },
+    ];
     completion = await openai.chat.completions.create({
       model: usedModel,
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: `${instruction}\n${combined.trim() ? `Relevant document text:\n${combined.slice(0, 180_000)}` : ''}`.trim() },
-      ],
+      messages: messagesToSend,
       temperature: 0.1,
     });
   }
@@ -558,12 +644,144 @@ async function analyzeArchitectureUrls(urls, model) {
       prompt: instruction,
       urls,
       model: completion?.model || usedModel,
+      requestMessages: messagesToSend,
       responseText: raw,
       usage: completion?.usage || undefined,
     });
   } catch (_e) {}
-  return { houseType, roofType, exteriorType, suggestions, suggestedTasks, raw, model: completion?.model || usedModel };
+  const roomAnalysis = Array.isArray(parsed.roomAnalysis) ? parsed.roomAnalysis : [];
+  const costAnalysis = typeof parsed.costAnalysis === 'object' && parsed.costAnalysis ? parsed.costAnalysis : { summary: '', highImpactItems: [], valueEngineeringIdeas: [] };
+  const accessibilityComfort = typeof parsed.accessibilityComfort === 'object' && parsed.accessibilityComfort ? parsed.accessibilityComfort : { metrics: {}, issues: [] };
+  const optimizationSuggestions = Array.isArray(parsed.optimizationSuggestions) ? parsed.optimizationSuggestions : [];
+  return {
+    houseType,
+    roofType,
+    exteriorType,
+    suggestions,
+    suggestedTasks,
+    roomAnalysis,
+    costAnalysis,
+    accessibilityComfort,
+    optimizationSuggestions,
+    raw,
+    model: completion?.model || usedModel
+  };
 }
 
 module.exports = { analyzeUrl, analyzeFiles: analyzeFilesDirectToOpenAI, analyzeTradeContext, analyzeArchitecture, analyzeArchitectureUrls };
 
+// Best-effort PDF -> image conversion using optional dependencies.
+// If required packages are not available, this returns [] silently.
+async function convertPdfUrlsToImages(urls, maxPages) {
+  const results = [];
+  // Allow env override; 0 or negative means all pages
+  let envMax = Number(process.env.PDF_RENDER_MAX_PAGES || NaN);
+  const limit = Number.isFinite(maxPages) ? Number(maxPages) : (Number.isFinite(envMax) ? envMax : 0);
+  for (const u of urls) {
+    try {
+      const { arrayBuffer, contentType } = await fetchArrayBuffer(u);
+      if (!/application\/pdf/i.test(contentType) && !/\.pdf($|[\?#])/i.test(u)) continue;
+      const buf = Buffer.from(arrayBuffer);
+      const imgs = await convertPdfBufferToPngDataUrls(buf, limit);
+      results.push(...imgs);
+      try {
+        console.log('[AI] pdf->images', { url: u, generatedImages: imgs.length });
+      } catch {}
+    } catch (err) { try { console.log('[AI] pdf->images error', { url: u, error: err?.message || String(err) }) } catch {} }
+  }
+  return results;
+}
+
+async function convertPdfBufferToPngDataUrls(buffer, maxPages) {
+  try {
+    // Lazy require to avoid hard dependency if env lacks these libs
+    const pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js');
+    const { createCanvas } = require('canvas');
+    const loadingTask = pdfjsLib.getDocument({ data: buffer });
+    const pdf = await loadingTask.promise;
+    const total = pdf.numPages;
+    const count = (maxPages && maxPages > 0) ? Math.min(total, Math.max(1, maxPages)) : total;
+    const out = [];
+    for (let i = 1; i <= count; i++) {
+      const page = await pdf.getPage(i);
+      const viewport = page.getViewport({ scale: 1.5 });
+      const canvas = createCanvas(viewport.width, viewport.height);
+      const ctx = canvas.getContext('2d');
+      const renderContext = { canvasContext: ctx, viewport };
+      await page.render(renderContext).promise;
+      const dataUrl = canvas.toDataURL('image/png');
+      out.push(dataUrl);
+    }
+    try {
+      console.log('[AI] pdf buffer converted', { totalPages: total, renderedPages: count });
+    } catch {}
+    return out;
+  } catch (e) {
+    // Fallback to system poppler (pdftoppm) if available
+    try {
+      console.log('[AI] canvas/pdfjs failed, trying poppler fallback', e?.message || e);
+    } catch {}
+    const imgs = await convertPdfBufferViaPoppler(buffer, maxPages).catch(() => []);
+    if (imgs && imgs.length) {
+      try { console.log('[AI] poppler fallback succeeded', { generatedImages: imgs.length }); } catch {}
+      return imgs;
+    }
+    try { console.log('[AI] pdf conversion skipped (no converters available)'); } catch {}
+    return [];
+  }
+}
+
+async function convertPdfBufferViaPoppler(buffer, maxPages) {
+  return new Promise((resolve) => {
+    try {
+      const { execFile } = require('node:child_process');
+      const tmpDir = os.tmpdir();
+      const tmpBase = `bw_pdf_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      const inPath = path.join(tmpDir, `${tmpBase}.pdf`);
+      fs.writeFileSync(inPath, buffer);
+      const outPrefix = path.join(tmpDir, `${tmpBase}_page`);
+      const args = ['-png', '-f', '1'];
+      if (maxPages && maxPages > 0) {
+        args.push('-l', String(maxPages));
+      }
+      // Scale to a reasonable width for OCR/vision
+      args.push('-scale-to', '2000', inPath, outPrefix);
+      execFile('pdftoppm', args, { timeout: 60_000 }, (_err) => {
+        const images = [];
+        try {
+          // Collect files: outPrefix-1.png, outPrefix-2.png, ...
+          const dir = path.dirname(outPrefix);
+          const base = path.basename(outPrefix);
+          const files = fs.readdirSync(dir)
+            .filter((f) => f.startsWith(base + '-') && f.endsWith('.png'))
+            .sort((a, b) => {
+              const ai = Number((a.match(/-(\d+)\.png$/) || [])[1] || 0);
+              const bi = Number((b.match(/-(\d+)\.png$/) || [])[1] || 0);
+              return ai - bi;
+            });
+          for (const f of files) {
+            const p = path.join(dir, f);
+            const bin = fs.readFileSync(p);
+            images.push(`data:image/png;base64,${bin.toString('base64')}`);
+          }
+        } catch {}
+        // Cleanup best-effort
+        try {
+          fs.unlinkSync(inPath);
+        } catch {}
+        try {
+          const dir = path.dirname(outPrefix);
+          const base = path.basename(outPrefix);
+          for (const f of fs.readdirSync(dir)) {
+            if (f.startsWith(base + '-') && f.endsWith('.png')) {
+              try { fs.unlinkSync(path.join(dir, f)); } catch {}
+            }
+          }
+        } catch {}
+        resolve(images);
+      });
+    } catch {
+      resolve([]);
+    }
+  });
+}

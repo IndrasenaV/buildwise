@@ -15,6 +15,16 @@ function buildDefaultPhases() {
   ];
 }
 
+function buildDefaultPlanning() {
+  return {
+    architecture: { title: 'Architecture Planning', status: 'todo', steps: [], notes: '' },
+    windows_doors: { title: 'Windows & Doors Planning', status: 'todo', steps: [], notes: '' },
+    hardwood_tiles: { title: 'Hardwood & Tiles Planning', status: 'todo', steps: [], notes: '' },
+    electrical: { title: 'Electrical Planning', status: 'todo', steps: [], notes: '' },
+    plumbing: { title: 'Plumbing Planning', status: 'todo', steps: [], notes: '' },
+  };
+}
+
 async function buildInitialTemplates(preferredTemplateId) {
   // Try DB template by id first if provided
   let bidsDef = [];
@@ -104,6 +114,7 @@ async function createHome(req, res) {
     address,
     clientName,
     phases: buildDefaultPhases(),
+    planning: buildDefaultPlanning(),
     trades: [],
     schedules: [],
     documents: [],
@@ -388,6 +399,10 @@ async function addDocument(req, res) {
                 exteriorType: result.exteriorType || '',
                 suggestions: Array.isArray(result.suggestions) ? result.suggestions : [],
                 suggestedTasks: Array.isArray(result.suggestedTasks) ? result.suggestedTasks : [],
+                roomAnalysis: Array.isArray(result.roomAnalysis) ? result.roomAnalysis : [],
+                costAnalysis: typeof result.costAnalysis === 'object' && result.costAnalysis ? result.costAnalysis : { summary: '', highImpactItems: [], valueEngineeringIdeas: [] },
+                accessibilityComfort: typeof result.accessibilityComfort === 'object' && result.accessibilityComfort ? result.accessibilityComfort : { metrics: {}, issues: [] },
+                optimizationSuggestions: Array.isArray(result.optimizationSuggestions) ? result.optimizationSuggestions : [],
                 raw: result.raw || '',
                 analyzed: true,
                 analyzedAt: new Date(),

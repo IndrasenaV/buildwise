@@ -8,13 +8,17 @@ import Alert from '@mui/material/Alert'
 import Chip from '@mui/material/Chip'
 import Button from '@mui/material/Button'
 import Box from '@mui/material/Box'
-import Table from '@mui/material/Table'
-import TableHead from '@mui/material/TableHead'
-import TableBody from '@mui/material/TableBody'
-import TableRow from '@mui/material/TableRow'
-import TableCell from '@mui/material/TableCell'
+import Grid from '@mui/material/Grid'
+import Card from '@mui/material/Card'
+import CardHeader from '@mui/material/CardHeader'
+import CardContent from '@mui/material/CardContent'
+import CardActions from '@mui/material/CardActions'
+import Avatar from '@mui/material/Avatar'
+import TextField from '@mui/material/TextField'
+import LinearProgress from '@mui/material/LinearProgress'
 import BidCompareDialog from '../components/BidCompareDialog.jsx'
-import TableContainer from '@mui/material/TableContainer'
+// Icons for common trades
+import TradeAvatar from '../components/TradeAvatar.jsx'
 
 export default function HomeTrades() {
   const { id } = useParams()
@@ -22,12 +26,22 @@ export default function HomeTrades() {
   const [error, setError] = useState('')
   const navigate = useNavigate()
   const [compareDlg, setCompareDlg] = useState({ open: false, tradeId: '' })
+  const [query, setQuery] = useState('')
 
   useEffect(() => {
     api.getHome(id).then(setHome).catch((e) => setError(e.message))
   }, [id])
 
   const trades = useMemo(() => home?.trades || [], [home])
+  const filteredTrades = useMemo(() => {
+    const q = String(query || '').toLowerCase().trim()
+    if (!q) return trades
+    return trades.filter((t) => {
+      const vendor = t?.vendor?.name || t?.vendor?.contactName || ''
+      const phases = (t?.phaseKeys || []).join(' ')
+      return [t.name, vendor, phases].some((s) => String(s || '').toLowerCase().includes(q))
+    })
+  }, [trades, query])
   const docsByTrade = useMemo(() => {
     const map = {}
     const allDocs = Array.isArray(home?.documents) ? home.documents : []
@@ -52,77 +66,60 @@ export default function HomeTrades() {
       <Typography variant='h6'>Trades</Typography>
       {error && <Alert severity='error'>{error}</Alert>}
 
-      <Paper variant='outlined' sx={{ maxHeight: { xs: 'none', md: 'calc(100vh - 200px)' } }}>
-        <TableContainer sx={{ maxHeight: { xs: 'none', md: 'calc(100vh - 260px)' } }}>
-          <Table size='small' stickyHeader>
-            <TableHead>
-              <TableRow>
-                <TableCell>Trade</TableCell>
-                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Vendor</TableCell>
-                <TableCell>Phases</TableCell>
-                <TableCell align='right'>Tasks</TableCell>
-                <TableCell align='center' sx={{ width: 120 }}>Progress</TableCell>
-                <TableCell align='right' sx={{ width: 160 }}>Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {trades.map((t) => {
-                const prog = computeTaskProgress(t)
-                return (
-                  <TableRow
-                    key={t._id}
-                    hover
+      <Paper variant='outlined' sx={{ p: 2 }}>
+        <TextField
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder='Search trades by name, vendor, or phase…'
+          fullWidth
+          size='small'
+        />
+        <Box sx={{ mt: 2 }}>
+          <Grid container spacing={2}>
+            {filteredTrades.map((t) => {
+              const prog = computeTaskProgress(t)
+              return (
+                <Grid item xs={12} sm={6} md={4} key={t._id}>
+                  <Card
+                    variant='outlined'
+                    sx={{ height: '100%', cursor: 'pointer', display: 'flex', flexDirection: 'column' }}
                     onClick={() => navigate(`/homes/${id}/trades/${t._id}`)}
-                    style={{ cursor: 'pointer' }}
                   >
-                    <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
-                      <Typography variant='subtitle2' sx={{ fontWeight: 600 }}>{t.name}</Typography>
-                    </TableCell>
-                    <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
-                      <Typography variant='body2' color='text.secondary'>
-                        {(t?.vendor?.name || t?.vendor?.contactName) ? (t?.vendor?.name || t?.vendor?.contactName) : '—'}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Stack direction='row' spacing={1} sx={{ flexWrap: 'wrap' }}>
+                    <CardHeader
+                      avatar={<TradeAvatar trade={t} />}
+                      title={<Typography variant='subtitle2' sx={{ fontWeight: 600 }}>{t.name}</Typography>}
+                      subheader={
+                        <Typography variant='caption' color='text.secondary'>
+                          {(t?.vendor?.name || t?.vendor?.contactName) ? (t?.vendor?.name || t?.vendor?.contactName) : '—'}
+                        </Typography>
+                      }
+                      sx={{ pb: 0.5 }}
+                    />
+                    <CardContent sx={{ flexGrow: 1 }}>
+                      <Stack direction='row' spacing={1} sx={{ flexWrap: 'wrap', mb: 1 }}>
                         {(t?.phaseKeys || []).map((p) => <Chip key={p} size='small' label={p} />)}
                       </Stack>
-                    </TableCell>
-                    <TableCell align='right'>
-                      <Typography variant='body2'>{prog.done} / {prog.total}</Typography>
-                    </TableCell>
-                    <TableCell align='center'>
-                      <Chip
-                        size='small'
-                        label={`${prog.pct}%`}
-                        color={prog.pct >= 80 ? 'success' : prog.pct >= 50 ? 'info' : 'default'}
-                        variant='outlined'
-                      />
-                    </TableCell>
-                    <TableCell align='right' onClick={(e) => e.stopPropagation()}>
-                      <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          onClick={() => setCompareDlg({ open: true, tradeId: t._id })}
-                        >
-                          Compare Bids
-                        </Button>
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
-              {!trades.length && (
-                <TableRow>
-                  <TableCell colSpan={5}>
-                    <Typography variant='body2' color='text.secondary'>No trades yet</Typography>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                      <Stack spacing={0.5}>
+                        <Typography variant='caption' color='text.secondary'>Tasks {prog.done} / {prog.total}</Typography>
+                        <LinearProgress variant='determinate' value={prog.pct} />
+                      </Stack>
+                    </CardContent>
+                    <CardActions sx={{ pt: 0, justifyContent: 'flex-end' }} onClick={(e) => e.stopPropagation()}>
+                      <Button size='small' variant='outlined' onClick={() => setCompareDlg({ open: true, tradeId: t._id })}>
+                        Compare Bids
+                      </Button>
+                    </CardActions>
+                  </Card>
+                </Grid>
+              )
+            })}
+            {!filteredTrades.length && (
+              <Grid item xs={12}>
+                <Typography variant='body2' color='text.secondary'>No trades found</Typography>
+              </Grid>
+            )}
+          </Grid>
+        </Box>
       </Paper>
       <BidCompareDialog
         open={compareDlg.open}

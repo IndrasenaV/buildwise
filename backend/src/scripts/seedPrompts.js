@@ -60,16 +60,28 @@ async function main() {
   await upsert(
     'architecture.analyze',
     [
-      'Extract home characteristics from the provided architectural drawings/blueprints or images.',
-      'Respond with a JSON object with keys:',
-      'houseType (one of: single_family, townhome, pool, airport_hangar or empty string),',
-      'roofType (one of: shingles, concrete_tile, flat_roof, metal_roof, other or empty string),',
-      'exteriorType (one of: brick, stucco, siding, other or empty string),',
-      'suggestions (array of short strings with recommendations or cautions),',
-      'suggestedTasks (array of objects with: title, description, phaseKey one of planning, preconstruction, exterior, interior).',
-      'If unsure for any key, use empty string. Do NOT include code fences or explanations.',
+      'Analyze the provided architectural PDFs/images and return ONLY JSON with:',
+      'houseType: one of single_family | townhome | pool | airport_hangar | ""',
+      'roofType: one of shingles | concrete_tile | flat_roof | metal_roof | other | ""',
+      'exteriorType: one of brick | stucco | siding | other | ""',
+      'suggestions: array<string> of brief general recommendations',
+      'suggestedTasks: array<{ title, description, phaseKey: planning|preconstruction|exterior|interior }>',
+      'roomAnalysis: array<{ name, level, areaSqFt, dimensions: { lengthFt, widthFt }, windows, doors, notes }>',
+      'costAnalysis: { summary, highImpactItems: array<{ item, rationale, estCostImpact }>, valueEngineeringIdeas: array<{ idea, estSavings, trade }> }',
+      'accessibilityComfort: { metrics: { avgDoorWidthIn, minHallwayWidthIn, bathroomTurnRadiusIn, stepFreeEntries, naturalLightScore, thermalZoningScore }, issues: array<{ area, issue, severity, recommendation }> }',
+      'optimizationSuggestions: array<{ title, description, impact: low|medium|high }>',
+      'roomAnalysis extraction requirements:',
+      '- Detect and list ALL rooms you can confidently identify across ALL pages/images. Do NOT arbitrarily limit the number of rooms.',
+      '- Include: bedrooms (BR/Bdrm/Bed/Primary), bathrooms (Full/Half/Bath/Ensuite/Powder), closets (WIC/Closet), pantry, laundry/utility, hallways, foyer/entry, kitchen, dining, breakfast/nook, living/family/great room, office/den/study, flex/bonus, media, mudroom, storage, mechanical, porches/patios/balconies, garage bays, stairs/landing.',
+      '- Use common abbreviations and label variations (e.g., BR, Bdrm, Prim, Pwd, WIC, Ldy, Mech).',
+      '- Level: infer from sheet titles/annotations (e.g., Floor 1/2, Ground/Main/Upper). Use 1 for ground/main if unclear.',
+      '- Dimensions/area: prefer annotated dimensions. If only scale/overall dims are present, approximate; if unknown, set 0.',
+      '- Windows/doors: count visible windows and doors/openings in the plan if discernible; otherwise 0.',
+      '- Notes: capture salient features (e.g., tray/vaulted ceiling, bay window, walk-in, double vanity).',
+      '- Avoid duplicates: if the same room appears on multiple sheets, include once.',
+      'If unsure for any key, use empty string, 0, or empty arrays. No prose, no code fences.',
     ].join(' '),
-    'Extract project attributes and suggestions from architecture PDFs/images',
+    'Extract project attributes, room/cost/accessibility, and optimization suggestions from architecture PDFs/images',
     {
       model: 'gpt-4o',
       supportsImages: true,
@@ -79,6 +91,23 @@ async function main() {
         exteriorType: 'brick | stucco | siding | other | ""',
         suggestions: ['string'],
         suggestedTasks: [{ title: 'string', description: 'string', phaseKey: 'planning|preconstruction|exterior|interior' }],
+        roomAnalysis: [{
+          name: 'string', level: 'string', areaSqFt: 0,
+          dimensions: { lengthFt: 0, widthFt: 0 }, windows: 0, doors: 0, notes: 'string'
+        }],
+        costAnalysis: {
+          summary: 'string',
+          highImpactItems: [{ item: 'string', rationale: 'string', estCostImpact: 'string' }],
+          valueEngineeringIdeas: [{ idea: 'string', estSavings: 'string', trade: 'string' }],
+        },
+        accessibilityComfort: {
+          metrics: {
+            avgDoorWidthIn: 0, minHallwayWidthIn: 0, bathroomTurnRadiusIn: 0, stepFreeEntries: 0,
+            naturalLightScore: 0, thermalZoningScore: 0
+          },
+          issues: [{ area: 'string', issue: 'string', severity: 'low|medium|high', recommendation: 'string' }]
+        },
+        optimizationSuggestions: [{ title: 'string', description: 'string', impact: 'low|medium|high' }],
       }, null, 2),
     }
   );

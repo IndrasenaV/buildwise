@@ -18,6 +18,7 @@ const AiLogSchema = new mongoose.Schema(
     prompt: { type: String, default: '' },
     urls: [{ type: String }],
     model: { type: String },
+    requestMessages: { type: mongoose.Schema.Types.Mixed }, // exact OpenAI messages payload sent
     responseText: { type: String },
     usage: { type: mongoose.Schema.Types.Mixed }, // supports both Completions and Responses API usage shapes
   },

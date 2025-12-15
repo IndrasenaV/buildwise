@@ -1,16 +1,27 @@
 const { Prompt } = require('../models/Prompt');
 const { normalizeKey } = require('./bidComparisonPrompts');
 
-const cache = new Map();
+const textCache = new Map();
+const docCache = new Map();
 
 async function getPromptText(key) {
-  if (cache.has(key)) return cache.get(key);
+  if (textCache.has(key)) return textCache.get(key);
   const doc = await Prompt.findOne({ key }).lean();
   if (!doc || !doc.text) {
     throw new Error(`Prompt not found: ${key}`);
   }
-  cache.set(key, doc.text);
+  textCache.set(key, doc.text);
   return doc.text;
+}
+
+async function getPrompt(key) {
+  if (docCache.has(key)) return docCache.get(key);
+  const doc = await Prompt.findOne({ key }).lean();
+  if (!doc || !doc.text) {
+    throw new Error(`Prompt not found: ${key}`);
+  }
+  docCache.set(key, doc);
+  return doc;
 }
 
 async function getTradePrompt(tradeName, extraContext = '') {
@@ -24,6 +35,7 @@ async function getTradePrompt(tradeName, extraContext = '') {
 
 module.exports = {
   getPromptText,
+  getPrompt,
   getTradePrompt,
 };
 

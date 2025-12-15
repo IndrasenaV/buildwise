@@ -39,6 +39,7 @@ import InputLabel from '@mui/material/InputLabel'
 import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 import FormControl from '@mui/material/FormControl'
+import Fab from '@mui/material/Fab'
 
 export default function HomeBidDetail() {
   const { id, bidId } = useParams()
@@ -567,7 +568,6 @@ export default function HomeBidDetail() {
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems="center" justifyContent="space-between">
           <Typography variant="subtitle1">Documents</Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Button variant="outlined" onClick={() => setAssistantOpen(true)}>Ask Alex</Button>
             <Button variant="contained" onClick={() => setDocDialogOpen(true)}>Upload</Button>
           </Box>
         </Stack>
@@ -1306,8 +1306,18 @@ export default function HomeBidDetail() {
         existingDocs={bidPdfDocs}
         onAfterUpload={(updatedHome) => setHome(updatedHome)}
       />
+      {/* Floating Chat with Alex */}
+      <Tooltip title="Chat with Alex">
+        <Fab
+          color="primary"
+          aria-label="chat-with-alex"
+          onClick={() => setAssistantOpen(true)}
+          sx={{ position: 'fixed', bottom: { xs: 16, md: 24 }, right: { xs: 16, md: 24 }, zIndex: (theme) => theme.zIndex.modal + 1 }}
+        >
+          <ChatBubbleOutlineIcon />
+        </Fab>
+      </Tooltip>
     </Stack>
   )
 }
-
 
