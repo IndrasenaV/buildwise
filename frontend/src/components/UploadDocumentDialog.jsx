@@ -104,7 +104,7 @@ export default function UploadDocumentDialog({
         payload.isFinal = !!markFinal
       }
       const resDoc = await api.addDocument(homeId, payload)
-      if (onCompleted) onCompleted(resDoc.home)
+      if (onCompleted) onCompleted(resDoc.home, resDoc.document)
       onClose?.()
     } catch (e) {
       setError(e.message)

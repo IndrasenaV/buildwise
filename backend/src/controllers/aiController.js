@@ -552,11 +552,15 @@ async function analyzeArchitectureUrls(urls, model) {
   const imageUrlRegex = /\.(png|jpe?g|webp|gif)$/i;
   let combined = '';
   const imageUrls = [];
+  const pdfUrls = [];
   for (let i = 0; i < urls.length; i++) {
     const u = urls[i];
     if (imageUrlRegex.test(u)) {
       imageUrls.push(u);
       continue;
+    }
+    if (/\.pdf($|[\?#])/i.test(u)) {
+      pdfUrls.push(u);
     }
     try {
       const text = await extractTextFromUrl(u);
@@ -574,14 +578,10 @@ async function analyzeArchitectureUrls(urls, model) {
   const preferredModel = String(promptDoc.model || '').trim();
   // Attempt to convert PDFs to images if supported
   let convertedImageUrls = [];
-  if (supportsImages && imageUrls.length === 0) {
-    // If we only had PDFs (no original images), try conversion
-    const pdfCandidates = urls.filter((u) => /\.pdf($|[\?#])/i.test(u));
-    if (pdfCandidates.length) {
+  if (supportsImages && pdfUrls.length) {
       try {
-        convertedImageUrls = await convertPdfUrlsToImages(pdfCandidates);
+      convertedImageUrls = await convertPdfUrlsToImages(pdfUrls);
       } catch (e) { try { console.log('[AI] pdf conversion failed', e?.message || e) } catch {} }
-    }
   }
   const allImageUrls = [...imageUrls, ...convertedImageUrls];
   const usedModel = model || (preferredModel || (allImageUrls.length > 0 ? 'gpt-4o' : 'gpt-4o-mini'));
@@ -589,7 +589,7 @@ async function analyzeArchitectureUrls(urls, model) {
   try {
     console.log('[AI] architecture.analyzeUrls',
       { supportsImages, preferredModel, requestModel: model || null, resolvedModel: usedModel,
-        originalImageCount: imageUrls.length, convertedFromPdfCount: convertedImageUrls.length,
+        originalImageCount: imageUrls.length, pdfCount: pdfUrls.length, convertedFromPdfCount: convertedImageUrls.length,
         totalImagesSent: allImageUrls.length, urlCount: urls.length });
   } catch {}
   let completion;
@@ -668,7 +668,186 @@ async function analyzeArchitectureUrls(urls, model) {
   };
 }
 
-module.exports = { analyzeUrl, analyzeFiles: analyzeFilesDirectToOpenAI, analyzeTradeContext, analyzeArchitecture, analyzeArchitectureUrls };
+// Step 1: Classify pages of an architecture PDF (returns page thumbnails + labels)
+async function analyzeArchitecturePages(req, res) {
+  const schema = Joi.object({
+    urls: Joi.array().items(Joi.string().uri()).min(1).optional(),
+    maxPages: Joi.number().integer().min(1).max(50).optional(),
+    model: Joi.string().optional(),
+  });
+  const { value, error } = schema.validate(req.body || {}, { abortEarly: false });
+  if (error) {
+    return res.status(400).json({ message: 'Validation failed', details: error.details });
+  }
+  const { urls = [], maxPages, model } = value;
+  try {
+    const usedModel = model || 'gpt-4o';
+    const pdfUrls = urls.filter((u) => /\.pdf($|[\?#])/i.test(u));
+    if (!pdfUrls.length && urls.length) {
+      // If not PDFs, treat each as a single-page image
+      const pages = urls.map((u, i) => ({ index: i, image: u }));
+      const classified = await classifyPageImagesWithVision(pages.map((p) => p.image), usedModel);
+      const out = classified.map((c, i) => ({
+        index: i,
+        image: pages[i].image,
+        label: c.label,
+        confidence: c.confidence,
+        title: c.title || '',
+      }));
+      return res.json({ pages: out });
+    }
+    const images = await convertPdfUrlsToImages(pdfUrls.length ? pdfUrls : urls, maxPages);
+    if (!images.length) return res.status(415).json({ message: 'No pages extracted from PDF' });
+    const classified = await classifyPageImagesWithVision(images, usedModel);
+    const pages = classified.map((c, i) => ({
+      index: i,
+      image: images[i],
+      label: c.label,
+      confidence: c.confidence,
+      title: c.title || '',
+    }));
+    return res.json({ pages });
+  } catch (e) {
+    return res.status(500).json({ message: e.message || 'Page classification failed' });
+  }
+}
+
+// Helper: classify an array of image data URLs with OpenAI Vision
+async function classifyPageImagesWithVision(imageDataUrls, model) {
+  const openai = ensureOpenAI();
+  const system = await getPromptText('system.jsonOnly');
+  const allowed = ['floor_plan','first_floor_plan','second_floor_plan','roof_plan','electrical_plan','elevation','site_plan','details','notes','unknown'];
+  const instruction =
+    `You are classifying architectural drawing pages. For each image, output a JSON array with entries:
+     { "label": one of ${JSON.stringify(allowed)}, "title": short human-friendly title, "confidence": 0..1 }.
+     Use specific floor labels when obvious (first_floor_plan, second_floor_plan). If unsure, use 'unknown'.
+     Respond with ONLY JSON array, length equal to number of images.`;
+  const userContent = [{ type: 'text', text: instruction }];
+  for (const img of imageDataUrls) {
+    userContent.push({ type: 'image_url', image_url: { url: img } });
+  }
+  const completion = await openai.chat.completions.create({
+    model: model || 'gpt-4o',
+    messages: [
+      { role: 'system', content: system },
+      { role: 'user', content: userContent },
+    ],
+    temperature: 0.1,
+  });
+  const raw = completion?.choices?.[0]?.message?.content?.toString?.() || '[]';
+  const parsed = parseJsonLoose(raw);
+  if (Array.isArray(parsed)) {
+    return parsed.map((p) => ({
+      label: String(p?.label || 'unknown').toLowerCase(),
+      title: String(p?.title || '').trim(),
+      confidence: Math.max(0, Math.min(1, Number(p?.confidence || 0))),
+    }));
+  }
+  return imageDataUrls.map(() => ({ label: 'unknown', title: '', confidence: 0 }));
+}
+
+// Step 2: Analyze only selected floor plan pages (by page indices) along with extracted PDF text
+async function analyzeArchitectureFromSelectedPages(req, res) {
+  const schema = Joi.object({
+    urls: Joi.array().items(Joi.string().uri()).min(1).required(),
+    selectedPages: Joi.array().items(Joi.number().integer().min(0)).min(1).required(),
+    model: Joi.string().optional(),
+  });
+  const { value, error } = schema.validate(req.body || {}, { abortEarly: false });
+  if (error) {
+    return res.status(400).json({ message: 'Validation failed', details: error.details });
+  }
+  const { urls, selectedPages, model } = value;
+  try {
+    const openai = ensureOpenAI();
+    // Extract combined text from all provided URLs (usually just the PDF)
+    let combined = '';
+    for (let i = 0; i < urls.length; i++) {
+      const u = urls[i];
+      try {
+        const text = await extractTextFromUrl(u);
+        if (text && text.trim()) {
+          const header = `\n\n--- Document ${i + 1}: ${u} ---\n`;
+          combined += `${header}${text}`;
+          if (combined.length > 180_000) break;
+        }
+      } catch {}
+    }
+    // Convert PDFs to images, then select only requested page indices
+    const pdfUrls = urls.filter((u) => /\.pdf($|[\?#])/i.test(u));
+    const allImages = pdfUrls.length ? await convertPdfUrlsToImages(pdfUrls) : [];
+    const selectedImages = selectedPages
+      .map((idx) => allImages[idx])
+      .filter(Boolean);
+    // Fallback: if user passed image URLs directly as urls, and no PDFs, treat urls as pages and index into them
+    if (!selectedImages.length && !pdfUrls.length) {
+      for (const i of selectedPages) {
+        if (urls[i]) selectedImages.push(urls[i]);
+      }
+    }
+    if (!selectedImages.length) {
+      return res.status(400).json({ message: 'No selected pages available to analyze' });
+    }
+    // Build messages with instruction and include selected images only
+    const system = await getPromptText('system.jsonOnly');
+    const promptDoc = await getPrompt('architecture.analyze');
+    const instruction = promptDoc.text;
+    const usedModel = model || (String(promptDoc.model || '').trim() || 'gpt-4o');
+    const userContent = [{ type: 'text', text: instruction }];
+    if (combined.trim()) {
+      userContent.push({ type: 'text', text: `Relevant document text:\n${combined.slice(0, 180_000)}` });
+    }
+    for (const img of selectedImages) {
+      userContent.push({ type: 'image_url', image_url: { url: img } });
+    }
+    const completion = await openai.chat.completions.create({
+      model: usedModel,
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: userContent },
+      ],
+      temperature: 0.1,
+    });
+    const raw = completion?.choices?.[0]?.message?.content?.toString?.() || '';
+    const parsed = parseJsonLoose(raw) || {};
+    const houseType = normalizeHouseType(parsed.houseType);
+    const roofType = normalizeRoofType(parsed.roofType);
+    const exteriorType = normalizeExteriorType(parsed.exteriorType);
+    const suggestions = Array.isArray(parsed.suggestions) ? parsed.suggestions.map((s) => String(s || '').trim()).filter(Boolean) : [];
+    const suggestedTasks = Array.isArray(parsed.suggestedTasks)
+      ? parsed.suggestedTasks.map((t) => ({
+          title: String(t?.title || '').trim(),
+          description: String(t?.description || '').trim(),
+          phaseKey: ['planning','preconstruction','exterior','interior'].includes(String(t?.phaseKey || '').toLowerCase())
+            ? String(t.phaseKey).toLowerCase()
+            : 'planning',
+        })).filter((t) => t.title)
+      : [];
+    const roomAnalysis = Array.isArray(parsed.roomAnalysis) ? parsed.roomAnalysis : [];
+    const costAnalysis = typeof parsed.costAnalysis === 'object' && parsed.costAnalysis ? parsed.costAnalysis : { summary: '', highImpactItems: [], valueEngineeringIdeas: [] };
+    const accessibilityComfort = typeof parsed.accessibilityComfort === 'object' && parsed.accessibilityComfort ? parsed.accessibilityComfort : { metrics: {}, issues: [] };
+    const optimizationSuggestions = Array.isArray(parsed.optimizationSuggestions) ? parsed.optimizationSuggestions : [];
+    return res.json({
+      result: {
+        houseType,
+        roofType,
+        exteriorType,
+        suggestions,
+        suggestedTasks,
+        roomAnalysis,
+        costAnalysis,
+        accessibilityComfort,
+        optimizationSuggestions,
+        raw,
+        model: completion?.model || usedModel
+      }
+    });
+  } catch (e) {
+    return res.status(500).json({ message: e.message || 'Selected page analysis failed' });
+  }
+}
+
+module.exports = { analyzeUrl, analyzeFiles: analyzeFilesDirectToOpenAI, analyzeTradeContext, analyzeArchitecture, analyzeArchitectureUrls, analyzeArchitecturePages, analyzeArchitectureFromSelectedPages };
 
 // Best-effort PDF -> image conversion using optional dependencies.
 // If required packages are not available, this returns [] silently.

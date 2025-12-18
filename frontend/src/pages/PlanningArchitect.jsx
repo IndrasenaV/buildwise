@@ -30,6 +30,10 @@ import List from '@mui/material/List'
 import ListItem from '@mui/material/ListItem'
 import ListItemText from '@mui/material/ListItemText'
 import Divider from '@mui/material/Divider'
+import Grid from '@mui/material/Grid'
+import Checkbox from '@mui/material/Checkbox'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Chip from '@mui/material/Chip'
 
 export default function PlanningArchitect() {
   const { id } = useParams()
@@ -40,6 +44,7 @@ export default function PlanningArchitect() {
   const [busy, setBusy] = useState(false)
   const [addTaskDlg, setAddTaskDlg] = useState({ open: false, title: '', description: '', tradeId: '', phaseKey: 'planning' })
   const [analyzeDlg, setAnalyzeDlg] = useState({ open: false, busy: false, result: null })
+  const [pageDlg, setPageDlg] = useState({ open: false, busy: false, error: '', docId: '', pages: [] })
 
   useEffect(() => {
     api.getHome(id).then(setHome).catch(() => {})
@@ -167,6 +172,29 @@ export default function PlanningArchitect() {
                   <TableCell>{uploadedAt || '—'}</TableCell>
                   <TableCell>{isFinal ? 'Yes' : 'No'}</TableCell>
                   <TableCell align="right">
+                    <Tooltip title="Classify pages">
+                      <span>
+                        <IconButton
+                          size="small"
+                          onClick={async () => {
+                            setPageDlg({ open: true, busy: true, error: '', docId: d._id, pages: [] })
+                            try {
+                              const resp = await api.classifyArchitecturePages(id, d._id)
+                              const pages = (resp?.pages || []).map((p) => {
+                                const lbl = String(p.label || '').toLowerCase()
+                                const isFloor = lbl.includes('floor')
+                                return { ...p, selected: isFloor }
+                              })
+                              setPageDlg((s) => ({ ...s, busy: false, pages }))
+                            } catch (e) {
+                              setPageDlg((s) => ({ ...s, busy: false, error: String(e?.message || 'Classification failed') }))
+                            }
+                          }}
+                        >
+                          🗂
+                        </IconButton>
+                      </span>
+                    </Tooltip>
                     <Tooltip title="View">
                       <IconButton size="small" onClick={() => openPreview(d.url, name)}>
                         <VisibilityIcon fontSize="small" />
@@ -272,7 +300,23 @@ export default function PlanningArchitect() {
         trades={home?.trades || home?.bids || []}
         defaultPinnedType="home"
         defaultDocType={uploadForCategory}
-        onCompleted={(updatedHome) => setHome(updatedHome)}
+        onCompleted={async (updatedHome, newDoc) => {
+          setHome(updatedHome)
+          try {
+            if (newDoc && String(newDoc.category || '').startsWith('architecture_')) {
+              setPageDlg({ open: true, busy: true, error: '', docId: newDoc._id, pages: [] })
+              const resp = await api.classifyArchitecturePages(id, newDoc._id)
+              const pages = (resp?.pages || []).map((p) => {
+                const lbl = String(p.label || '').toLowerCase()
+                const isFloor = lbl.includes('floor')
+                return { ...p, selected: isFloor }
+              })
+              setPageDlg((s) => ({ ...s, busy: false, pages }))
+            }
+          } catch (e) {
+            setPageDlg((s) => ({ ...s, busy: false, error: String(e?.message || 'Classification failed') }))
+          }
+        }}
       />
       <Dialog open={addTaskDlg.open} onClose={() => setAddTaskDlg((d) => ({ ...d, open: false }))} fullWidth maxWidth="sm">
         <DialogTitle>Add Suggested Task</DialogTitle>
@@ -497,6 +541,66 @@ export default function PlanningArchitect() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setAnalyzeDlg((d) => ({ ...d, open: false }))} disabled={analyzeDlg.busy}>Close</Button>
+        </DialogActions>
+      </Dialog>
+      {/* Page Classification Dialog */}
+      <Dialog open={pageDlg.open} onClose={() => (!pageDlg.busy ? setPageDlg((s) => ({ ...s, open: false })) : null)} fullWidth maxWidth="lg">
+        <DialogTitle>Classify Pages</DialogTitle>
+        <DialogContent dividers>
+          {pageDlg.busy ? (
+            <Stack alignItems="center" sx={{ py: 4 }}>
+              <CircularProgress />
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>Analyzing pages…</Typography>
+            </Stack>
+          ) : (
+            <Stack spacing={2}>
+              {!!pageDlg.error && <Typography variant="body2" color="error.main">{pageDlg.error}</Typography>}
+              <Grid container spacing={2}>
+                {pageDlg.pages.map((p) => (
+                  <Grid key={p.index} item xs={12} sm={6} md={4} lg={3}>
+                    <Paper variant="outlined" sx={{ p: 1 }}>
+                      <Box sx={{ position: 'relative', mb: 1 }}>
+                        <img src={p.image} alt={`Page ${p.index + 1}`} style={{ width: '100%', height: 240, objectFit: 'contain', background: 'rgba(255,255,255,0.04)' }} />
+                      </Box>
+                      <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+                        <Chip size="small" label={`${p.label || 'unknown'}${typeof p.confidence === 'number' ? ` (${Math.round(p.confidence * 100)}%)` : ''}`} />
+                        <FormControlLabel
+                          control={<Checkbox checked={!!p.selected} onChange={(e) => {
+                            const sel = e.target.checked
+                            setPageDlg((s) => ({ ...s, pages: s.pages.map((pg) => (pg.index === p.index ? { ...pg, selected: sel } : pg)) }))
+                          }} />}
+                          label="Use"
+                        />
+                      </Stack>
+                      {p.title ? <Typography variant="caption" color="text.secondary">{p.title}</Typography> : null}
+                    </Paper>
+                  </Grid>
+                ))}
+              </Grid>
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPageDlg((s) => ({ ...s, open: false }))} disabled={pageDlg.busy}>Close</Button>
+          <Button
+            variant="contained"
+            disabled={pageDlg.busy || !(pageDlg.pages || []).some((p) => p.selected)}
+            onClick={async () => {
+              try {
+                setPageDlg((s) => ({ ...s, busy: true }))
+                const selectedPages = (pageDlg.pages || []).filter((p) => p.selected).map((p) => p.index)
+                const resp = await api.analyzeArchitectureSelectedPages(id, pageDlg.docId, selectedPages)
+                const updatedHome = resp?.home || null
+                if (updatedHome) setHome(updatedHome)
+                setAnalyzeDlg({ open: true, busy: false, result: resp?.result || null })
+                setPageDlg((s) => ({ ...s, open: false, busy: false }))
+              } catch (e) {
+                setPageDlg((s) => ({ ...s, busy: false, error: String(e?.message || 'Analyze selected pages failed') }))
+              }
+            }}
+          >
+            Analyze selected floor plans
+          </Button>
         </DialogActions>
       </Dialog>
     </Stack>

@@ -109,6 +109,8 @@ async function createHome(req, res) {
   }
 
   const { name, address, clientName, withTemplates, templateVersionId } = value;
+  const creatorEmail = String(req?.user?.email || '').toLowerCase();
+  const creatorName = String(req?.user?.fullName || '');
   const base = {
     name,
     address,
@@ -118,6 +120,13 @@ async function createHome(req, res) {
     trades: [],
     schedules: [],
     documents: [],
+    participants: creatorEmail ? [{
+      fullName: creatorName,
+      email: creatorEmail,
+      phone: '',
+      role: 'owner',
+      permission: 'admin',
+    }] : [],
   };
   if (withTemplates) {
     const templates = await buildInitialTemplates(templateVersionId);
@@ -384,29 +393,19 @@ async function addDocument(req, res) {
       { arrayFilters: [{ 'o.category': doc.category, 'o._id': { $ne: String(doc._id) } }] }
     ).catch(() => {});
   }
-  // Fire-and-forget AI analysis for architecture docs; do not block response
+  // Fire-and-forget: classify pages for architecture docs (step 1). Do not block response.
   if (doc.category && /^architecture_/.test(doc.category) && doc.url) {
     (async () => {
       try {
-        const result = await analyzeArchitectureUrls([doc.url]);
+        const { analyzeArchitecturePages } = require('./aiController');
+        const resp = await analyzeArchitecturePages({ body: { urls: [doc.url] } }, { json: (b) => b });
+        const meta = Array.isArray(resp?.pages) ? resp.pages.map((p) => ({ index: p.index, label: p.label, confidence: p.confidence, title: p.title || '' })) : [];
         await Home.updateOne(
           { _id: homeId },
           {
             $set: {
-              'documents.$[d].analysis': {
-                houseType: result.houseType || '',
-                roofType: result.roofType || '',
-                exteriorType: result.exteriorType || '',
-                suggestions: Array.isArray(result.suggestions) ? result.suggestions : [],
-                suggestedTasks: Array.isArray(result.suggestedTasks) ? result.suggestedTasks : [],
-                roomAnalysis: Array.isArray(result.roomAnalysis) ? result.roomAnalysis : [],
-                costAnalysis: typeof result.costAnalysis === 'object' && result.costAnalysis ? result.costAnalysis : { summary: '', highImpactItems: [], valueEngineeringIdeas: [] },
-                accessibilityComfort: typeof result.accessibilityComfort === 'object' && result.accessibilityComfort ? result.accessibilityComfort : { metrics: {}, issues: [] },
-                optimizationSuggestions: Array.isArray(result.optimizationSuggestions) ? result.optimizationSuggestions : [],
-                raw: result.raw || '',
-                analyzed: true,
-                analyzedAt: new Date(),
-              }
+              'documents.$[d].analysis.pageClassification': meta,
+              'documents.$[d].analysis.pageClassifiedAt': new Date()
             }
           },
           { arrayFilters: [{ 'd._id': String(doc._id) }] }
