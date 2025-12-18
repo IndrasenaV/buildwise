@@ -43,11 +43,20 @@ export default function PlanningArchitect() {
   const [uploadForCategory, setUploadForCategory] = useState('architecture_base')
   const [busy, setBusy] = useState(false)
   const [addTaskDlg, setAddTaskDlg] = useState({ open: false, title: '', description: '', tradeId: '', phaseKey: 'planning' })
-  const [analyzeDlg, setAnalyzeDlg] = useState({ open: false, busy: false, result: null })
   const [pageDlg, setPageDlg] = useState({ open: false, busy: false, error: '', docId: '', pages: [] })
+  const [useMock, setUseMock] = useState(false)
+  // Legacy dialog references guarded off; define to avoid reference errors
+  const [analyzeDlg, setAnalyzeDlg] = useState({ open: false, busy: false, result: null })
+  const [reqDraft, setReqDraft] = useState('')
+  const [reqSaving, setReqSaving] = useState(false)
+  const [reqSaved, setReqSaved] = useState(false)
 
   useEffect(() => {
-    api.getHome(id).then(setHome).catch(() => {})
+    api.getHome(id).then((h) => {
+      setHome(h)
+      try { setReqDraft(h?.requirements || '') } catch {}
+      setReqSaved(false)
+    }).catch(() => {})
   }, [id])
 
   function openPreview(url, title) {
@@ -210,15 +219,7 @@ export default function PlanningArchitect() {
                         <IconButton
                           size="small"
                           onClick={async () => {
-                            setAnalyzeDlg({ open: true, busy: true, result: null })
-                            try {
-                              const resp = await api.analyzeArchitectureDoc(id, d._id)
-                              const updatedHome = resp?.home || resp
-                              setHome(updatedHome)
-                              setAnalyzeDlg({ open: true, busy: false, result: resp?.result || null })
-                            } catch (e) {
-                              setAnalyzeDlg({ open: true, busy: false, result: { error: String(e?.message || 'Analysis failed') } })
-                            }
+                            navigate(`/homes/${id}/planning/architect/analysis/${d._id}`)
                           }}
                         >
                           ⚙
@@ -280,10 +281,52 @@ export default function PlanningArchitect() {
           { label: 'Planning', href: `/homes/${id}/planning` },
           { label: 'Architect' }
         ]}
-        actions={
-          <Button variant="contained" onClick={() => { setUploadForCategory('architecture_base'); setUploadOpen(true) }}>Upload</Button>
-        }
+        actions={<Button variant="contained" onClick={() => { setUploadForCategory('architecture_base'); setUploadOpen(true) }}>Upload</Button>}
       />
+      {home && (
+        <Paper variant="outlined" sx={{ p: 2 }}>
+          <Typography variant="h6" gutterBottom>Homeowner Requirements</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+            Add goals, preferences, and constraints to tailor architecture analysis and suggestions.
+          </Typography>
+          {reqSaved && <Typography variant="caption" color="success.main">Saved</Typography>}
+          <TextField
+            placeholder="Describe requirements, priorities, and must-haves…"
+            value={reqDraft}
+            onChange={(e) => { setReqDraft(e.target.value); setReqSaved(false) }}
+            multiline
+            minRows={4}
+            fullWidth
+            sx={{ mt: 1 }}
+          />
+          <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+            <Button
+              variant="contained"
+              disabled={reqSaving}
+              onClick={async () => {
+                try {
+                  setReqSaving(true)
+                  const updated = await api.updateHome(id, { requirements: reqDraft })
+                  setHome(updated)
+                  setReqSaved(true)
+                } catch {
+                  // ignore
+                } finally {
+                  setReqSaving(false)
+                }
+              }}
+            >
+              {reqSaving ? 'Saving…' : 'Save requirements'}
+            </Button>
+            <Button
+              disabled={reqSaving || (reqDraft || '') === (home?.requirements || '')}
+              onClick={() => { setReqDraft(home?.requirements || ''); setReqSaved(false) }}
+            >
+              Reset
+            </Button>
+          </Stack>
+        </Paper>
+      )}
       <Paper variant="outlined" sx={{ p: 2 }}>
         <Typography variant="h6" gutterBottom>Architecture</Typography>
         <Stack spacing={2}>
@@ -361,6 +404,7 @@ export default function PlanningArchitect() {
           </Button>
         </DialogActions>
       </Dialog>
+      {false && (
       <Dialog open={analyzeDlg.open} onClose={() => (!analyzeDlg.busy ? setAnalyzeDlg((d) => ({ ...d, open: false })) : null)} fullWidth maxWidth="md">
         <DialogTitle>Architecture Analysis</DialogTitle>
         <DialogContent dividers>
@@ -378,6 +422,29 @@ export default function PlanningArchitect() {
                 <Typography variant="body2">Roof Type: {analyzeDlg.result?.roofType || '—'}</Typography>
                 <Typography variant="body2">Exterior Type: {analyzeDlg.result?.exteriorType || '—'}</Typography>
               </Box>
+              {analyzeDlg.result?.functionalScores && (
+                <Paper variant="outlined" sx={{ p: 2 }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>Functional Overview</Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} md={6}>
+                      <FunctionalRadar scores={analyzeDlg.result.functionalScores} />
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <Stack spacing={1}>
+                        {Object.entries(analyzeDlg.result.functionalScores).map(([k, v]) => (
+                          <Box key={k}>
+                            <Stack direction="row" justifyContent="space-between">
+                              <Typography variant="caption" sx={{ textTransform: 'capitalize' }}>{k}</Typography>
+                              <Typography variant="caption">{Math.round((v || 0) * 100)}%</Typography>
+                            </Stack>
+                            <LinearProgress variant="determinate" value={Math.round((v || 0) * 100)} />
+                          </Box>
+                        ))}
+                      </Stack>
+                    </Grid>
+                  </Grid>
+                </Paper>
+              )}
               {!!(analyzeDlg.result?.roomAnalysis || []).length && (
                 <Box>
                   <Typography variant="subtitle2" sx={{ mb: .5 }}>Detailed Room Analysis</Typography>
@@ -416,6 +483,18 @@ export default function PlanningArchitect() {
                     <Typography variant="body2" sx={{ mb: 1 }}>{analyzeDlg.result.costAnalysis.summary}</Typography>
                   ) : null}
                   {!!(analyzeDlg.result?.costAnalysis?.highImpactItems || []).length && (
+                    <Paper variant="outlined" sx={{ p: 2, mb: 1 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>Key Cost Drivers vs Typical</Typography>
+                      <CostDriversChart
+                        data={(analyzeDlg.result?.costAnalysis?.highImpactItems || []).map((it) => ({
+                          label: it.item,
+                          project: Number(it.projectValue ?? 0),
+                          typical: Number(it.typicalValue ?? 0),
+                        }))}
+                      />
+                    </Paper>
+                  )}
+                  {!!(analyzeDlg.result?.costAnalysis?.highImpactItems || []).length && (
                     <Box sx={{ mb: 1 }}>
                       <Typography variant="body2" sx={{ fontWeight: 600, mb: .5 }}>High-Impact Items</Typography>
                       <List dense disablePadding>
@@ -424,7 +503,13 @@ export default function PlanningArchitect() {
                             <ListItem>
                               <ListItemText
                                 primary={it.item || 'Item'}
-                                secondary={`${it.rationale || '—'}${it.estCostImpact ? ` · Impact: ${it.estCostImpact}` : ''}`}
+                                secondary={
+                                  <span>
+                                    {it.rationale || '—'}
+                                    {it.metricName ? ` · ${it.metricName}: ${it.projectValue ?? '—'} (typical ${it.typicalValue ?? '—'})` : ''}
+                                    {it.estCostImpact ? ` · Est. Impact: ${typeof it.estCostImpact === 'number' ? `$${it.estCostImpact.toLocaleString()}` : it.estCostImpact}` : ''}
+                                  </span>
+                                }
                               />
                             </ListItem>
                             {i < (analyzeDlg.result?.costAnalysis?.highImpactItems || []).length - 1 && <Divider component="li" />}
@@ -499,6 +584,27 @@ export default function PlanningArchitect() {
                   </List>
                 </Box>
               )}
+              {(analyzeDlg.result?.lightingAnalysis && ((analyzeDlg.result?.lightingAnalysis?.rooms || []).length || analyzeDlg.result?.lightingAnalysis?.summary)) && (
+                <Paper variant="outlined" sx={{ p: 2 }}>
+                  <Typography variant="subtitle2" sx={{ mb: .5 }}>Lighting & Daylight</Typography>
+                  {analyzeDlg.result?.lightingAnalysis?.summary ? (
+                    <Typography variant="body2" sx={{ mb: 1 }}>{analyzeDlg.result.lightingAnalysis.summary}</Typography>
+                  ) : null}
+                  {!!(analyzeDlg.result?.lightingAnalysis?.rooms || []).length && (
+                    <Box>
+                      {(analyzeDlg.result?.lightingAnalysis?.rooms || []).map((r, i) => (
+                        <Box key={i} sx={{ mb: 1 }}>
+                          <Stack direction="row" justifyContent="space-between">
+                            <Typography variant="caption">{r.name} {r.orientation ? `· ${r.orientation}` : ''} {typeof r.glazingAreaPct === 'number' ? `· ${r.glazingAreaPct}% glazing` : ''}</Typography>
+                            <Typography variant="caption">{Math.round((r.daylightScore || 0) * 100)}%</Typography>
+                          </Stack>
+                          <LinearProgress variant="determinate" value={Math.round((r.daylightScore || 0) * 100)} />
+                        </Box>
+                      ))}
+                    </Box>
+                  )}
+                </Paper>
+              )}
               {!!(analyzeDlg.result?.optimizationSuggestions || []).length && (
                 <Box>
                   <Typography variant="subtitle2">Smart Optimization Suggestions</Typography>
@@ -543,6 +649,7 @@ export default function PlanningArchitect() {
           <Button onClick={() => setAnalyzeDlg((d) => ({ ...d, open: false }))} disabled={analyzeDlg.busy}>Close</Button>
         </DialogActions>
       </Dialog>
+      )}
       {/* Page Classification Dialog */}
       <Dialog open={pageDlg.open} onClose={() => (!pageDlg.busy ? setPageDlg((s) => ({ ...s, open: false })) : null)} fullWidth maxWidth="lg">
         <DialogTitle>Classify Pages</DialogTitle>
@@ -592,7 +699,8 @@ export default function PlanningArchitect() {
                 const resp = await api.analyzeArchitectureSelectedPages(id, pageDlg.docId, selectedPages)
                 const updatedHome = resp?.home || null
                 if (updatedHome) setHome(updatedHome)
-                setAnalyzeDlg({ open: true, busy: false, result: resp?.result || null })
+                const result = resp?.result || null
+                navigate(`/homes/${id}/planning/architect/analysis/${pageDlg.docId}`, { state: { result } })
                 setPageDlg((s) => ({ ...s, open: false, busy: false }))
               } catch (e) {
                 setPageDlg((s) => ({ ...s, busy: false, error: String(e?.message || 'Analyze selected pages failed') }))

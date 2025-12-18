@@ -332,6 +332,8 @@ const HomeSchema = new mongoose.Schema(
     },
     schedules: [ScheduleSchema],
     documents: [DocumentSchema],
+    // Optional freeform homeowner requirements used to guide analysis
+    requirements: { type: String, default: '' },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
   },

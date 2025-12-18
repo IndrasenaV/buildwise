@@ -5,6 +5,7 @@ import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import Alert from '@mui/material/Alert'
+import TextField from '@mui/material/TextField'
 import Box from '@mui/material/Box'
 import Divider from '@mui/material/Divider'
 import List from '@mui/material/List'
@@ -119,11 +120,19 @@ export default function HomeDashboard() {
   const navigate = useNavigate()
   const [home, setHome] = useState(null)
   const [error, setError] = useState('')
+  const [reqDraft, setReqDraft] = useState('')
+  const [reqSaving, setReqSaving] = useState(false)
+  const [reqSaved, setReqSaved] = useState(false)
 
   useEffect(() => {
     let mounted = true
     api.getHome(id)
-      .then((h) => { if (mounted) setHome(h) })
+      .then((h) => {
+        if (!mounted) return
+        setHome(h)
+        try { setReqDraft(h?.requirements || '') } catch {}
+        setReqSaved(false)
+      })
       .catch((e) => { if (mounted) setError(e.message) })
     return () => { mounted = false }
   }, [id])
@@ -230,6 +239,48 @@ export default function HomeDashboard() {
             })()}
           </Box>
         </Box>
+      </Paper>
+
+      <Paper variant="outlined" sx={{ p: 2 }}>
+        <Typography variant="h6" gutterBottom>Homeowner Requirements (optional)</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+          Add goals, preferences, and constraints (e.g., “maximize daylight in bedrooms”, “target budget $500k”, “quiet office”, “age-in-place”). We’ll use this to tailor analysis and suggestions.
+        </Typography>
+        {!!reqSaved && <Alert severity="success" sx={{ mb: 1 }}>Saved</Alert>}
+        <TextField
+          placeholder="Describe requirements, priorities, and must-haves…"
+          value={reqDraft}
+          onChange={(e) => { setReqDraft(e.target.value); setReqSaved(false) }}
+          multiline
+          minRows={4}
+          fullWidth
+        />
+        <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+          <Button
+            variant="contained"
+            disabled={reqSaving}
+            onClick={async () => {
+              try {
+                setReqSaving(true)
+                const updated = await api.updateHome(id, { requirements: reqDraft })
+                setHome(updated)
+                setReqSaved(true)
+              } catch (e) {
+                setError(e.message || 'Save failed')
+              } finally {
+                setReqSaving(false)
+              }
+            }}
+          >
+            {reqSaving ? 'Saving…' : 'Save requirements'}
+          </Button>
+          <Button
+            disabled={reqSaving || (reqDraft || '') === (home?.requirements || '')}
+            onClick={() => { setReqDraft(home?.requirements || ''); setReqSaved(false) }}
+          >
+            Reset
+          </Button>
+        </Stack>
       </Paper>
 
       <Paper variant="outlined" sx={{ p: 2 }}>
