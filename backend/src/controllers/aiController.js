@@ -543,7 +543,7 @@ async function analyzeArchitecture(req, res) {
   }
 }
 
-async function analyzeArchitectureUrls(urls, model) {
+async function analyzeArchitectureUrls(urls, model, extraContext) {
   // Reuse core logic but return normalized fields only
   const req = { body: { urls, model }, user: {} };
   const openai = ensureOpenAI(); // ensure key present early
@@ -599,6 +599,9 @@ async function analyzeArchitectureUrls(urls, model) {
     if (combined.trim()) {
       userContent.push({ type: 'text', text: `Relevant document text:\n${combined.slice(0, 180_000)}` });
     }
+    if (extraContext && String(extraContext).trim()) {
+      userContent.push({ type: 'text', text: `Homeowner context:\n${String(extraContext).slice(0, 30_000)}` });
+    }
     for (const img of allImageUrls) {
       userContent.push({ type: 'image_url', image_url: { url: img } });
     }
@@ -612,10 +615,17 @@ async function analyzeArchitectureUrls(urls, model) {
       temperature: 0.1,
     });
   } else {
-    messagesToSend = [
+    const contextText = [
       { role: 'system', content: system },
-      { role: 'user', content: `${instruction}\n${combined.trim() ? `Relevant document text:\n${combined.slice(0, 180_000)}` : ''}`.trim() },
+      { role: 'user', content: instruction },
     ];
+    if (combined.trim()) {
+      contextText.push({ role: 'user', content: `Relevant document text:\n${combined.slice(0, 180_000)}` });
+    }
+    if (extraContext && String(extraContext).trim()) {
+      contextText.push({ role: 'user', content: `Homeowner context:\n${String(extraContext).slice(0, 30_000)}` });
+    }
+    messagesToSend = contextText;
     completion = await openai.chat.completions.create({
       model: usedModel,
       messages: messagesToSend,

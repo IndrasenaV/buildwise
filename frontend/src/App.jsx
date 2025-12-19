@@ -20,6 +20,7 @@ import Account from './pages/Account.jsx'
 import HomePlanning from './pages/HomePlanning.jsx'
 import PlanningArchitect from './pages/PlanningArchitect.jsx'
 import PlanningArchitectAnalysis from './pages/PlanningArchitectAnalysis.jsx'
+import PlanningArchitectInterview from './pages/PlanningArchitectInterview.jsx'
 import HomeTools from './pages/HomeTools.jsx'
 import Prompts from './pages/Prompts.jsx'
 
@@ -36,6 +37,7 @@ function App() {
         <Route path="/homes/:id/planning" element={<HomePlanning />} />
         <Route path="/homes/:id/planning/architect" element={<PlanningArchitect />} />
         <Route path="/homes/:id/planning/architect/analysis/:docId" element={<PlanningArchitectAnalysis />} />
+        <Route path="/homes/:id/planning/architect/interview" element={<PlanningArchitectInterview />} />
         <Route path="/homes/:id/tools" element={<HomeTools />} />
         <Route path="/homes/:id/:phase" element={<HomeDetail />} />
         <Route path="/homes/:id/trades" element={<HomeTrades />} />

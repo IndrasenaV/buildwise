@@ -334,6 +334,8 @@ const HomeSchema = new mongoose.Schema(
     documents: [DocumentSchema],
     // Optional freeform homeowner requirements used to guide analysis
     requirements: { type: String, default: '' },
+    // Structured interview answers for architecture planning (dynamic Q&A)
+    requirementsInterview: { type: mongoose.Schema.Types.Mixed, default: null },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
   },

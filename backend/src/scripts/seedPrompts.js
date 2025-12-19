@@ -111,6 +111,25 @@ async function main() {
       }, null, 2),
     }
   );
+  // Dynamic questions generator prompt
+  await upsert(
+    'architecture.questions.generator',
+    [
+      'You are Buildwise AI. You generate ONLY JSON arrays of the NEXT set of interview questions for architecture planning.',
+      'Use the provided knowledge base (KB) that contains an exhaustive taxonomy of possible questions grouped by sections and modes.',
+      'Strategy:',
+      '- Start with high-level questions across sections in the selected mode (e.g., summary).',
+      '- Based on the user’s answers so far, propose targeted follow-ups that drill down per section.',
+      '- Never repeat already-answered questions (check IDs in the answers).',
+      '- Keep each question concise and unambiguous.',
+      '- Respect conditional logic (e.g., only ask office specifics if office needed).',
+      'Output format: JSON array of { id, text, type, options?, min?, max?, section?, required? }',
+      'Types: text | number | boolean | select | scale',
+      'Do NOT include prose or explanations—JSON only.',
+    ].join(' '),
+    'Generator for dynamic architecture interview questions',
+    { model: 'gpt-4o-mini', supportsImages: false }
+  );
   // Seed trade prompts
   await upsert('bid.default', DEFAULT_PROMPT, 'Default bid comparison prompt', { model: 'gpt-4o-mini', supportsImages: false });
   for (const [k, v] of Object.entries(TRADE_PROMPTS)) {

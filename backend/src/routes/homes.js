@@ -4,6 +4,7 @@ const {
   getHome,
   createHome,
   updateHome,
+  // new endpoint handler inline below
   addBid,
   addTaskToBid,
   addSchedule,
@@ -51,7 +52,18 @@ router.post('/:homeId/documents/:docId/analyze-architecture', async (req, res) =
   if (!doc) return res.status(404).json({ message: 'Document not found' });
   if (!doc.url) return res.status(400).json({ message: 'Document URL missing' });
   try {
-    const result = await analyzeArchitectureUrls([doc.url]);
+    // Build extra context from homeowner requirements and interview
+    const parts = [];
+    if ((home.requirements || '').trim()) {
+      parts.push(`Homeowner freeform requirements:\n${home.requirements}`);
+    }
+    if (home.requirementsInterview && typeof home.requirementsInterview === 'object') {
+      try {
+        parts.push(`Homeowner interview answers (JSON):\n${JSON.stringify(home.requirementsInterview)}`);
+      } catch {}
+    }
+    const extraContext = parts.join('\n\n');
+    const result = await analyzeArchitectureUrls([doc.url], undefined, extraContext);
     const updated = await Home.findOneAndUpdate(
       { _id: homeId },
       {
@@ -147,6 +159,16 @@ router.post('/:homeId/documents/:docId/architecture-pages/analyze-floorplans', a
   } catch (e) {
     return res.status(500).json({ message: e.message || 'Selected page analysis failed' });
   }
+});
+
+// Save requirements interview answers
+router.put('/:homeId/requirements-interview', require('../middleware/auth').requireAuth, async (req, res) => {
+  const { Home } = require('../models/Home');
+  const { homeId } = req.params;
+  const answers = req.body && typeof req.body === 'object' ? req.body : {};
+  const updated = await Home.findByIdAndUpdate(homeId, { $set: { requirementsInterview: answers } }, { new: true });
+  if (!updated) return res.status(404).json({ message: 'Home not found' });
+  return res.json(updated);
 });
 
 router.post('/:homeId/assign-client', assignClientToHome);

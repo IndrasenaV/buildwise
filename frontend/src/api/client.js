@@ -237,6 +237,13 @@ export const api = {
     }),
   analyzeArchitecture: ({ urls }) =>
     apiRequest('/ai/analyze-architecture', { method: 'POST', body: JSON.stringify({ urls }) }),
+  // Architecture interview questions (public for authenticated users)
+  getArchitectureQuestions: () => apiRequest('/ai/architecture-questions'),
+  updateArchitectureQuestions: (payload) => apiRequest('/ai/architecture-questions', { method: 'PUT', body: JSON.stringify(payload || {}) }),
+  nextArchitectureQuestions: ({ mode = 'summary', answers = {} } = {}) =>
+    apiRequest('/ai/architecture-questions/next', { method: 'POST', body: JSON.stringify({ mode, answers }) }),
+  saveRequirementsInterview: (homeId, answers) =>
+    apiRequest(`/homes/${homeId}/requirements-interview`, { method: 'PUT', body: JSON.stringify(answers || {}) }),
   // Bid comparison for a trade
   compareTradeBids: (homeId, bidId, { urls, extraContext }) =>
     apiRequest(`/homes/${homeId}/trades/${bidId}/compare-bids`, {

@@ -25,6 +25,8 @@ import TableHead from '@mui/material/TableHead'
 import TableBody from '@mui/material/TableBody'
 import TableRow from '@mui/material/TableRow'
 import TableCell from '@mui/material/TableCell'
+import Box from '@mui/material/Box'
+import CircularProgress from '@mui/material/CircularProgress'
 
 export default function Prompts() {
   const [query, setQuery] = useState('')
@@ -33,6 +35,11 @@ export default function Prompts() {
   const [error, setError] = useState('')
   const [editor, setEditor] = useState({ open: false, mode: 'create', key: '', text: '', description: '', contextConfig: { includes: {} }, model: '', supportsImages: false, outputJsonSchema: '' })
   const MODEL_OPTIONS = ['', 'gpt-4o-mini', 'gpt-4o']
+  // KB editor state
+  const [kbLoading, setKbLoading] = useState(false)
+  const [kbError, setKbError] = useState('')
+  const [kbText, setKbText] = useState('')
+  const [kbSaving, setKbSaving] = useState(false)
 
   async function load() {
     setLoading(true)
@@ -141,6 +148,60 @@ export default function Prompts() {
             </TableBody>
           </Table>
         </Paper>
+      </Paper>
+      {/* Knowledge Base Editor */}
+      <Paper variant="outlined" sx={{ p: 2 }}>
+        <Stack spacing={2}>
+          <Typography variant="h6">Knowledge Base: architecture.questions</Typography>
+          {kbError && <Typography variant="body2" color="error.main">{kbError}</Typography>}
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Button
+              variant="outlined"
+              onClick={async () => {
+                setKbError('')
+                setKbLoading(true)
+                try {
+                  const res = await api.getArchitectureQuestions()
+                  setKbText(JSON.stringify(res?.questions || {}, null, 2))
+                } catch (e) {
+                  setKbError(e.message)
+                } finally {
+                  setKbLoading(false)
+                }
+              }}
+              disabled={kbLoading}
+            >
+              {kbLoading ? 'Loading…' : 'Load KB'}
+            </Button>
+            <Button
+              variant="contained"
+              onClick={async () => {
+                setKbError('')
+                setKbSaving(true)
+                try {
+                  const parsed = JSON.parse(kbText)
+                  await api.updateArchitectureQuestions({ data: parsed })
+                } catch (e) {
+                  setKbError(e.message || 'Save failed (ensure valid JSON)')
+                } finally {
+                  setKbSaving(false)
+                }
+              }}
+              disabled={kbSaving || !kbText.trim()}
+            >
+              {kbSaving ? 'Saving…' : 'Save KB'}
+            </Button>
+          </Stack>
+          <TextField
+            label="KB JSON (architecture.questions)"
+            value={kbText}
+            onChange={(e) => setKbText(e.target.value)}
+            fullWidth
+            multiline
+            minRows={16}
+            placeholder='{"version":1,"modes":[...],"sections":[...]}'
+          />
+        </Stack>
       </Paper>
       <Dialog open={editor.open} onClose={() => setEditor((e) => ({ ...e, open: false }))} fullWidth maxWidth="md">
         <DialogTitle>{editor.mode === 'create' ? 'Create Prompt' : `Edit Prompt: ${editor.key}`}</DialogTitle>

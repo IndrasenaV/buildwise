@@ -34,6 +34,10 @@ import Grid from '@mui/material/Grid'
 import Checkbox from '@mui/material/Checkbox'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import Chip from '@mui/material/Chip'
+import Accordion from '@mui/material/Accordion'
+import AccordionSummary from '@mui/material/AccordionSummary'
+import AccordionDetails from '@mui/material/AccordionDetails'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 
 export default function PlanningArchitect() {
   const { id } = useParams()
@@ -50,6 +54,7 @@ export default function PlanningArchitect() {
   const [reqDraft, setReqDraft] = useState('')
   const [reqSaving, setReqSaving] = useState(false)
   const [reqSaved, setReqSaved] = useState(false)
+  const [kb, setKb] = useState(null)
 
   useEffect(() => {
     api.getHome(id).then((h) => {
@@ -58,6 +63,30 @@ export default function PlanningArchitect() {
       setReqSaved(false)
     }).catch(() => {})
   }, [id])
+
+  useEffect(() => {
+    let mounted = true
+    api.getArchitectureQuestions().then((res) => {
+      if (!mounted) return
+      setKb(res?.questions || null)
+    }).catch(() => {})
+    return () => { mounted = false }
+  }, [])
+
+  const answeredEntries = useMemo(() => Object.entries(home?.requirementsInterview?.answers || {}), [home])
+  const idToLabel = useMemo(() => {
+    const map = {}
+    const node = kb
+    if (node && Array.isArray(node.sections)) {
+      for (const s of node.sections) {
+        const qs = Array.isArray(s.questions) ? s.questions : []
+        for (const q of qs) {
+          if (q?.id && q?.text) map[q.id] = q.text
+        }
+      }
+    }
+    return map
+  }, [kb])
 
   function openPreview(url, title) {
     window.open(url, '_blank', 'noopener,noreferrer')
@@ -281,7 +310,12 @@ export default function PlanningArchitect() {
           { label: 'Planning', href: `/homes/${id}/planning` },
           { label: 'Architect' }
         ]}
-        actions={<Button variant="contained" onClick={() => { setUploadForCategory('architecture_base'); setUploadOpen(true) }}>Upload</Button>}
+        actions={
+          <Stack direction="row" spacing={1}>
+            <Button variant="outlined" onClick={() => navigate(`/homes/${id}/planning/architect/interview`)}>Guided Requirement Questionnaire</Button>
+            <Button variant="contained" onClick={() => { setUploadForCategory('architecture_base'); setUploadOpen(true) }}>Upload</Button>
+          </Stack>
+        }
       />
       {home && (
         <Paper variant="outlined" sx={{ p: 2 }}>
@@ -325,6 +359,39 @@ export default function PlanningArchitect() {
               Reset
             </Button>
           </Stack>
+          <Box sx={{ mt: 2 }}>
+            <Button variant="outlined" onClick={() => navigate(`/homes/${id}/planning/architect/interview`)}>
+              Open Guided Requirement Questionnaire
+            </Button>
+          </Box>
+        {!!answeredEntries.length && (
+          <Paper variant="outlined" sx={{ p: 2, mt: 2 }}>
+            <Accordion defaultExpanded={false}>
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                  Answered Interview Questions ({answeredEntries.length})
+                </Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Grid container spacing={2}>
+                  {answeredEntries.map(([qid, val]) => (
+                    <Grid key={qid} item xs={12} sm={6}>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: .5 }}>
+                        {idToLabel[qid] || qid}
+                      </Typography>
+                      <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                        {String(val)}
+                      </Typography>
+                    </Grid>
+                  ))}
+                </Grid>
+                <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                  <Button size="small" onClick={() => navigate(`/homes/${id}/planning/architect/interview`)}>Edit in Questionnaire</Button>
+                </Stack>
+              </AccordionDetails>
+            </Accordion>
+          </Paper>
+        )}
         </Paper>
       )}
       <Paper variant="outlined" sx={{ p: 2 }}>
