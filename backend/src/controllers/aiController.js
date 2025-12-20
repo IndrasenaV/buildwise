@@ -441,9 +441,9 @@ async function analyzeArchitecture(req, res) {
         }
       } catch (_e) {}
     }
-    // Load DB prompt config
+    // Load DB prompt config - use Texas compliance prompt, fallback to standard
     const system = await getPromptText('system.jsonOnly');
-    const promptDoc = await getPrompt('architecture.analyze');
+    let promptDoc = await getPrompt('architecture.analyze.texas');
     const supportsImages = !!promptDoc.supportsImages;
     const preferredModel = String(promptDoc.model || '').trim();
     // Optionally convert PDFs to images if supported
@@ -495,9 +495,18 @@ async function analyzeArchitecture(req, res) {
     }
     const raw = completion?.choices?.[0]?.message?.content?.toString?.() || '';
     const parsed = parseJsonLoose(raw) || {};
-    const houseType = normalizeHouseType(parsed.houseType);
-    const roofType = normalizeRoofType(parsed.roofType);
-    const exteriorType = normalizeExteriorType(parsed.exteriorType);
+    
+    // Handle new structure with projectInfo wrapper, fallback to top-level for backward compatibility
+    const projectInfo = parsed.projectInfo || {};
+    const houseType = normalizeHouseType(projectInfo.houseType || parsed.houseType);
+    const roofType = normalizeRoofType(projectInfo.roofType || parsed.roofType);
+    const exteriorType = normalizeExteriorType(projectInfo.exteriorType || parsed.exteriorType);
+    const address = String(projectInfo.address || parsed.address || '').trim();
+    const totalSqFt = Number(projectInfo.totalSqFt || parsed.totalSqFt || 0);
+    
+    // Extract functionalScores (new structure: Livability, Happiness, Circulation, Acoustic)
+    const functionalScores = parsed.functionalScores || {};
+    
     const suggestions = Array.isArray(parsed.suggestions) ? parsed.suggestions.map((s) => String(s || '').trim()).filter(Boolean) : [];
     const suggestedTasks = Array.isArray(parsed.suggestedTasks)
       ? parsed.suggestedTasks.map((t) => ({
@@ -529,6 +538,10 @@ async function analyzeArchitecture(req, res) {
       houseType,
       roofType,
       exteriorType,
+      address,
+      totalSqFt,
+      projectInfo: address || totalSqFt ? { address, totalSqFt, houseType, roofType, exteriorType } : undefined,
+      functionalScores: Object.keys(functionalScores).length > 0 ? functionalScores : undefined,
       suggestions,
       suggestedTasks,
       roomAnalysis,
@@ -571,9 +584,14 @@ async function analyzeArchitectureUrls(urls, model, extraContext) {
       }
     } catch (_e) {}
   }
-  // Load prompt metadata
+  // Load prompt metadata - use Texas compliance prompt, fallback to standard
   const system = await getPromptText('system.jsonOnly');
-  const promptDoc = await getPrompt('architecture.analyze');
+  let promptDoc;
+  try {
+    promptDoc = await getPrompt('architecture.analyze.texas');
+  } catch {
+    promptDoc = await getPrompt('architecture.analyze');
+  }
   const supportsImages = !!promptDoc.supportsImages;
   const preferredModel = String(promptDoc.model || '').trim();
   // Attempt to convert PDFs to images if supported
@@ -634,15 +652,24 @@ async function analyzeArchitectureUrls(urls, model, extraContext) {
   }
   const raw = completion?.choices?.[0]?.message?.content?.toString?.() || '';
   const parsed = parseJsonLoose(raw) || {};
-  const houseType = normalizeHouseType(parsed.houseType);
-  const roofType = normalizeRoofType(parsed.roofType);
-  const exteriorType = normalizeExteriorType(parsed.exteriorType);
+  
+  // Handle new structure with projectInfo wrapper, fallback to top-level for backward compatibility
+  const projectInfo = parsed.projectInfo || {};
+  const houseType = normalizeHouseType(projectInfo.houseType || parsed.houseType);
+  const roofType = normalizeRoofType(projectInfo.roofType || parsed.roofType);
+  const exteriorType = normalizeExteriorType(projectInfo.exteriorType || parsed.exteriorType);
+  const address = String(projectInfo.address || parsed.address || '').trim();
+  const totalSqFt = Number(projectInfo.totalSqFt || parsed.totalSqFt || 0);
+  
+  // Extract functionalScores (new structure: Livability, Happiness, Circulation, Acoustic)
+  const functionalScores = parsed.functionalScores || {};
+  
   const suggestions = Array.isArray(parsed.suggestions) ? parsed.suggestions.map((s) => String(s || '').trim()).filter(Boolean) : [];
   const suggestedTasks = Array.isArray(parsed.suggestedTasks)
     ? parsed.suggestedTasks.map((t) => ({
         title: String(t?.title || '').trim(),
         description: String(t?.description || '').trim(),
-        phaseKey: normalizeHouseType('x') && ['planning','preconstruction','exterior','interior'].includes(String(t?.phaseKey || '').toLowerCase())
+        phaseKey: ['planning','preconstruction','exterior','interior'].includes(String(t?.phaseKey || '').toLowerCase())
           ? String(t.phaseKey).toLowerCase()
           : 'planning',
       })).filter((t) => t.title)
@@ -667,6 +694,10 @@ async function analyzeArchitectureUrls(urls, model, extraContext) {
     houseType,
     roofType,
     exteriorType,
+    address,
+    totalSqFt,
+    projectInfo: address || totalSqFt ? { address, totalSqFt, houseType, roofType, exteriorType } : undefined,
+    functionalScores: Object.keys(functionalScores).length > 0 ? functionalScores : undefined,
     suggestions,
     suggestedTasks,
     roomAnalysis,

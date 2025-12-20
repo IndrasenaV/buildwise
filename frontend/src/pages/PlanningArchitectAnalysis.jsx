@@ -137,26 +137,37 @@ export default function PlanningArchitectAnalysis() {
           {tab === 'overview' && (
             <Stack spacing={2}>
               <Paper variant="outlined" sx={{ p: 2 }}>
-                <Typography variant="subtitle2">Detected</Typography>
-                <Typography variant="body2">House Type: {result?.houseType || '—'}</Typography>
-                <Typography variant="body2">Roof Type: {result?.roofType || '—'}</Typography>
-                <Typography variant="body2">Exterior Type: {result?.exteriorType || '—'}</Typography>
+                <Typography variant="subtitle2" sx={{ mb: 1 }}>Project Information</Typography>
+                {result?.projectInfo?.address && (
+                  <Typography variant="body2">Address: {result.projectInfo.address}</Typography>
+                )}
+                {result?.projectInfo?.totalSqFt ? (
+                  <Typography variant="body2">Total Square Feet: {result.projectInfo.totalSqFt.toLocaleString()}</Typography>
+                ) : result?.totalSqFt ? (
+                  <Typography variant="body2">Total Square Feet: {result.totalSqFt.toLocaleString()}</Typography>
+                ) : null}
+                <Typography variant="body2">House Type: {result?.projectInfo?.houseType || result?.houseType || '—'}</Typography>
+                <Typography variant="body2">Roof Type: {result?.projectInfo?.roofType || result?.roofType || '—'}</Typography>
+                <Typography variant="body2">Exterior Type: {result?.projectInfo?.exteriorType || result?.exteriorType || '—'}</Typography>
               </Paper>
-              {result?.functionalScores && (
+              {result?.functionalScores && Object.keys(result.functionalScores).length > 0 && (
                 <Paper variant="outlined" sx={{ p: 2 }}>
                   <Typography variant="subtitle2" sx={{ mb: 1 }}>Functional Overview</Typography>
                   <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
                     <Box><FunctionalRadar scores={result.functionalScores} /></Box>
                     <Stack spacing={1}>
-                      {Object.entries(result.functionalScores).map(([k, v]) => (
-                        <Box key={k}>
-                          <Stack direction="row" justifyContent="space-between">
-                            <Typography variant="caption" sx={{ textTransform: 'capitalize' }}>{k}</Typography>
-                            <Typography variant="caption">{Math.round((v || 0) * 100)}%</Typography>
-                          </Stack>
-                          <LinearProgress variant="determinate" value={Math.round((v || 0) * 100)} />
-                        </Box>
-                      ))}
+                      {Object.entries(result.functionalScores).map(([k, v]) => {
+                        const numValue = typeof v === 'number' ? v : (typeof v === 'string' && !isNaN(parseFloat(v))) ? parseFloat(v) : 0;
+                        return (
+                          <Box key={k}>
+                            <Stack direction="row" justifyContent="space-between">
+                              <Typography variant="caption" sx={{ textTransform: 'capitalize' }}>{k}</Typography>
+                              <Typography variant="caption">{Math.round(numValue * 100)}%</Typography>
+                            </Stack>
+                            <LinearProgress variant="determinate" value={Math.round(numValue * 100)} />
+                          </Box>
+                        );
+                      })}
                     </Stack>
                   </Box>
                 </Paper>
@@ -227,8 +238,10 @@ export default function PlanningArchitectAnalysis() {
                               secondary={
                                 <span>
                                   {it.rationale || '—'}
-                                  {it.metricName ? ` · ${it.metricName}: ${it.projectValue ?? '—'} (typical ${it.typicalValue ?? '—'})` : ''}
-                                  {it.estCostImpact ? ` · Est. Impact: ${typeof it.estCostImpact === 'number' ? `$${it.estCostImpact.toLocaleString()}` : it.estCostImpact}` : ''}
+                                  {it.metricName ? ` · Metric: ${it.metricName}` : ''}
+                                  {(it.projectValue !== undefined && it.projectValue !== null) ? ` · Project: ${typeof it.projectValue === 'number' ? it.projectValue.toLocaleString() : it.projectValue}` : ''}
+                                  {(it.typicalValue !== undefined && it.typicalValue !== null) ? ` · Typical: ${typeof it.typicalValue === 'number' ? it.typicalValue.toLocaleString() : it.typicalValue}` : ''}
+                                  {it.estCostImpact ? ` · Impact: ${typeof it.estCostImpact === 'number' ? `$${it.estCostImpact.toLocaleString()}` : it.estCostImpact}` : ''}
                                 </span>
                               }
                             />
@@ -290,9 +303,18 @@ export default function PlanningArchitectAnalysis() {
                 <Box sx={{ mb: 1 }}>
                   <Typography variant="body2" sx={{ fontWeight: 600, mb: .5 }}>Metrics</Typography>
                   <List dense disablePadding>
-                    {Object.entries(result.accessibilityComfort.metrics).map(([k, v]) => (
-                      <ListItem key={k}><ListItemText primary={`${k}: ${v}`} /></ListItem>
-                    ))}
+                    {Object.entries(result.accessibilityComfort.metrics).map(([k, v]) => {
+                      // Handle both Pass/Fail strings and numeric values for backward compatibility
+                      const displayValue = typeof v === 'string' ? v : (typeof v === 'number' ? v : String(v));
+                      return (
+                        <ListItem key={k}>
+                          <ListItemText 
+                            primary={`${k}: ${displayValue}`}
+                            secondary={typeof v === 'string' && (v === 'Pass' || v === 'Fail') ? (v === 'Pass' ? 'Compliant' : 'Non-compliant') : undefined}
+                          />
+                        </ListItem>
+                      );
+                    })}
                   </List>
                 </Box>
               ) : null}
