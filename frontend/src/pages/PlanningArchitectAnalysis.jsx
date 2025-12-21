@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api/client'
 import PageHeader from '../components/PageHeader.jsx'
@@ -55,9 +55,23 @@ export default function PlanningArchitectAnalysis() {
       } else {
         setResult(stateResult || existing || null)
       }
-    }).catch(() => {})
+    }).catch(() => { })
     return () => { mounted = false }
   }, [id, docId, useMock])
+
+  const autoRunRef = useRef(false)
+  useEffect(() => { autoRunRef.current = false }, [docId])
+
+  useEffect(() => {
+    if (!home || useMock || busy || autoRunRef.current) return
+    const doc = (home?.documents || []).find((d) => String(d._id) === String(docId))
+    // If doc exists but no analysis OR analysis is incomplete/not-analyzed OR missing projectInfo (schema fix), trigger run
+    const analysis = doc?.analysis
+    if (doc && (!analysis || !analysis.analyzed || !analysis.projectInfo)) {
+      autoRunRef.current = true
+      runAnalysisNow()
+    }
+  }, [home, result, useMock, busy, docId])
 
   async function runAnalysisNow() {
     try {
@@ -112,6 +126,10 @@ export default function PlanningArchitectAnalysis() {
               <Button variant="contained" onClick={runAnalysisNow} disabled={busy}>
                 {busy ? 'Analyzing…' : 'Run Analysis'}
               </Button>
+            ) : !useMock ? (
+              <Button variant="outlined" size="small" onClick={runAnalysisNow} disabled={busy}>
+                {busy ? 'Re-analyzing…' : 'Re-analyze'}
+              </Button>
             ) : null}
           </Stack>
         }
@@ -131,8 +149,18 @@ export default function PlanningArchitectAnalysis() {
               <Tab label="Accessibility" value="access" />
               <Tab label="Suggestions" value="suggestions" />
               <Tab label="Tasks" value="tasks" />
+              <Tab label="Raw" value="raw" />
             </Tabs>
           </Paper>
+
+          {tab === 'raw' && (
+            <Paper variant="outlined" sx={{ p: 2, overflow: 'auto' }}>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>Raw Analysis Result</Typography>
+              <pre style={{ margin: 0, fontSize: 12, fontFamily: 'monospace' }}>
+                {result?.raw || JSON.stringify(result, null, 2)}
+              </pre>
+            </Paper>
+          )}
 
           {tab === 'overview' && (
             <Stack spacing={2}>
@@ -308,7 +336,7 @@ export default function PlanningArchitectAnalysis() {
                       const displayValue = typeof v === 'string' ? v : (typeof v === 'number' ? v : String(v));
                       return (
                         <ListItem key={k}>
-                          <ListItemText 
+                          <ListItemText
                             primary={`${k}: ${displayValue}`}
                             secondary={typeof v === 'string' && (v === 'Pass' || v === 'Fail') ? (v === 'Pass' ? 'Compliant' : 'Non-compliant') : undefined}
                           />

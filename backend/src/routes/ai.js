@@ -43,12 +43,14 @@ router.put('/architecture-questions', requireAuth, requireSysadmin, async (req, 
     if (!data) return res.status(400).json({ message: 'Missing data' });
     const updated = await KnowledgeBase.findOneAndUpdate(
       { key: 'architecture.questions' },
-      { $set: {
-        data,
-        ...(typeof description === 'string' ? { description } : {}),
-        ...(typeof version === 'number' ? { version } : {}),
-        ...(Array.isArray(tags) ? { tags } : {}),
-      } },
+      {
+        $set: {
+          data,
+          ...(typeof description === 'string' ? { description } : {}),
+          ...(typeof version === 'number' ? { version } : {}),
+          ...(Array.isArray(tags) ? { tags } : {}),
+        }
+      },
       { new: true }
     );
     return res.json({ key: updated.key, description: updated.description || '', questions: updated.data, version: updated.version });

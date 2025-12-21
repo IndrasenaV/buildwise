@@ -26,6 +26,15 @@ const DocumentSchema = new mongoose.Schema(
       houseType: { type: String, default: '' },
       roofType: { type: String, default: '' },
       exteriorType: { type: String, default: '' },
+      address: { type: String, default: '' },
+      totalSqFt: { type: Number, default: 0 },
+      projectInfo: {
+        address: String,
+        totalSqFt: Number,
+        houseType: String,
+        roofType: String,
+        exteriorType: String
+      },
       raw: { type: String, default: '' },
       analyzed: { type: Boolean, default: false },
       suggestions: [{ type: String }],

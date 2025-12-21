@@ -158,7 +158,7 @@ async function createHome(req, res) {
         }
       }
     }
-  } catch (_e) {}
+  } catch (_e) { }
   const home = await Home.create(base);
   return res.status(201).json(home);
 }
@@ -355,7 +355,7 @@ async function addDocument(req, res) {
     const u = new URL(value.url);
     const last = decodeURIComponent((u.pathname || '').split('/').pop() || '');
     if (!derivedFileName && last) derivedFileName = last;
-  } catch {}
+  } catch { }
   const uploadedBy = {
     email: (req?.user?.email || '').toLowerCase(),
     fullName: req?.user?.fullName || '',
@@ -392,28 +392,9 @@ async function addDocument(req, res) {
       { _id: homeId },
       { $set: { 'documents.$[o].isFinal': false } },
       { arrayFilters: [{ 'o.category': doc.category, 'o._id': { $ne: String(doc._id) } }] }
-    ).catch(() => {});
+    ).catch(() => { });
   }
-  // Fire-and-forget: classify pages for architecture docs (step 1). Do not block response.
-  if (doc.category && /^architecture_/.test(doc.category) && doc.url) {
-    (async () => {
-      try {
-        const { analyzeArchitecturePages } = require('./aiController');
-        const resp = await analyzeArchitecturePages({ body: { urls: [doc.url] } }, { json: (b) => b });
-        const meta = Array.isArray(resp?.pages) ? resp.pages.map((p) => ({ index: p.index, label: p.label, confidence: p.confidence, title: p.title || '' })) : [];
-        await Home.updateOne(
-          { _id: homeId },
-          {
-            $set: {
-              'documents.$[d].analysis.pageClassification': meta,
-              'documents.$[d].analysis.pageClassifiedAt': new Date()
-            }
-          },
-          { arrayFilters: [{ 'd._id': String(doc._id) }] }
-        );
-      } catch (_e) {}
-    })();
-  }
+
   return res.status(201).json({ home, document: doc });
 }
 
@@ -538,7 +519,7 @@ async function updateQualityCheck(req, res) {
   const updated = await Home.findOneAndUpdate(
     { _id: homeId },
     { $set: set },
-    { new: true, arrayFilters: [{ 'b._id': String(bidId) }, { 'q._id': String (checkId) }] }
+    { new: true, arrayFilters: [{ 'b._id': String(bidId) }, { 'q._id': String(checkId) }] }
   );
   if (!updated) return res.status(404).json({ message: 'Home/Trade/Check not found' });
   return res.json(updated);
