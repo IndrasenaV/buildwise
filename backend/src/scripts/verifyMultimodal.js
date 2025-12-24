@@ -49,9 +49,17 @@ async function run() {
         const dbCount = await KnowledgeChunk.countDocuments({ homeId });
         console.log(`DB Verification: Found ${dbCount} documents for homeId ${homeId}.`);
 
-        // 4. Search
+        // 4. Search with Retry (Atlas indexing can take a moment)
         console.log('Searching for "Multi-Modal"...');
-        const results = await searchSimilar('Multi-Modal', homeId);
+
+        let results = [];
+        for (let i = 0; i < 10; i++) {
+            results = await searchSimilar('Multi-Modal', homeId);
+            if (results.length > 0) break;
+            console.log(`Attempt ${i + 1}: No results yet, waiting for indexing...`);
+            await new Promise(r => setTimeout(r, 3000)); // Wait 3s
+        }
+
         console.log('Results:', results);
 
         if (results.length > 0) {

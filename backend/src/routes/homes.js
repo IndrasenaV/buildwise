@@ -43,16 +43,19 @@ router.post('/:homeId/documents', addDocument);
 router.patch('/:homeId/documents/:docId', require('../controllers/homeController').updateDocument);
 router.delete('/:homeId/documents/:docId', require('../controllers/homeController').deleteDocument);
 router.post('/:homeId/documents/:docId/analyze-architecture', async (req, res) => {
+  console.log(`[Analyze] Request for homeId: ${req.params.homeId}, docId: ${req.params.docId}`);
   const { analyzeArchitectureUrls } = require('../controllers/aiController');
-  const { storeChunk } = require('../services/vectorService');
+  const { storeChunk, ingestPdf } = require('../services/vectorService');
   const { Home } = require('../models/Home');
   const { homeId, docId } = req.params;
-  const home = await Home.findById(homeId);
-  if (!home) return res.status(404).json({ message: 'Home not found' });
-  const doc = (home.documents || []).find((d) => String(d._id) === String(docId));
-  if (!doc) return res.status(404).json({ message: 'Document not found' });
-  if (!doc.url) return res.status(400).json({ message: 'Document URL missing' });
+
   try {
+    const home = await Home.findById(homeId);
+    if (!home) return res.status(404).json({ message: 'Home not found' });
+    const doc = (home.documents || []).find((d) => String(d._id) === String(docId));
+    if (!doc) return res.status(404).json({ message: 'Document not found' });
+    if (!doc.url) return res.status(400).json({ message: 'Document URL missing' });
+
     // Build extra context from homeowner requirements and interview
     const parts = [];
     if ((home.requirements || '').trim()) {
@@ -64,7 +67,10 @@ router.post('/:homeId/documents/:docId/analyze-architecture', async (req, res) =
       } catch { }
     }
     const extraContext = parts.join('\n\n');
+
+    console.log('[Analyze] Calling analyzeArchitectureUrls...');
     const result = await analyzeArchitectureUrls([doc.url], undefined, extraContext);
+    console.log('[Analyze] Analysis complete.');
 
     // [RAG] Index the analysis for the home
     try {
@@ -75,12 +81,24 @@ router.post('/:homeId/documents/:docId/analyze-architecture', async (req, res) =
       Suggestions: ${(result.suggestions || []).join('. ')}.
       Rooms: ${(result.roomAnalysis || []).map(r => `${r.name} (${r.dimensions?.lengthFt}x${r.dimensions?.widthFt})`).join(', ')}.
       `;
+
+      console.log('[Analyze] Storing summary chunk...');
       await storeChunk({
         homeId,
         content: summaryText,
         metadata: { source: 'automated_analysis', docId: String(docId), docUrl: doc.url }
       });
-    } catch (e) { console.error('RAG Indexing failed', e); }
+
+      // [RAG] Multi-modal Ingestion via LlamaParse
+      console.log('[Analyze] Triggering LlamaParse ingestion (background) for:', doc.url);
+      ingestPdf(doc.url, homeId).catch(err => {
+        console.error('[Analyze] Background LlamaParse ingestion failed:', err.message);
+      });
+
+    } catch (e) {
+      console.error('[Analyze] RAG Indexing/Ingestion failed:', e);
+      // We don't fail the whole request if RAG fails, but we log it.
+    }
 
     const updated = await Home.findOneAndUpdate(
       { _id: homeId },
@@ -110,7 +128,8 @@ router.post('/:homeId/documents/:docId/analyze-architecture', async (req, res) =
     );
     return res.json({ home: updated, result });
   } catch (e) {
-    return res.status(500).json({ message: e.message || 'Analysis failed' });
+    console.error('[Analyze] CRITICAL ERROR:', e);
+    return res.status(500).json({ message: e.message || 'Analysis failed', stack: e.stack });
   }
 });
 

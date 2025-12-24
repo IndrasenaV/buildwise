@@ -5,7 +5,7 @@ const { Message } = require('../models/Message');
 const { Home } = require('../models/Home');
 const { getPromptText, getTradePrompt, getPrompt } = require('../services/promptService');
 const { executeWithLangChain, extractTextFromUrl } = require('../services/langchainService');
-const { storeChunk, searchSimilar } = require('../services/vectorService');
+const { storeChunk, searchSimilar, ingestPdf } = require('../services/vectorService');
 
 const analyzeSchema = Joi.object({
   // Allow either a single URL or an array of URLs
@@ -334,13 +334,27 @@ async function analyzeArchitecture(req, res) {
       // If req.body.homeId exists? The schema doesn't require it.
       // For now, we only store if homeId is provided in body (optional param addition)
       if (req.body.homeId) {
+        // 1. Store the summary
         await storeChunk({
           homeId: req.body.homeId,
           content: summaryText,
           metadata: { source: 'automated_analysis', model: usedModel }
         });
+
+        // 2. Ingest the actual PDF/Image content for deep RAG (Multi-modal)
+        console.log('[Analyze] Triggering ingestion for URLs:', urls);
+        for (const url of urls) {
+          try {
+            // ingestPdf handles URL fetching and LlamaParse
+            await ingestPdf(url, req.body.homeId);
+          } catch (err) {
+            console.error(`[Analyze] Failed to ingest URL ${url}:`, err.message);
+          }
+        }
       }
-    } catch (_e) { }
+    } catch (_e) {
+      console.error('[Analyze] Error storing chunks:', _e);
+    }
     // Normalize enriched sections
     const roomAnalysis = Array.isArray(parsed.roomAnalysis) ? parsed.roomAnalysis : [];
     const costAnalysis = typeof parsed.costAnalysis === 'object' && parsed.costAnalysis ? parsed.costAnalysis : { summary: '', highImpactItems: [], valueEngineeringIdeas: [] };
@@ -393,54 +407,80 @@ async function analyzeArchitectureUrls(urls, model, extraContext) {
       Happiness: z.number().describe("Score 0-1"),
       Circulation: z.number().describe("Score 0-1"),
       Acoustic: z.number().describe("Score 0-1"),
-    }).optional(),
+    }).optional().nullable(),
     suggestions: z.array(z.string()).describe("List of improvement suggestions"),
     suggestedTasks: z.array(z.object({
       title: z.string(),
       description: z.string(),
-      phaseKey: z.enum(['planning', 'preconstruction', 'exterior', 'interior']).optional(),
+      phaseKey: z.enum(['planning', 'preconstruction', 'exterior', 'interior']).optional().nullable(),
     })).describe("List of suggested tasks"),
     roomAnalysis: z.array(z.object({
       name: z.string(),
-      level: z.union([z.number(), z.string()]).optional(),
-      areaSqFt: z.number().optional(),
+      level: z.union([z.number(), z.string()]).optional().nullable(),
+      areaSqFt: z.number().optional().nullable(),
       dimensions: z.object({
-        lengthFt: z.number().optional(),
-        widthFt: z.number().optional(),
-      }).optional(),
-      windows: z.number().optional(),
-      doors: z.number().optional(),
-      notes: z.string().optional(),
-    })).optional(),
+        lengthFt: z.number().optional().nullable(),
+        widthFt: z.number().optional().nullable(),
+      }).optional().nullable(),
+      windows: z.number().optional().nullable(),
+      doors: z.number().optional().nullable(),
+      notes: z.string().optional().nullable(),
+    })).optional().nullable(),
     costAnalysis: z.object({
       summary: z.string(),
       highImpactItems: z.array(z.object({
         item: z.string(),
         rationale: z.string(),
-        metricName: z.string().optional(),
-        projectValue: z.union([z.number(), z.string()]).optional(),
-        typicalValue: z.union([z.number(), z.string()]).optional(),
-        estCostImpact: z.string().optional(),
+        metricName: z.string().optional().nullable(),
+        projectValue: z.union([z.number(), z.string()]).optional().nullable(),
+        typicalValue: z.union([z.number(), z.string()]).optional().nullable(),
+        estCostImpact: z.string().optional().nullable(),
       })),
       valueEngineeringIdeas: z.array(z.object({
         idea: z.string(),
         trade: z.string(),
         estSavings: z.string(),
       })),
-    }).optional(),
+    }).optional().nullable(),
     accessibilityComfort: z.object({
-      metrics: z.record(z.string()).optional(),
+      metrics: z.object({
+        avgDoorWidthIn: z.number().optional().nullable(),
+        minHallwayWidthIn: z.number().optional().nullable(),
+        bathroomTurnRadiusIn: z.number().optional().nullable(),
+        stepFreeEntries: z.number().optional().nullable(),
+        naturalLightScore: z.number().optional().nullable(),
+        thermalZoningScore: z.number().optional().nullable(),
+      }).optional().nullable(),
       issues: z.array(z.object({
         area: z.string(),
         severity: z.string(),
         issue: z.string(),
         recommendation: z.string(),
-      })).optional(),
-    }).optional(),
-    optimizationSuggestions: z.array(z.string()).optional(),
+      })).optional().nullable(),
+    }).optional().nullable(),
+    optimizationSuggestions: z.array(z.object({
+      title: z.string(),
+      description: z.string(),
+      impact: z.enum(['low', 'medium', 'high']).optional().nullable(),
+    })).optional().nullable(),
   });
 
-  const { data: parsed, usage } = await executeWithLangChain({
+  // Helper to remove nulls (convert to undefined for Mongoose)
+  function sanitize(obj) {
+    if (obj === null) return undefined;
+    if (Array.isArray(obj)) return obj.map(sanitize).filter(v => v !== undefined);
+    if (typeof obj === 'object') {
+      const out = {};
+      for (const [k, v] of Object.entries(obj)) {
+        const val = sanitize(v);
+        if (val !== undefined) out[k] = val;
+      }
+      return out;
+    }
+    return obj;
+  }
+
+  const { data: rawData, usage } = await executeWithLangChain({
     systemPrompt: system,
     userPrompt: instruction,
     urls,
@@ -450,6 +490,8 @@ async function analyzeArchitectureUrls(urls, model, extraContext) {
     extraContext: extraContext ? String(extraContext).slice(0, 30000) : '',
     schema: analysisSchema,
   });
+
+  const parsed = sanitize(rawData);
 
   console.log('[analyzeArchitectureUrls] Structured LLM response:', JSON.stringify(parsed, null, 2));
 

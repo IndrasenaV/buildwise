@@ -230,7 +230,7 @@ async function parsePdfWithLlama(source) {
   console.log(`[LlamaParse] Job started: ${jobId}`);
 
   // 3. Poll for result
-  const maxRetries = 60; // 30-60 seconds max
+  const maxRetries = 300; // 5 minutes max
   for (let i = 0; i < maxRetries; i++) {
     await new Promise(r => setTimeout(r, 1000)); // sleep 1s
 

@@ -86,6 +86,7 @@ async function ingestPdf(pdfSource, homeId) {
 async function searchSimilar(query, homeId, limit = 5) {
     if (!query || !query.trim()) return [];
     const queryVector = await getEmbedding(query);
+    console.log(`[Vector] Generated embedding for query: "${query}" (length: ${queryVector.length})`);
 
     const pipeline = [
         {
