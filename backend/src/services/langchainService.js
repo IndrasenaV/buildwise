@@ -181,10 +181,89 @@ async function executeWithLangChain({
   }
 }
 
+/**
+ * Parse PDF using LlamaCloud API (Manual Implementation)
+ * Use this to avoid dependency hell with llamaindex/readers
+ * @param {string|Buffer} source - URL, Path, or Buffer
+ */
+async function parsePdfWithLlama(source) {
+  const apiKey = process.env.LLAMA_CLOUD_API_KEY;
+  if (!apiKey) throw new Error("Missing LLAMA_CLOUD_API_KEY in .env");
+
+  // 1. Get Buffer
+  let fileBuffer;
+  let filename = 'upload.pdf';
+
+  if (Buffer.isBuffer(source)) {
+    fileBuffer = source;
+  } else if (typeof source === 'string') {
+    if (source.startsWith('http') || source.startsWith('https')) {
+      const { arrayBuffer } = await fetchArrayBuffer(source);
+      fileBuffer = Buffer.from(arrayBuffer);
+    } else {
+      fileBuffer = fs.readFileSync(source);
+      filename = path.basename(source);
+    }
+  }
+
+  // 2. Upload File
+  const baseUrl = "https://api.cloud.llamaindex.ai/api/parsing";
+  const blob = new Blob([fileBuffer], { type: 'application/pdf' });
+  const formData = new FormData();
+  formData.append('file', blob, filename);
+
+  const uploadRes = await fetch(`${baseUrl}/upload`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      // 'Content-Type': 'multipart/form-data' // Let fetch set this with boundary
+    },
+    body: formData
+  });
+
+  if (!uploadRes.ok) {
+    const err = await uploadRes.text();
+    throw new Error(`LlamaParse Upload Failed: ${uploadRes.status} ${err}`);
+  }
+
+  const { id: jobId } = await uploadRes.json();
+  console.log(`[LlamaParse] Job started: ${jobId}`);
+
+  // 3. Poll for result
+  const maxRetries = 60; // 30-60 seconds max
+  for (let i = 0; i < maxRetries; i++) {
+    await new Promise(r => setTimeout(r, 1000)); // sleep 1s
+
+    const jobRes = await fetch(`${baseUrl}/job/${jobId}`, {
+      headers: { 'Authorization': `Bearer ${apiKey}` }
+    });
+
+    if (!jobRes.ok) continue;
+
+    const jobData = await jobRes.json();
+    if (jobData.status === 'SUCCESS') {
+      // Fetch result content
+      const resultRes = await fetch(`${baseUrl}/job/${jobId}/result/markdown`, {
+        headers: { 'Authorization': `Bearer ${apiKey}` }
+      });
+      if (!resultRes.ok) throw new Error("Failed to fetch LlamaParse result");
+      const resultText = await resultRes.json(); // It returns JSON { markdown: "..." } usually? Or raw text?
+      // Actually docs say it might return JSON with markdown field.
+      // Let's assume JSON first.
+      return resultText.markdown || resultText;
+    } else if (jobData.status === 'FAILED') {
+      throw new Error(`LlamaParse Job Failed: ${JSON.stringify(jobData)}`);
+    }
+    // console.log(`[LlamaParse] Status: ${jobData.status}...`);
+  }
+  throw new Error("LlamaParse Timed Out");
+}
+
 module.exports = {
   getLangChainLLM,
   executeWithLangChain,
   extractTextFromUrl,
   extractTextFromPdfUrl,
+  parsePdfWithLlama,
 };
 

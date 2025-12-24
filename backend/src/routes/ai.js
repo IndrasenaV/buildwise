@@ -1,5 +1,5 @@
 const express = require('express');
-const { analyzeUrl, analyzeFiles, analyzeTradeContext, analyzeArchitecture } = require("../controllers/aiController");
+const { analyzeUrl, analyzeFiles, analyzeTradeContext, analyzeArchitecture, chat } = require("../controllers/aiController");
 const { requireAuth } = require('../middleware/auth');
 const { KnowledgeBase } = require('../models/KnowledgeBase');
 const OpenAI = require('openai');
@@ -22,6 +22,7 @@ router.post('/analyze', requireAuth, analyzeUrl);
 router.post('/analyze-files', requireAuth, analyzeFiles);
 router.post('/analyze-trade', requireAuth, analyzeTradeContext);
 router.post('/analyze-architecture', requireAuth, analyzeArchitecture);
+router.post('/chat', requireAuth, chat);
 
 // Public (auth required, but no sysadmin) fetch for architecture interview questions
 router.get('/architecture-questions', requireAuth, async (req, res) => {

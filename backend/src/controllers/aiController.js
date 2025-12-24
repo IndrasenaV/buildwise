@@ -5,6 +5,7 @@ const { Message } = require('../models/Message');
 const { Home } = require('../models/Home');
 const { getPromptText, getTradePrompt, getPrompt } = require('../services/promptService');
 const { executeWithLangChain, extractTextFromUrl } = require('../services/langchainService');
+const { storeChunk, searchSimilar } = require('../services/vectorService');
 
 const analyzeSchema = Joi.object({
   // Allow either a single URL or an array of URLs
@@ -318,6 +319,27 @@ async function analyzeArchitecture(req, res) {
         responseText: raw,
         usage: usage || undefined,
       });
+
+      // [RAG] Store the analysis in vector store for future context
+      // We convert the structured data to a readable summary for better embedding
+      const summaryText = `Architecture Analysis for ${address || 'Home'}.
+      House Type: ${houseType}. Roof: ${roofType}. Exterior: ${exteriorType}.
+      SqFt: ${totalSqFt}.
+      Suggestions: ${suggestions.join('. ')}.
+      Rooms: ${roomAnalysis.map(r => `${r.name} (${r.dimensions?.lengthFt}x${r.dimensions?.widthFt})`).join(', ')}.
+      `;
+      // Find home ID from request if possible, or use a placeholder if stateless (but RAG requires state)
+      // The current analyzeArchitecture is stateless (urls only).
+      // We need a homeId to store this against.
+      // If req.body.homeId exists? The schema doesn't require it.
+      // For now, we only store if homeId is provided in body (optional param addition)
+      if (req.body.homeId) {
+        await storeChunk({
+          homeId: req.body.homeId,
+          content: summaryText,
+          metadata: { source: 'automated_analysis', model: usedModel }
+        });
+      }
     } catch (_e) { }
     // Normalize enriched sections
     const roomAnalysis = Array.isArray(parsed.roomAnalysis) ? parsed.roomAnalysis : [];
@@ -448,4 +470,65 @@ async function analyzeArchitectureUrls(urls, model, extraContext) {
   };
 }
 
-module.exports = { analyzeUrl, analyzeFiles: analyzeFilesDirectToOpenAI, analyzeTradeContext, analyzeArchitecture, analyzeArchitectureUrls };
+async function chat(req, res) {
+  const schema = Joi.object({
+    homeId: Joi.string().required(),
+    message: Joi.string().required(),
+    threadId: Joi.string().optional(),
+    history: Joi.array().optional() // Optional client-provided history
+  });
+
+  const { value, error } = schema.validate(req.body);
+  if (error) return res.status(400).json({ message: error.details[0].message });
+
+  const { homeId, message, history = [] } = value;
+
+  try {
+    // 1. Retrieve relevant context (RAG)
+    const similarChunks = await searchSimilar(message, homeId, 3);
+    const contextText = similarChunks.map(c => c.content).join('\n---\n');
+
+    console.log('[Chat] User Message:', message);
+    console.log('[Chat] Retrieved Chunks:', JSON.stringify(similarChunks, null, 2));
+
+    // 2. Build system prompt with context
+    const systemPrompt = `You are an expert architect assistant.
+    Use the following context from the home's architecture plans to answer the user's question.
+    If the context doesn't contain the answer, say you don't know based on the current plans.
+    
+    Context:
+    ${contextText}
+    `;
+    console.log('[Chat] System Prompt:', systemPrompt);
+
+    // 3. Construct conversation history for Memory
+    let userPromptWithHistory = message;
+    if (history.length > 0) {
+      userPromptWithHistory = `Previous conversation:\n${history.map(h => `${h.role}: ${h.content}`).join('\n')}\n\nCurrent User Question: ${message}`;
+    }
+    console.log('[Chat] Final User Prompt to LLM:', userPromptWithHistory);
+
+    // 4. Call LLM
+    const { text, usage } = await executeWithLangChain({
+      systemPrompt,
+      userPrompt: userPromptWithHistory,
+      model: 'gpt-4o-mini',
+      temperature: 0.3
+    });
+
+    // 5. Respond
+    // Ideally save message to DB here if threadId exists
+
+    res.json({
+      reply: text,
+      contextUsed: similarChunks.map(c => c.content.slice(0, 100) + '...'),
+      usage
+    });
+
+  } catch (e) {
+    console.error("Chat error:", e);
+    res.status(500).json({ message: e.message || "Chat failed" });
+  }
+}
+
+module.exports = { analyzeUrl, analyzeFiles: analyzeFilesDirectToOpenAI, analyzeTradeContext, analyzeArchitecture, analyzeArchitectureUrls, chat };

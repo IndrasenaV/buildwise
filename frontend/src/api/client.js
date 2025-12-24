@@ -46,7 +46,7 @@ function formatApiError(body) {
       return `Please fix the following:\n- ${messages.join('\n- ')}`
     }
     if (body && body.message) return body.message
-  } catch {}
+  } catch { }
   return ''
 }
 
@@ -57,7 +57,7 @@ async function apiRequest(path, options = {}) {
     if (token) {
       authHeaders.Authorization = `Bearer ${token}`
     }
-  } catch {}
+  } catch { }
   const res = await fetch(`${API_BASE}${path}`, {
     headers: { 'Content-Type': 'application/json', ...authHeaders, ...(options.headers || {}) },
     ...options,
@@ -235,8 +235,10 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ homeId, tradeId, taskId, urls, prompt, promptKey, action, containsImages })
     }),
-  analyzeArchitecture: ({ urls }) =>
-    apiRequest('/ai/analyze-architecture', { method: 'POST', body: JSON.stringify({ urls }) }),
+  analyzeArchitecture: ({ urls, homeId }) =>
+    apiRequest('/ai/analyze-architecture', { method: 'POST', body: JSON.stringify({ urls, homeId }) }),
+  chat: ({ homeId, message, history }) =>
+    apiRequest('/ai/chat', { method: 'POST', body: JSON.stringify({ homeId, message, history }) }),
   // Architecture interview questions (public for authenticated users)
   getArchitectureQuestions: () => apiRequest('/ai/architecture-questions'),
   updateArchitectureQuestions: (payload) => apiRequest('/ai/architecture-questions', { method: 'PUT', body: JSON.stringify(payload || {}) }),

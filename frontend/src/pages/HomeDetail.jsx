@@ -35,7 +35,6 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import UploadDocumentDialog from '../components/UploadDocumentDialog.jsx'
 import DependencyGraph from '../components/DependencyGraph.jsx'
 import PhaseTimeline from '../components/PhaseTimeline.jsx'
-import Tabs from '@mui/material/Tabs'
 import Tab from '@mui/material/Tab'
 
 const ALL_PHASES = ['planning', 'preconstruction', 'exterior', 'interior']
@@ -143,7 +142,7 @@ export default function HomeDetail() {
     setUploadFile(null)
     setUploadTitle('')
     // load messages for this task
-    api.listMessages(id, { taskId: task._id, limit: 50 }).then(setTaskMessages).catch(() => {})
+    api.listMessages(id, { taskId: task._id, limit: 50 }).then(setTaskMessages).catch(() => { })
   }
   function closeTask() {
     setTaskModal({ open: false, bidId: '', task: null })
@@ -257,129 +256,129 @@ export default function HomeDetail() {
       </Paper>
 
       {viewTab === 0 ? (
-      <Paper variant="outlined" sx={{ p: 2 }}>
-        <Typography variant="h6" gutterBottom>{(PHASE_LABELS[currentPhase] || currentPhase)} Trades</Typography>
-        {error && <Alert severity="error">{error}</Alert>}
-        {bidsForPhase.length ? (
-          <List dense disablePadding>
-            {bidsForPhase.map((b, idx) => {
-              const isExpanded = expandedTradeIds.has(b._id)
-              const phaseTasks = tasksForPhase(b)
-              const tasksDone = phaseTasks.filter((t) => t.status === 'done').length
-              const qcs = qualityChecksForPhase(b)
-              const qcDone = qcs.filter((q) => q.accepted).length
-              const qcPending = qcs.length - qcDone
-              return (
-              <Box key={b._id}>
-                <ListItem alignItems="flex-start">
-                  <ListItemText
-                    primary={
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="subtitle1" sx={{ flex: 1 }}>{b.name}</Typography>
-                          <IconButton
-                            size="small"
-                            onClick={() => setExpandedTradeIds((prev) => {
-                              const next = new Set(prev)
-                              if (next.has(b._id)) next.delete(b._id); else next.add(b._id)
-                              return next
-                            })}
-                          >
-                            {isExpanded ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
-                          </IconButton>
-                        <Tooltip title="Open Trade">
-                          <IconButton size="small" onClick={() => navigate(`/homes/${id}/trades/${b._id}`)}>
-                            <LaunchIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
-                    }
-                    secondary={
-                        isExpanded ? (
-                      <Box sx={{ mt: 1 }}>
-                        {/* Tasks in this phase */}
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
-                          <Typography variant="subtitle2">Tasks</Typography>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <Tooltip title="Add Task">
-                              <IconButton
-                                size="small"
-                                onClick={() => setAddDialog({ open: true, mode: 'task', bidId: b._id, title: '', desc: '', phaseKey: currentPhase })}
-                              >
-                                <AddTaskIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Add Quality Check">
-                              <IconButton
-                                size="small"
-                                onClick={() => setAddDialog({ open: true, mode: 'check', bidId: b._id, title: '', desc: '', phaseKey: currentPhase })}
-                              >
-                                <FactCheckIcon fontSize="small" />
+        <Paper variant="outlined" sx={{ p: 2 }}>
+          <Typography variant="h6" gutterBottom>{(PHASE_LABELS[currentPhase] || currentPhase)} Trades</Typography>
+          {error && <Alert severity="error">{error}</Alert>}
+          {bidsForPhase.length ? (
+            <List dense disablePadding>
+              {bidsForPhase.map((b, idx) => {
+                const isExpanded = expandedTradeIds.has(b._id)
+                const phaseTasks = tasksForPhase(b)
+                const tasksDone = phaseTasks.filter((t) => t.status === 'done').length
+                const qcs = qualityChecksForPhase(b)
+                const qcDone = qcs.filter((q) => q.accepted).length
+                const qcPending = qcs.length - qcDone
+                return (
+                  <Box key={b._id}>
+                    <ListItem alignItems="flex-start">
+                      <ListItemText
+                        primary={
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Typography variant="subtitle1" sx={{ flex: 1 }}>{b.name}</Typography>
+                            <IconButton
+                              size="small"
+                              onClick={() => setExpandedTradeIds((prev) => {
+                                const next = new Set(prev)
+                                if (next.has(b._id)) next.delete(b._id); else next.add(b._id)
+                                return next
+                              })}
+                            >
+                              {isExpanded ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+                            </IconButton>
+                            <Tooltip title="Open Trade">
+                              <IconButton size="small" onClick={() => navigate(`/homes/${id}/trades/${b._id}`)}>
+                                <LaunchIcon fontSize="small" />
                               </IconButton>
                             </Tooltip>
                           </Box>
-                        </Box>
-                            {phaseTasks.length ? (
-                          <Box sx={{ mb: 1 }}>
-                                {phaseTasks.map((t) => (
-                              <Box key={t._id} sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5, flexWrap: 'wrap' }}>
-                                <Typography variant="body2" sx={{ flex: 1, minWidth: 240 }}>{t.title}</Typography>
-                                {t.status === 'done' && (
-                                  <Chip size="small" color="success" label={`Done${t.completedBy ? ` by ${t.completedBy}` : ''}${t.completedAt ? ` @ ${new Date(t.completedAt).toLocaleString()}` : ''}`} />
-                                )}
-                                <Tooltip title={t.status === 'done' ? 'Reopen Task' : 'Mark Done'}>
-                                  <IconButton size="small" color={t.status === 'done' ? 'default' : 'primary'} onClick={() => toggleTask(b._id, t)}>
-                                    {t.status === 'done' ? <UndoIcon fontSize="small" /> : <CheckCircleOutlineIcon fontSize="small" />}
-                                  </IconButton>
-                                </Tooltip>
-                                <Tooltip title="Open Task">
-                                  <IconButton size="small" onClick={() => openTask(b._id, t)}>
-                                    <EditIcon fontSize="small" />
-                                  </IconButton>
-                                </Tooltip>
+                        }
+                        secondary={
+                          isExpanded ? (
+                            <Box sx={{ mt: 1 }}>
+                              {/* Tasks in this phase */}
+                              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+                                <Typography variant="subtitle2">Tasks</Typography>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <Tooltip title="Add Task">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => setAddDialog({ open: true, mode: 'task', bidId: b._id, title: '', desc: '', phaseKey: currentPhase })}
+                                    >
+                                      <AddTaskIcon fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Add Quality Check">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => setAddDialog({ open: true, mode: 'check', bidId: b._id, title: '', desc: '', phaseKey: currentPhase })}
+                                    >
+                                      <FactCheckIcon fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                </Box>
                               </Box>
-                            ))}
-                          </Box>
-                        ) : (
-                          <Typography variant="body2" color="text.secondary">No tasks</Typography>
-                        )}
+                              {phaseTasks.length ? (
+                                <Box sx={{ mb: 1 }}>
+                                  {phaseTasks.map((t) => (
+                                    <Box key={t._id} sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5, flexWrap: 'wrap' }}>
+                                      <Typography variant="body2" sx={{ flex: 1, minWidth: 240 }}>{t.title}</Typography>
+                                      {t.status === 'done' && (
+                                        <Chip size="small" color="success" label={`Done${t.completedBy ? ` by ${t.completedBy}` : ''}${t.completedAt ? ` @ ${new Date(t.completedAt).toLocaleString()}` : ''}`} />
+                                      )}
+                                      <Tooltip title={t.status === 'done' ? 'Reopen Task' : 'Mark Done'}>
+                                        <IconButton size="small" color={t.status === 'done' ? 'default' : 'primary'} onClick={() => toggleTask(b._id, t)}>
+                                          {t.status === 'done' ? <UndoIcon fontSize="small" /> : <CheckCircleOutlineIcon fontSize="small" />}
+                                        </IconButton>
+                                      </Tooltip>
+                                      <Tooltip title="Open Task">
+                                        <IconButton size="small" onClick={() => openTask(b._id, t)}>
+                                          <EditIcon fontSize="small" />
+                                        </IconButton>
+                                      </Tooltip>
+                                    </Box>
+                                  ))}
+                                </Box>
+                              ) : (
+                                <Typography variant="body2" color="text.secondary">No tasks</Typography>
+                              )}
 
-                        {/* Quality checks in this phase */}
-                        <Box sx={{ mt: 1 }}>
-                          <Typography variant="subtitle2" sx={{ mb: 0.5 }}>Quality Checks</Typography>
-                              {qcs.length ? (
-                                qcs.map((qc) => (
-                              <Box key={qc._id} sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5, flexWrap: 'wrap' }}>
-                                <Typography variant="body2" sx={{ flex: 1, minWidth: 240 }}>{qc.title}</Typography>
-                                {qc.accepted ? <Chip size="small" color="success" label="Completed" /> : null}
-                                <Tooltip title={qc.accepted ? 'Reopen Check' : 'Mark Completed'}>
-                                  <IconButton size="small" color={qc.accepted ? 'default' : 'primary'} onClick={() => toggleQualityCheck(b._id, qc)}>
-                                    {qc.accepted ? <UndoIcon fontSize="small" /> : <CheckCircleOutlineIcon fontSize="small" />}
-                                  </IconButton>
-                                </Tooltip>
+                              {/* Quality checks in this phase */}
+                              <Box sx={{ mt: 1 }}>
+                                <Typography variant="subtitle2" sx={{ mb: 0.5 }}>Quality Checks</Typography>
+                                {qcs.length ? (
+                                  qcs.map((qc) => (
+                                    <Box key={qc._id} sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5, flexWrap: 'wrap' }}>
+                                      <Typography variant="body2" sx={{ flex: 1, minWidth: 240 }}>{qc.title}</Typography>
+                                      {qc.accepted ? <Chip size="small" color="success" label="Completed" /> : null}
+                                      <Tooltip title={qc.accepted ? 'Reopen Check' : 'Mark Completed'}>
+                                        <IconButton size="small" color={qc.accepted ? 'default' : 'primary'} onClick={() => toggleQualityCheck(b._id, qc)}>
+                                          {qc.accepted ? <UndoIcon fontSize="small" /> : <CheckCircleOutlineIcon fontSize="small" />}
+                                        </IconButton>
+                                      </Tooltip>
+                                    </Box>
+                                  ))
+                                ) : (
+                                  <Typography variant="body2" color="text.secondary">No quality checks</Typography>
+                                )}
                               </Box>
-                            ))
+                              {/* Footer spacing */}
+                              <Box sx={{ mt: 1 }} />
+                            </Box>
                           ) : (
-                            <Typography variant="body2" color="text.secondary">No quality checks</Typography>
-                          )}
-                        </Box>
-                        {/* Footer spacing */}
-                        <Box sx={{ mt: 1 }} />
-                      </Box>
-                        ) : (
-                          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                            Tasks: {tasksDone}/{phaseTasks.length} · Quality Checks: {qcDone} completed, {qcPending} pending
-                          </Typography>
-                        )
-                    }
-                  />
-                </ListItem>
-                {idx < bidsForPhase.length - 1 && <Divider component="li" />}
-              </Box>
-              )
-            })}
-          </List>
-        ) : <Typography variant="body2" color="text.secondary">No trades in this phase</Typography>}
-      </Paper>
+                            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                              Tasks: {tasksDone}/{phaseTasks.length} · Quality Checks: {qcDone} completed, {qcPending} pending
+                            </Typography>
+                          )
+                        }
+                      />
+                    </ListItem>
+                    {idx < bidsForPhase.length - 1 && <Divider component="li" />}
+                  </Box>
+                )
+              })}
+            </List>
+          ) : <Typography variant="body2" color="text.secondary">No trades in this phase</Typography>}
+        </Paper>
       ) : (
         <>
           <Paper variant="outlined" sx={{ p: 2 }}>
@@ -396,7 +395,7 @@ export default function HomeDetail() {
                   if (trade && task) {
                     openTask(trade._id, task)
                   }
-                } catch {}
+                } catch { }
               }}
             />
           </Paper>
@@ -545,8 +544,7 @@ export default function HomeDetail() {
           <Button onClick={submitAddDialog} variant="contained" disabled={!addDialog.title}>Add</Button>
         </DialogActions>
       </Dialog>
-
-    </Stack>
+    </Stack >
   )
 }
 

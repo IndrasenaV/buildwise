@@ -23,7 +23,7 @@ import CircularProgress from '@mui/material/CircularProgress'
 import BidCompareDialog from '../components/BidCompareDialog.jsx'
 
 const BID_TYPES = [
-  'electrical','plumbing','hvac','roofing','drywall','painting','flooring','cabinets','countertops','tile','insulation','windows & doors','finish carpentry','concrete','landscaping'
+  'electrical', 'plumbing', 'hvac', 'roofing', 'drywall', 'painting', 'flooring', 'cabinets', 'countertops', 'tile', 'insulation', 'windows & doors', 'finish carpentry', 'concrete', 'landscaping'
 ]
 
 export default function HomeTools() {
@@ -445,7 +445,7 @@ export default function HomeTools() {
             variant="contained"
             onClick={() => {
               const L = Number(concL), W = Number(concW), T = Number(concT)
-              if ([L,W,T].some((x) => Number.isNaN(x) || x <= 0)) { setConcResult(null); return }
+              if ([L, W, T].some((x) => Number.isNaN(x) || x <= 0)) { setConcResult(null); return }
               const thicknessFt = T / 12
               const cubicFeet = L * W * thicknessFt
               const cuyd = cubicFeet / 27
@@ -482,7 +482,7 @@ export default function HomeTools() {
             variant="contained"
             onClick={() => {
               const A = Number(paintArea), C = Math.max(1, Number(paintCoats)), Cov = Number(paintCoverage)
-              if ([A,C,Cov].some((x) => Number.isNaN(x) || x <= 0)) { setPaintResult(null); return }
+              if ([A, C, Cov].some((x) => Number.isNaN(x) || x <= 0)) { setPaintResult(null); return }
               const gallons = (A * C) / Cov
               const rounded = Math.ceil(gallons)
               setPaintResult({ exact: gallons.toFixed(2), rounded })
@@ -523,11 +523,11 @@ export default function HomeTools() {
               const RL = Number(tileRoomL), RW = Number(tileRoomW)
               const TL = Number(tileLen), TW = Number(tileWid)
               const W = Number(tileWaste)
-              if ([RL,RW,TL,TW].some((x) => Number.isNaN(x) || x <= 0)) { setTileResult(null); return }
+              if ([RL, RW, TL, TW].some((x) => Number.isNaN(x) || x <= 0)) { setTileResult(null); return }
               const roomSqFt = RL * RW
-              const tileSqFt = (TL/12) * (TW/12)
+              const tileSqFt = (TL / 12) * (TW / 12)
               const baseTiles = roomSqFt / tileSqFt
-              const tilesWithWaste = baseTiles * (1 + (Number.isNaN(W) ? 0.1 : (W/100)))
+              const tilesWithWaste = baseTiles * (1 + (Number.isNaN(W) ? 0.1 : (W / 100)))
               setTileResult({ tiles: Math.ceil(tilesWithWaste), area: roomSqFt.toFixed(2) })
             }}
           >
@@ -574,7 +574,7 @@ export default function HomeTools() {
                 if (!archFile) return
                 setArchBusy(true)
                 const uploaded = await uploadTemp(archFile, `homes/${id}/tools/architecture`)
-                const res = await api.analyzeArchitecture({ urls: [uploaded.url] })
+                const res = await api.analyzeArchitecture({ urls: [uploaded.url], homeId: id })
                 setArchResult({ houseType: res?.houseType || '', roofType: res?.roofType || '', exteriorType: res?.exteriorType || '' })
               } catch (e) {
                 setArchError(e.message || 'Analysis failed')

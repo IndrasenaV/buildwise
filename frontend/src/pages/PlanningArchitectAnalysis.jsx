@@ -24,6 +24,7 @@ import CostDriversChart from '../components/analysis/CostDriversChart.jsx'
 import { mockArchitectureAnalysis } from '../mock/architectureAnalysis.js'
 import Switch from '@mui/material/Switch'
 import FormControlLabel from '@mui/material/FormControlLabel'
+import { PlanChat } from '../components/PlanChat.jsx'
 
 export default function PlanningArchitectAnalysis() {
   const { id, docId } = useParams()
@@ -398,6 +399,7 @@ export default function PlanningArchitectAnalysis() {
           )}
         </>
       )}
+      {home && <PlanChat homeId={home._id} />}
     </Stack>
   )
 }

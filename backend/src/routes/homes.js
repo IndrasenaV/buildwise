@@ -44,6 +44,7 @@ router.patch('/:homeId/documents/:docId', require('../controllers/homeController
 router.delete('/:homeId/documents/:docId', require('../controllers/homeController').deleteDocument);
 router.post('/:homeId/documents/:docId/analyze-architecture', async (req, res) => {
   const { analyzeArchitectureUrls } = require('../controllers/aiController');
+  const { storeChunk } = require('../services/vectorService');
   const { Home } = require('../models/Home');
   const { homeId, docId } = req.params;
   const home = await Home.findById(homeId);
@@ -64,6 +65,23 @@ router.post('/:homeId/documents/:docId/analyze-architecture', async (req, res) =
     }
     const extraContext = parts.join('\n\n');
     const result = await analyzeArchitectureUrls([doc.url], undefined, extraContext);
+
+    // [RAG] Index the analysis for the home
+    try {
+      const summaryText = `Architecture Analysis for ${result.address || 'Home'}.
+      Document: ${doc.title || doc.fileName || 'Plan'}.
+      House Type: ${result.houseType || ''}. Roof: ${result.roofType || ''}. Exterior: ${result.exteriorType || ''}.
+      Total SqFt: ${result.totalSqFt || 0}.
+      Suggestions: ${(result.suggestions || []).join('. ')}.
+      Rooms: ${(result.roomAnalysis || []).map(r => `${r.name} (${r.dimensions?.lengthFt}x${r.dimensions?.widthFt})`).join(', ')}.
+      `;
+      await storeChunk({
+        homeId,
+        content: summaryText,
+        metadata: { source: 'automated_analysis', docId: String(docId), docUrl: doc.url }
+      });
+    } catch (e) { console.error('RAG Indexing failed', e); }
+
     const updated = await Home.findOneAndUpdate(
       { _id: homeId },
       {
