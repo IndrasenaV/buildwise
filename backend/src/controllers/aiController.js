@@ -480,34 +480,84 @@ async function analyzeArchitectureUrls(urls, model, extraContext) {
     return obj;
   }
 
-  const { data: rawData, usage } = await executeWithLangChain({
-    systemPrompt: system,
-    userPrompt: instruction,
-    urls,
-    model: usedModel,
-    temperature: 0.1,
-    supportsImages: supportsImages && hasImages,
-    extraContext: extraContext ? String(extraContext).slice(0, 30000) : '',
-    schema: analysisSchema,
-  });
+  // Refactor: Use the Texas Prompt as the System Prompt
+  const newSystemPrompt = instruction; // architecture.analyze.texas
+  const newUserPrompt = "Analyze the provided architectural plans and extract all required data.";
 
-  const parsed = sanitize(rawData);
+  // Eval / Critique Loop (Max 3 attempts)
+  let attempts = 0;
+  const maxAttempts = 3;
+  let currentInstruction = newUserPrompt; // User prompt may accumulate critique
+  let lastParsed = null;
+  let lastUsage = null;
 
-  console.log('[analyzeArchitectureUrls] Structured LLM response:', JSON.stringify(parsed, null, 2));
+  while (attempts < maxAttempts) {
+    attempts++;
+    console.log(`[analyzeArchitectureUrls] Iteration ${attempts}/${maxAttempts}...`);
+
+    const { data: rawData, usage } = await executeWithLangChain({
+      systemPrompt: newSystemPrompt,
+      userPrompt: currentInstruction,
+      urls,
+      model: usedModel,
+      temperature: 0.1,
+      supportsImages: supportsImages && hasImages,
+      extraContext: extraContext ? String(extraContext).slice(0, 30000) : '',
+      schema: analysisSchema,
+    });
+
+    const parsed = sanitize(rawData);
+    lastParsed = parsed;
+    lastUsage = usage;
+
+    // Check for "Totally Empty Object"
+    const parsedKeys = parsed ? Object.keys(parsed) : [];
+    if (!parsed || parsedKeys.length === 0) {
+      console.warn(`[analyzeArchitectureUrls] Iteration ${attempts}: Received EMPTY object.`);
+      currentInstruction += `\n\nCRITICAL ERROR: Your last response was an empty JSON object. You MUST return a populated JSON object matching the schema.`;
+      continue; // Retry immediately
+    }
+
+    // Evaluate Quality (Missing Dimensions/Windows)
+    const rooms = parsed.roomAnalysis || [];
+    const meaningfulRooms = rooms.filter(r =>
+      /bed|living|great|family|kitchen|office|study|dining/i.test(r.name || '')
+    );
+    const badMeaningfulRooms = meaningfulRooms.filter(r =>
+      (!r.dimensions || (!r.dimensions.lengthFt && !r.dimensions.widthFt)) ||
+      (r.windows === 0)
+    );
+
+    if (badMeaningfulRooms.length > 0 && attempts < maxAttempts) {
+      const failedNames = badMeaningfulRooms.map(r => r.name).slice(0, 5).join(', ');
+      const critique = `CRITICAL FEEDBACK: You missed dimensions or window counts for key rooms: ${failedNames}. You MUST look closer at the plan provided. Re-analyze the images and fill in these missing values. Estimate if necessary.`;
+      console.warn(`[analyzeArchitectureUrls] Critique: ${critique}`);
+      // Append critique to instruction for next run
+      currentInstruction += `\n\n${critique}`;
+    } else {
+      console.log('[analyzeArchitectureUrls] Quality check passed or max attempts reached.');
+      break;
+    }
+  }
+
+  // Safety fallbacks if final result is still empty/null
+  if (!lastParsed) lastParsed = {};
+
+  console.log('[analyzeArchitectureUrls] Final Structured LLM response:', JSON.stringify(lastParsed, null, 2));
 
   // No manual normalization needed thanks to Zod
-  const projectInfo = parsed.projectInfo || {};
+  const projectInfo = lastParsed.projectInfo || {};
 
   // Return result matching existing format expected by route
   return {
-    ...parsed,
+    ...lastParsed,
     // Duplicate top-level keys for backward compatibility if needed by frontend/other logic
     houseType: projectInfo.houseType || '',
     roofType: projectInfo.roofType || '',
     exteriorType: projectInfo.exteriorType || '',
     address: projectInfo.address || '',
     totalSqFt: projectInfo.totalSqFt || 0,
-    raw: JSON.stringify(parsed), // store structured result as "raw" text for inspection
+    raw: JSON.stringify(lastParsed), // store structured result as "raw" text for inspection
     model: usedModel
   };
 }
@@ -530,20 +580,63 @@ async function chat(req, res) {
     const similarChunks = await searchSimilar(message, homeId, 3);
     const contextText = similarChunks.map(c => c.content).join('\n---\n');
 
-    console.log('[Chat] User Message:', message);
-    console.log('[Chat] Retrieved Chunks:', JSON.stringify(similarChunks, null, 2));
+    // 2. Fetch Structured Analysis for specific room counts
+    const home = await Home.findById(homeId);
+    let analysisSummary = "No structured analysis available.";
 
-    // 2. Build system prompt with context
+    if (home && home.documents) {
+      const analyzedDoc = home.documents.find(d => d.analysis && d.analysis.analyzed);
+      if (analyzedDoc) {
+        const a = analyzedDoc.analysis;
+        const rooms = a.roomAnalysis || [];
+
+        // Count rooms by category
+        const counts = {};
+        rooms.forEach(r => {
+          const name = (r.name || 'Other').toLowerCase();
+          let cat = 'Other';
+          if (name.includes('bed') || name.includes('br')) cat = 'Bedroom';
+          else if (name.includes('bath') || name.includes('pwd') || name.includes('ensuite')) cat = 'Bathroom';
+          else if (name.includes('kitchen')) cat = 'Kitchen';
+          else if (name.includes('dining')) cat = 'Dining';
+          else if (name.includes('liv') || name.includes('great') || name.includes('fam')) cat = 'Living';
+          else if (name.includes('garage')) cat = 'Garage';
+
+          counts[cat] = (counts[cat] || 0) + 1;
+        });
+
+        const countStr = Object.entries(counts).map(([k, v]) => `${v} ${k}(s)`).join(', ');
+
+        analysisSummary = `
+            Analysis Summary for ${a.projectInfo?.address || 'Home'}:
+            - Type: ${a.houseType}, SqFt: ${a.totalSqFt}
+            - Room Counts: ${countStr}
+            - Suggestions: ${(a.suggestions || []).slice(0, 3).join('; ')}
+            `;
+      }
+    }
+
+    console.log('[Chat] User Message:', message);
+    console.log('[Chat] Analysis Summary:', analysisSummary);
+
+    // 3. Build system prompt with context
     const systemPrompt = `You are an expert architect assistant.
-    Use the following context from the home's architecture plans to answer the user's question.
-    If the context doesn't contain the answer, say you don't know based on the current plans.
     
-    Context:
+    PRIMARY SOURCE (Structured Analysis):
+    ${analysisSummary}
+
+    SECONDARY SOURCE (Vector Search Context):
     ${contextText}
+
+    INSTRUCTIONS:
+    1. Use the "Analysis Summary" for quantitative questions like "How many bedrooms?" or "square footage".
+    2. Use the "Vector Search Context" for specific details not in the summary.
+    3. If the user's question is vague (e.g., "Is it good?"), ambiguous, or requires more detail than available (e.g., "What is the wall color?"), ASK A CLARIFYING QUESTION instead of guessing.
+    4. Be helpful but strictly accurate to the plans provided.
     `;
     console.log('[Chat] System Prompt:', systemPrompt);
 
-    // 3. Construct conversation history for Memory
+    // 4. Construct conversation history for Memory
     let userPromptWithHistory = message;
     if (history.length > 0) {
       userPromptWithHistory = `Previous conversation:\n${history.map(h => `${h.role}: ${h.content}`).join('\n')}\n\nCurrent User Question: ${message}`;
