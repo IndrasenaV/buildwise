@@ -162,6 +162,14 @@ export default function SideNavLayout() {
               </ListItemButton>
             )}
           </ListItem>
+          <ListItem disablePadding>
+            {userRoles.includes('sysadmin') && (
+              <ListItemButton onClick={() => go('/knowledge')}>
+                <ListItemIcon><DescriptionIcon /></ListItemIcon>
+                <ListItemText primary="Knowledge Base" />
+              </ListItemButton>
+            )}
+          </ListItem>
         </List>
         {currentHomeId && (
           <>

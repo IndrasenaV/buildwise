@@ -4,6 +4,9 @@ const { AiLog } = require('../models/AiLog');
 const { Message } = require('../models/Message');
 const { Home } = require('../models/Home');
 const { getPromptText, getTradePrompt, getPrompt } = require('../services/promptService');
+const { KnowledgeDocument } = require('../models/KnowledgeDocument');
+const { ingestPdf, ingestText } = require('../services/vectorService');
+const { extractTextFromUrl } = require('../services/langchainService');
 const { executeWithLangChain, extractTextFromUrl } = require('../services/langchainService');
 const { storeChunk, searchSimilar } = require('../services/vectorService');
 
@@ -539,3 +542,81 @@ async function chat(req, res) {
 }
 
 module.exports = { analyzeUrl, analyzeFiles: analyzeFilesDirectToOpenAI, analyzeTradeContext, analyzeArchitecture, analyzeArchitectureUrls, chat };
+/**
+ * Create a knowledge document and ingest into vector store
+ * body: { url, title, trade?, city?, state?, contentType? }
+ */
+async function createKnowledge(req, res) {
+  const schema = Joi.object({
+    url: Joi.string().uri().required(),
+    title: Joi.string().required(),
+    trade: Joi.string().allow('').optional(),
+    city: Joi.string().allow('').optional(),
+    state: Joi.string().allow('').optional(),
+    contentType: Joi.string().allow('').optional(),
+  });
+  const { homeId: homeIdParam } = req.params || {};
+  const { value, error } = schema.validate(req.body || {}, { abortEarly: false });
+  if (error) return res.status(400).json({ message: 'Validation failed', details: error.details });
+
+  const { url, title, trade = '', city = '', state = '', contentType = '' } = value;
+
+  try {
+    const homeId = homeIdParam || 'global';
+    const doc = await KnowledgeDocument.create({
+      homeId,
+      title,
+      url,
+      s3Key: '',
+      trade,
+      city,
+      state,
+      contentType,
+      chunkCount: 0,
+    });
+    // Ingest
+    let count = 0;
+    const meta = { docId: String(doc._id), title, trade, city, state, contentType, source: 'kb_doc' };
+    if (/\.pdf($|[\?#])/i.test(url) || /application\/pdf/i.test(contentType)) {
+      count = await ingestPdf(url, homeId, meta);
+    } else {
+      const text = await extractTextFromUrl(url).catch(() => '');
+      if (text && text.trim()) {
+        count = await ingestText(text, homeId, meta);
+      }
+    }
+    const updated = await KnowledgeDocument.findByIdAndUpdate(doc._id, { $set: { chunkCount: count } }, { new: true });
+    return res.status(201).json({ document: updated, chunks: count });
+  } catch (e) {
+    console.error('[Knowledge] create failed:', e);
+    return res.status(500).json({ message: e.message || 'Failed to create knowledge doc' });
+  }
+}
+
+/**
+ * List knowledge documents for a home
+ */
+async function listKnowledge(req, res) {
+  const { homeId } = req.query || {};
+  const filter = homeId ? { homeId } : {};
+  const docs = await KnowledgeDocument.find(filter).sort({ createdAt: -1 }).lean();
+  return res.json({ documents: docs });
+}
+
+/**
+ * Delete a knowledge document and its chunks
+ */
+async function deleteKnowledge(req, res) {
+  const { homeId: homeIdParam, docId } = req.params;
+  const filter = { _id: docId };
+  if (homeIdParam) filter.homeId = homeIdParam;
+  const doc = await KnowledgeDocument.findOneAndDelete(filter);
+  if (!doc) return res.status(404).json({ message: 'Not found' });
+  const { KnowledgeChunk } = require('../models/KnowledgeChunk');
+  await KnowledgeChunk.deleteMany({ 'metadata.docId': String(docId), homeId });
+  return res.json({ ok: true });
+}
+
+module.exports.createKnowledge = createKnowledge;
+module.exports.listKnowledge = listKnowledge;
+module.exports.deleteKnowledge = deleteKnowledge;

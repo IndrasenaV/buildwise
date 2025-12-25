@@ -27,6 +27,8 @@ import PlanningFlooring from './pages/PlanningFlooring.jsx'
 import PlanningWindowsDoors from './pages/PlanningWindowsDoors.jsx'
 import PlanningAppliances from './pages/PlanningAppliances.jsx'
 import PlanningCabinets from './pages/PlanningCabinets.jsx'
+import PlanningKnowledge from './pages/PlanningKnowledge.jsx'
+import Knowledge from './pages/Knowledge.jsx'
 
 function App() {
   return (
@@ -45,6 +47,7 @@ function App() {
         <Route path="/homes/:id/planning/windows-doors" element={<PlanningWindowsDoors />} />
         <Route path="/homes/:id/planning/appliances" element={<PlanningAppliances />} />
         <Route path="/homes/:id/planning/cabinets" element={<PlanningCabinets />} />
+        <Route path="/homes/:id/planning/knowledge" element={<PlanningKnowledge />} />
         <Route path="/homes/:id/planning/flooring" element={<PlanningFlooring />} />
         <Route path="/homes/:id/tools" element={<HomeTools />} />
         <Route path="/homes/:id/:phase" element={<HomeDetail />} />
@@ -59,6 +62,7 @@ function App() {
         <Route path="/templates" element={<Templates />} />
         <Route path="/templates/:id" element={<TemplateEditor />} />
         <Route path="/prompts" element={<Prompts />} />
+        <Route path="/knowledge" element={<Knowledge />} />
       </Route>
     </Routes>
   )

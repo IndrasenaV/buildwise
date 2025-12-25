@@ -42,7 +42,7 @@ async function storeChunk({ homeId, content, originalContent, imageUrl, metadata
  * @param {string} homeId
  * @returns {Promise<number>} - Count of chunks created
  */
-async function ingestPdf(pdfSource, homeId) {
+async function ingestPdf(pdfSource, homeId, meta = {}) {
     console.log(`[Vector] Ingesting PDF via LlamaParse (Home: ${homeId})`);
 
     // 1. Parse with LlamaCloud to get Markdown (including image descriptions)
@@ -72,11 +72,34 @@ async function ingestPdf(pdfSource, homeId) {
             metadata: {
                 source: 'llamaparse_pdf',
                 // page info is lost with simple splitText unless we process nodes, but acceptable for now
+                ...meta
             }
         });
         processedCount++;
     }
     return processedCount;
+}
+
+/**
+ * Ingest raw text by splitting and storing embeddings
+ */
+async function ingestText(text, homeId, meta = {}) {
+    if (!text || !text.trim()) return 0;
+    const splitter = new SentenceSplitter({
+        chunkSize: 1000,
+        chunkOverlap: 200,
+    });
+    const chunks = await splitter.splitText(text);
+    let processed = 0;
+    for (const chunkText of chunks) {
+        await storeChunk({
+            homeId,
+            content: chunkText,
+            metadata: { source: 'kb_text', ...meta }
+        });
+        processed++;
+    }
+    return processed;
 }
 
 /**
@@ -121,4 +144,4 @@ async function searchSimilar(query, homeId, limit = 5) {
     }
 }
 
-module.exports = { storeChunk, searchSimilar, ingestPdf };
+module.exports = { storeChunk, searchSimilar, ingestPdf, ingestText };

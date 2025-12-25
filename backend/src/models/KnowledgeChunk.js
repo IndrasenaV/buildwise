@@ -8,9 +8,14 @@ const KnowledgeChunkSchema = new mongoose.Schema(
     imageUrl: { type: String }, // Reference to the source image (e.g. S3 url or path)
     embedding: { type: [Number], required: true }, // Vector embedding
     metadata: {
-      source: { type: String, default: 'analysis' }, // e.g. analysis, chat, doc
+      source: { type: String, default: 'analysis' }, // e.g. analysis, chat, doc, kb_doc
       docId: { type: String },
       page: { type: Number },
+      title: { type: String, default: '' },
+      trade: { type: String, default: '' },
+      city: { type: String, default: '' },
+      state: { type: String, default: '' },
+      contentType: { type: String, default: '' },
     },
   },
   { timestamps: true }

@@ -18,6 +18,7 @@ import CheckBoxIcon from '@mui/icons-material/CheckBox'
 import DoorSlidingIcon from '@mui/icons-material/DoorSliding'
 import KitchenIcon from '@mui/icons-material/Kitchen'
 import CabinetIcon from '@mui/icons-material/Kitchen'
+import MenuBookIcon from '@mui/icons-material/MenuBook'
 
 export default function HomePlanning() {
   const { id } = useParams()
@@ -94,6 +95,7 @@ export default function HomePlanning() {
               </CardActionArea>
             </Card>
           </Grid>
+          
           <Grid item xs={12} sm={6} md={3}>
             <Card>
               <CardActionArea onClick={() => {}}>
