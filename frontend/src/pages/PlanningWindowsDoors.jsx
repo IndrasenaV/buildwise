@@ -18,6 +18,7 @@ import TableRow from '@mui/material/TableRow'
 import TableCell from '@mui/material/TableCell'
 import IconButton from '@mui/material/IconButton'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
+import RangeCostBar from '../components/analysis/RangeCostBar.jsx'
 
 export default function PlanningWindowsDoors() {
   const { id } = useParams()
@@ -124,6 +125,13 @@ export default function PlanningWindowsDoors() {
   const extDoorUnitCost = useMemo(() => COSTS.exteriorDoor[extDoorType] || 0, [extDoorType])
   const intDoorUnitCost = useMemo(() => COSTS.interiorDoor[intDoorType] || 0, [intDoorType])
 
+  const windowAreaSum = useMemo(() => {
+    if (windowItems && windowItems.length) {
+      return windowItems.reduce((sum, w) => sum + (Math.max(0, Number(w.widthIn || 0)) * Math.max(0, Number(w.heightIn || 0)) / 144), 0)
+    }
+    return windowsCount * (36 * 48 / 144)
+  }, [windowItems, windowsCount])
+
   const totals = useMemo(() => {
     const winTotal = (windowItems && windowItems.length)
       ? windowItems.reduce((sum, w) => {
@@ -139,6 +147,18 @@ export default function PlanningWindowsDoors() {
       total: windows + exDoors + inDoors
     }
   }, [windowsCount, exteriorDoorsCount, interiorDoorsCount, windowItems, windowRateSqft, extDoorUnitCost, intDoorUnitCost])
+
+  const rangeTotals = useMemo(() => {
+    const minWindowRate = (Math.min(...Object.values(COSTS.window || {})) || 0) + (Math.min(...Object.values(COSTS.paneAdj || {})) || 0)
+    const maxWindowRate = (Math.max(...Object.values(COSTS.window || {})) || 0) + (Math.max(...Object.values(COSTS.paneAdj || {})) || 0)
+    const extMin = Math.min(...Object.values(COSTS.exteriorDoor || {}))
+    const extMax = Math.max(...Object.values(COSTS.exteriorDoor || {}))
+    const intMin = Math.min(...Object.values(COSTS.interiorDoor || {}))
+    const intMax = Math.max(...Object.values(COSTS.interiorDoor || {}))
+    const cheapest = (windowAreaSum * minWindowRate) + (exteriorDoorsCount * extMin) + (interiorDoorsCount * intMin)
+    const costliest = (windowAreaSum * maxWindowRate) + (exteriorDoorsCount * extMax) + (interiorDoorsCount * intMax)
+    return { cheapest, costliest }
+  }, [windowAreaSum, exteriorDoorsCount, interiorDoorsCount, COSTS])
 
   async function saveAll() {
     try {
@@ -238,6 +258,52 @@ export default function PlanningWindowsDoors() {
           </Stack>
         }
       />
+      <Paper variant="outlined" sx={{ p: 2 }}>
+        <Grid container spacing={2}>
+          <Grid item xs={12} md={6}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>Summary</Typography>
+            <Stack spacing={1}>
+              <Typography variant="body2">
+                {windowItems.length ? (
+                  <>Windows (details): {formatCurrency(totals.windows)}</>
+                ) : (
+                  <>Windows: {windowsCount} × {formatCurrency((36 * 48 / 144) * windowRateSqft)} = {formatCurrency(totals.windows)}</>
+                )}
+              </Typography>
+              <Typography variant="body2">Exterior doors: {exteriorDoorsCount} × {formatCurrency(extDoorUnitCost)} = {formatCurrency(totals.exDoors)}</Typography>
+              <Typography variant="body2">Interior doors: {interiorDoorsCount} × {formatCurrency(intDoorUnitCost)} = {formatCurrency(totals.inDoors)}</Typography>
+              <Divider />
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>Total: {formatCurrency(totals.total)}</Typography>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <TextField
+                  size="small"
+                  type="number"
+                  label="Budget (USD)"
+                  value={budget}
+                  onChange={(e) => setBudget(Number(e.target.value || 0))}
+                />
+                <Typography variant="body2" color={(Number(budget || 0) - totals.total) >= 0 ? 'success.main' : 'error.main'}>
+                  {Number(budget || 0) - totals.total >= 0
+                    ? `Under by ${formatCurrency(Number(budget || 0) - totals.total)}`
+                    : `Over by ${formatCurrency(totals.total - Number(budget || 0))}`}
+                </Typography>
+              </Stack>
+            </Stack>
+          </Grid>
+          <Grid item xs={12}>
+            <RangeCostBar
+              minLabel="Cheapest config"
+              minValue={rangeTotals.cheapest}
+              maxLabel="Costliest config"
+              maxValue={rangeTotals.costliest}
+              currentValue={totals.total}
+              budgetValue={Number(budget || 0)}
+              width={720}
+              height={96}
+            />
+          </Grid>
+        </Grid>
+      </Paper>
       <Paper variant="outlined" sx={{ p: 2 }}>
         <Typography variant="h6" gutterBottom>Counts</Typography>
         <Grid container spacing={2}>
@@ -432,42 +498,7 @@ export default function PlanningWindowsDoors() {
           Est. per-interior-door: {formatCurrency(intDoorUnitCost)}
         </Typography>
       </Paper>
-      <Paper variant="outlined" sx={{ p: 2 }}>
-        <Typography variant="h6" gutterBottom>Summary</Typography>
-        <Grid container spacing={2}>
-          <Grid item xs={12} md={6}>
-            <Stack spacing={1}>
-              <Typography variant="body2">
-                {windowItems.length ? (
-                  <>Windows (details): {formatCurrency(totals.windows)}</>
-                ) : (
-                  <>Windows: {windowsCount} × {formatCurrency((36 * 48 / 144) * windowRateSqft)} = {formatCurrency(totals.windows)}</>
-                )}
-              </Typography>
-              <Typography variant="body2">Exterior doors: {exteriorDoorsCount} × {formatCurrency(extDoorUnitCost)} = {formatCurrency(totals.exDoors)}</Typography>
-              <Typography variant="body2">Interior doors: {interiorDoorsCount} × {formatCurrency(intDoorUnitCost)} = {formatCurrency(totals.inDoors)}</Typography>
-              <Divider />
-              <Typography variant="body2" sx={{ fontWeight: 600 }}>Total: {formatCurrency(totals.total)}</Typography>
-            </Stack>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Stack spacing={1}>
-              <TextField
-                size="small"
-                type="number"
-                label="Budget (USD)"
-                value={budget}
-                onChange={(e) => setBudget(Number(e.target.value || 0))}
-              />
-              <Typography variant="body2" color={(Number(budget || 0) - totals.total) >= 0 ? 'success.main' : 'error.main'}>
-                {Number(budget || 0) - totals.total >= 0
-                  ? `Under by ${formatCurrency(Number(budget || 0) - totals.total)}`
-                  : `Over by ${formatCurrency(totals.total - Number(budget || 0))}`}
-              </Typography>
-            </Stack>
-          </Grid>
-        </Grid>
-      </Paper>
+      {/* Bottom summary removed; consolidated at top */}
     </Stack>
   )
 }

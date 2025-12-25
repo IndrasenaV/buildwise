@@ -16,6 +16,7 @@ import DoorFrontIcon from '@mui/icons-material/DoorFront'
 import TextureIcon from '@mui/icons-material/Texture'
 import CheckBoxIcon from '@mui/icons-material/CheckBox'
 import DoorSlidingIcon from '@mui/icons-material/DoorSliding'
+import KitchenIcon from '@mui/icons-material/Kitchen'
 
 export default function HomePlanning() {
   const { id } = useParams()
@@ -62,6 +63,19 @@ export default function HomePlanning() {
                     <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Windows & Doors</Typography>
                     <Typography variant="body2" color="text.secondary">Select types and estimate</Typography>
                           </div>
+                </CardContent>
+              </CardActionArea>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card>
+              <CardActionArea onClick={() => navigate(`/homes/${id}/planning/appliances`)}>
+                <CardContent style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <KitchenIcon color="primary" />
+                  <div>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Appliances</Typography>
+                    <Typography variant="body2" color="text.secondary">Select types, brand, and estimate</Typography>
+                      </div>
                 </CardContent>
               </CardActionArea>
             </Card>
