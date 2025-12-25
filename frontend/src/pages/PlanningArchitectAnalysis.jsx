@@ -21,9 +21,6 @@ import ListItemText from '@mui/material/ListItemText'
 import LinearProgress from '@mui/material/LinearProgress'
 import FunctionalRadar from '../components/analysis/FunctionalRadar.jsx'
 import CostDriversChart from '../components/analysis/CostDriversChart.jsx'
-import { mockArchitectureAnalysis } from '../mock/architectureAnalysis.js'
-import Switch from '@mui/material/Switch'
-import FormControlLabel from '@mui/material/FormControlLabel'
 import { PlanChat } from '../components/PlanChat.jsx'
 
 export default function PlanningArchitectAnalysis() {
@@ -34,11 +31,6 @@ export default function PlanningArchitectAnalysis() {
   const [result, setResult] = useState(null)
   const [tab, setTab] = useState('overview')
   const [busy, setBusy] = useState(false)
-
-  const useMock = useMemo(() => {
-    const params = new URLSearchParams(location.search || '')
-    return params.get('mock') === '1'
-  }, [location.search])
 
   const doc = useMemo(() => {
     return (home?.documents || []).find((d) => String(d._id) === String(docId))
@@ -51,20 +43,16 @@ export default function PlanningArchitectAnalysis() {
       setHome(h)
       const stateResult = location.state && location.state.result ? location.state.result : null
       const existing = ((h?.documents || []).find((d) => String(d._id) === String(docId)))?.analysis || null
-      if (useMock) {
-        setResult(stateResult || mockArchitectureAnalysis)
-      } else {
-        setResult(stateResult || existing || null)
-      }
+      setResult(stateResult || existing || null)
     }).catch(() => { })
     return () => { mounted = false }
-  }, [id, docId, useMock])
+  }, [id, docId])
 
   const autoRunRef = useRef(false)
   useEffect(() => { autoRunRef.current = false }, [docId])
 
   useEffect(() => {
-    if (!home || useMock || busy || autoRunRef.current) return
+    if (!home || busy || autoRunRef.current) return
     const doc = (home?.documents || []).find((d) => String(d._id) === String(docId))
     // If doc exists but no analysis OR analysis is incomplete/not-analyzed OR missing projectInfo (schema fix), trigger run
     const analysis = doc?.analysis
@@ -72,7 +60,7 @@ export default function PlanningArchitectAnalysis() {
       autoRunRef.current = true
       runAnalysisNow()
     }
-  }, [home, result, useMock, busy, docId])
+  }, [home, result, busy, docId])
 
   async function runAnalysisNow() {
     try {
@@ -103,41 +91,21 @@ export default function PlanningArchitectAnalysis() {
         ]}
         actions={
           <Stack direction="row" spacing={1} alignItems="center">
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={useMock}
-                  onChange={(e) => {
-                    const checked = e.target.checked
-                    const params = new URLSearchParams(location.search || '')
-                    if (checked) params.set('mock', '1'); else params.delete('mock')
-                    navigate({ pathname: location.pathname, search: params.toString() ? `?${params.toString()}` : '' }, { replace: true, state: {} })
-                    // Optimistically update result
-                    if (checked) {
-                      setResult(mockArchitectureAnalysis)
-                    } else {
-                      setResult(doc?.analysis || null)
-                    }
-                  }}
-                />
-              }
-              label="Mock results"
-            />
-            {!result && !useMock ? (
+            {!result ? (
               <Button variant="contained" onClick={runAnalysisNow} disabled={busy}>
                 {busy ? 'Analyzing…' : 'Run Analysis'}
               </Button>
-            ) : !useMock ? (
+            ) : (
               <Button variant="outlined" size="small" onClick={runAnalysisNow} disabled={busy}>
                 {busy ? 'Re-analyzing…' : 'Re-analyze'}
               </Button>
-            ) : null}
+            )}
           </Stack>
         }
       />
       {!result ? (
         <Typography variant="body2" color="text.secondary">
-          {useMock ? 'Loading mock analysis…' : 'No analysis yet. Use Run Analysis to start.'}
+          No analysis yet. Use Run Analysis to start.
         </Typography>
       ) : (
         <>

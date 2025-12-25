@@ -6,6 +6,7 @@ import IconButton from '@mui/material/IconButton'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import Breadcrumbs from '@mui/material/Breadcrumbs'
 import Link from '@mui/material/Link'
+import { Link as RouterLink } from 'react-router-dom'
 
 /**
  * Reusable page header with:
@@ -44,7 +45,7 @@ export default function PageHeader({ title, onBack, breadcrumbs = [], actions = 
             {breadcrumbs.map((b, idx) => (
               <Fragment key={`${b.label}-${idx}`}>
                 {b.href ? (
-                  <Link underline="hover" color="inherit" href={b.href}>
+                  <Link underline="hover" color="inherit" component={RouterLink} to={b.href}>
                     {b.label}
                   </Link>
                 ) : (

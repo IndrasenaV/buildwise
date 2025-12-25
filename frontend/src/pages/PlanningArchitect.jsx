@@ -48,7 +48,6 @@ export default function PlanningArchitect() {
   const [busy, setBusy] = useState(false)
   const [addTaskDlg, setAddTaskDlg] = useState({ open: false, title: '', description: '', tradeId: '', phaseKey: 'planning' })
   const [pageDlg, setPageDlg] = useState({ open: false, busy: false, error: '', docId: '', pages: [] })
-  const [useMock, setUseMock] = useState(false)
   // Legacy dialog references guarded off; define to avoid reference errors
   const [analyzeDlg, setAnalyzeDlg] = useState({ open: false, busy: false, result: null })
   const [reqDraft, setReqDraft] = useState('')

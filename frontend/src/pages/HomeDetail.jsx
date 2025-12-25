@@ -35,6 +35,7 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import UploadDocumentDialog from '../components/UploadDocumentDialog.jsx'
 import DependencyGraph from '../components/DependencyGraph.jsx'
 import PhaseTimeline from '../components/PhaseTimeline.jsx'
+import Tabs from '@mui/material/Tabs'
 import Tab from '@mui/material/Tab'
 
 const ALL_PHASES = ['planning', 'preconstruction', 'exterior', 'interior']
