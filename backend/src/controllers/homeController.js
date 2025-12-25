@@ -169,6 +169,7 @@ const homeUpdateSchema = Joi.object({
   clientName: Joi.string().allow('').optional(),
   requirements: Joi.string().allow('').optional(),
   flooring: Joi.object().unknown(true).optional(),
+  windowsDoors: Joi.object().unknown(true).optional(),
   phases: Joi.array()
     .items(
       Joi.object({
@@ -468,6 +469,23 @@ async function updateDocument(req, res) {
   return res.json(updated);
 }
 
+// Dedicated updater for windows & doors (avoids top-level schema issues)
+async function updateWindowsDoors(req, res) {
+  const { homeId } = req.params;
+  const schema = Joi.object().unknown(true).required();
+  const { value, error } = schema.validate(req.body || {}, { abortEarly: false });
+  if (error) {
+    return res.status(400).json({ message: 'Validation failed', details: error.details });
+  }
+  const updated = await Home.findByIdAndUpdate(
+    homeId,
+    { $set: { windowsDoors: value } },
+    { new: true }
+  );
+  if (!updated) return res.status(404).json({ message: 'Home not found' });
+  return res.json(updated);
+}
+
 const qualityCheckCreateSchema = Joi.object({
   phaseKey: Joi.string().valid(...PhaseKeyEnum).required(),
   title: Joi.string().required(),
@@ -531,6 +549,7 @@ module.exports = {
   getHome,
   createHome,
   updateHome,
+  updateWindowsDoors,
   addBid,
   addTaskToBid,
   addQualityCheckToBid,

@@ -15,6 +15,7 @@ import RoofingIcon from '@mui/icons-material/Roofing'
 import DoorFrontIcon from '@mui/icons-material/DoorFront'
 import TextureIcon from '@mui/icons-material/Texture'
 import CheckBoxIcon from '@mui/icons-material/CheckBox'
+import DoorSlidingIcon from '@mui/icons-material/DoorSliding'
 
 export default function HomePlanning() {
   const { id } = useParams()
@@ -54,12 +55,12 @@ export default function HomePlanning() {
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <Card>
-              <CardActionArea onClick={() => {}}>
+              <CardActionArea onClick={() => navigate(`/homes/${id}/planning/windows-doors`)}>
                 <CardContent style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <DoorFrontIcon color="primary" />
                   <div>
                     <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Windows & Doors</Typography>
-                    <Typography variant="body2" color="text.secondary">Coming soon</Typography>
+                    <Typography variant="body2" color="text.secondary">Select types and estimate</Typography>
                           </div>
                 </CardContent>
               </CardActionArea>

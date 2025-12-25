@@ -24,6 +24,7 @@ import PlanningArchitectInterview from './pages/PlanningArchitectInterview.jsx'
 import HomeTools from './pages/HomeTools.jsx'
 import Prompts from './pages/Prompts.jsx'
 import PlanningFlooring from './pages/PlanningFlooring.jsx'
+import PlanningWindowsDoors from './pages/PlanningWindowsDoors.jsx'
 
 function App() {
   return (
@@ -39,6 +40,7 @@ function App() {
         <Route path="/homes/:id/planning/architect" element={<PlanningArchitect />} />
         <Route path="/homes/:id/planning/architect/analysis/:docId" element={<PlanningArchitectAnalysis />} />
         <Route path="/homes/:id/planning/architect/interview" element={<PlanningArchitectInterview />} />
+        <Route path="/homes/:id/planning/windows-doors" element={<PlanningWindowsDoors />} />
         <Route path="/homes/:id/planning/flooring" element={<PlanningFlooring />} />
         <Route path="/homes/:id/tools" element={<HomeTools />} />
         <Route path="/homes/:id/:phase" element={<HomeDetail />} />

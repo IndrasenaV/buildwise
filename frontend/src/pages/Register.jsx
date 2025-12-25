@@ -10,6 +10,8 @@ import Alert from '@mui/material/Alert'
 import Checkbox from '@mui/material/Checkbox'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import FormHelperText from '@mui/material/FormHelperText'
+import Link from '@mui/material/Link'
+import { Link as RouterLink } from 'react-router-dom'
 
 export default function Register() {
   const [email, setEmail] = useState('')
@@ -58,7 +60,7 @@ export default function Register() {
         label={
           <span>
             I agree to the{' '}
-            <a href="/terms" target="_blank" rel="noopener noreferrer">Terms and Conditions</a>
+            <Link component={RouterLink} to="/terms" underline="hover">Terms and Conditions</Link>
             , including data use, analytics tracking, and AI output limitations.
           </span>
         }

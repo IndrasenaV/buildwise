@@ -91,6 +91,7 @@ export const api = {
   createHome: (body) => apiRequest('/homes', { method: 'POST', body: JSON.stringify(body) }),
   getHome: (id) => apiRequest(`/homes/${id}`),
   updateHome: (id, body) => apiRequest(`/homes/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  updateWindowsDoors: (homeId, value) => apiRequest(`/homes/${homeId}/windows-doors`, { method: 'PUT', body: JSON.stringify(value || {}) }),
   addBid: (homeId, body) => apiRequest(`/homes/${homeId}/trades`, { method: 'POST', body: JSON.stringify(body) }),
   addTask: (homeId, bidId, body) => apiRequest(`/homes/${homeId}/trades/${bidId}/tasks`, { method: 'POST', body: JSON.stringify(body) }),
   updateTask: (homeId, bidId, taskId, body) => apiRequest(`/homes/${homeId}/trades/${bidId}/tasks/${taskId}`, { method: 'PATCH', body: JSON.stringify(body) }),
