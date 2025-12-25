@@ -17,6 +17,7 @@ import MenuItem from '@mui/material/MenuItem'
 import TextField from '@mui/material/TextField'
 import Checkbox from '@mui/material/Checkbox'
 import RangeCostBar from '../components/analysis/RangeCostBar.jsx'
+import { PlanChat } from '../components/PlanChat.jsx'
 
 export default function PlanningFlooring() {
   const { id } = useParams()
@@ -666,6 +667,15 @@ export default function PlanningFlooring() {
           </Grid>
         )}
       </Paper>
+      {home && (
+        <PlanChat
+          homeId={home._id}
+          personaTitle="Flooring Assistant"
+          defaultOpen
+          welcome="Hi! I’m your Flooring Assistant. I can help you choose between carpet, hardwood, and tile by room, estimate costs per sqft, and suggest trade-offs to meet your budget."
+          promptKey="assistant.flooring"
+        />
+      )}
     </Stack>
   )
 }

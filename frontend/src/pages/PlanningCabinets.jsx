@@ -12,6 +12,7 @@ import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 import Divider from '@mui/material/Divider'
 import RangeCostBar from '../components/analysis/RangeCostBar.jsx'
+import { PlanChat } from '../components/PlanChat.jsx'
 
 export default function PlanningCabinets() {
   const { id } = useParams()
@@ -242,6 +243,15 @@ export default function PlanningCabinets() {
           </Grid>
         </Grid>
       </Paper>
+      {home && (
+        <PlanChat
+          homeId={home._id}
+          personaTitle="Cabinet Assist AI"
+          defaultOpen
+          welcome="Hi! I’m your Cabinet Assist AI. I can help you choose between custom vs. prebuilt cabinets, recommend materials and finishes, and estimate costs from your linear footage."
+          promptKey="assistant.cabinets"
+        />
+      )}
     </Stack>
   )
 }

@@ -17,7 +17,7 @@ import Collapse from '@mui/material/Collapse';
 import Tooltip from '@mui/material/Tooltip';
 import InfoIcon from '@mui/icons-material/Info';
 
-export const PlanChat = ({ homeId }) => {
+export const PlanChat = ({ homeId, personaTitle = 'Plan Assistant', preface = '', welcome = '', defaultOpen = false, promptKey = '' }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
@@ -32,6 +32,20 @@ export const PlanChat = ({ homeId }) => {
         scrollToBottom();
     }, [messages, isOpen]);
 
+    // Auto-open with welcome message
+    useEffect(() => {
+        if (defaultOpen && !isOpen) {
+            setIsOpen(true);
+        }
+    }, [defaultOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    useEffect(() => {
+        if (welcome && isOpen && messages.length === 0) {
+            setMessages([{ role: 'assistant', content: welcome }]);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen]);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!input.trim() || !homeId) return;
@@ -43,7 +57,8 @@ export const PlanChat = ({ homeId }) => {
 
         try {
             const history = messages.map(m => ({ role: m.role, content: m.content })).slice(-5);
-            const res = await api.chat({ homeId, message: userMsg.content, history });
+            const combined = preface ? `${preface}\n\nUser: ${userMsg.content}` : userMsg.content;
+            const res = await api.chat({ homeId, message: combined, history, promptKey });
             const aiMsg = {
                 role: 'assistant',
                 content: res.reply,
@@ -90,7 +105,7 @@ export const PlanChat = ({ homeId }) => {
                     <Box sx={{ p: 2, bgcolor: 'primary.main', color: 'primary.contrastText', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <Stack direction="row" alignItems="center" spacing={1}>
                             <SmartToyIcon />
-                            <Typography variant="subtitle1" fontWeight="bold">Plan Assistant</Typography>
+                            <Typography variant="subtitle1" fontWeight="bold">{personaTitle}</Typography>
                         </Stack>
                         <IconButton size="small" onClick={() => setIsOpen(false)} sx={{ color: 'inherit' }}>
                             <CloseIcon />
