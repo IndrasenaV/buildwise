@@ -14,6 +14,7 @@ import ArchitectureIcon from '@mui/icons-material/Architecture'
 import RoofingIcon from '@mui/icons-material/Roofing'
 import DoorFrontIcon from '@mui/icons-material/DoorFront'
 import TextureIcon from '@mui/icons-material/Texture'
+import CheckBoxIcon from '@mui/icons-material/CheckBox'
 
 export default function HomePlanning() {
   const { id } = useParams()
@@ -73,6 +74,19 @@ export default function HomePlanning() {
                     <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Roof</Typography>
                     <Typography variant="body2" color="text.secondary">Coming soon</Typography>
                           </div>
+                </CardContent>
+              </CardActionArea>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card>
+              <CardActionArea onClick={() => navigate(`/homes/${id}/planning/flooring`)}>
+                <CardContent style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <TextureIcon color="primary" />
+                  <div>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Flooring</Typography>
+                    <Typography variant="body2" color="text.secondary">Select per-room flooring</Typography>
+                      </div>
                 </CardContent>
               </CardActionArea>
             </Card>

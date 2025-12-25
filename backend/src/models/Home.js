@@ -345,6 +345,8 @@ const HomeSchema = new mongoose.Schema(
     requirements: { type: String, default: '' },
     // Structured interview answers for architecture planning (dynamic Q&A)
     requirementsInterview: { type: mongoose.Schema.Types.Mixed, default: null },
+    // Flooring selections per room (free-form structure managed by UI)
+    flooring: { type: mongoose.Schema.Types.Mixed, default: null },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
   },

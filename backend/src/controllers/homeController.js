@@ -168,6 +168,7 @@ const homeUpdateSchema = Joi.object({
   address: Joi.string().allow('').optional(),
   clientName: Joi.string().allow('').optional(),
   requirements: Joi.string().allow('').optional(),
+  flooring: Joi.object().unknown(true).optional(),
   phases: Joi.array()
     .items(
       Joi.object({
