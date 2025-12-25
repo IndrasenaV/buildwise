@@ -351,6 +351,8 @@ const HomeSchema = new mongoose.Schema(
     windowsDoors: { type: mongoose.Schema.Types.Mixed, default: null },
     // Appliances planning selections
     appliances: { type: mongoose.Schema.Types.Mixed, default: null },
+    // Cabinets planning selections
+    cabinets: { type: mongoose.Schema.Types.Mixed, default: null },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
   },

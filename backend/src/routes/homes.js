@@ -27,6 +27,7 @@ router.get('/:homeId', getHome);
 router.put('/:homeId', updateHome);
 router.put('/:homeId/windows-doors', requireAuth, require('../controllers/homeController').updateWindowsDoors);
 router.put('/:homeId/appliances', requireAuth, require('../controllers/homeController').updateAppliances);
+router.put('/:homeId/cabinets', requireAuth, require('../controllers/homeController').updateCabinets);
 
 // Trades routes
 router.post('/:homeId/trades', addBid);
