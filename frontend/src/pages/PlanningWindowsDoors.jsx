@@ -19,7 +19,6 @@ import TableCell from '@mui/material/TableCell'
 import IconButton from '@mui/material/IconButton'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import RangeCostBar from '../components/analysis/RangeCostBar.jsx'
-import { PlanChat } from '../components/PlanChat.jsx'
 
 export default function PlanningWindowsDoors() {
   const { id } = useParams()
@@ -499,16 +498,7 @@ export default function PlanningWindowsDoors() {
           Est. per-interior-door: {formatCurrency(intDoorUnitCost)}
         </Typography>
       </Paper>
-      {/* Bottom summary removed; consolidated at top */}
-      {home && (
-        <PlanChat
-          homeId={home._id}
-          personaTitle="Windows & Doors Assistant"
-          defaultOpen
-          welcome="Hello! I’m the Windows & Doors Assistant. I can help you select window tiers (vinyl, composite, wood, aluminum, steel/iron), glass options, and door types while keeping you on budget."
-          promptKey="assistant.windows_doors"
-        />
-      )}
+      {/* Chat moved to global right-side panel */}
     </Stack>
   )
 }

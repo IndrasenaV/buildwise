@@ -21,7 +21,6 @@ import ListItemText from '@mui/material/ListItemText'
 import LinearProgress from '@mui/material/LinearProgress'
 import FunctionalRadar from '../components/analysis/FunctionalRadar.jsx'
 import CostDriversChart from '../components/analysis/CostDriversChart.jsx'
-import { PlanChat } from '../components/PlanChat.jsx'
 
 export default function PlanningArchitectAnalysis() {
   const { id, docId } = useParams()
@@ -367,7 +366,7 @@ export default function PlanningArchitectAnalysis() {
           )}
         </>
       )}
-      {home && <PlanChat homeId={home._id} />}
+      {/* Chat moved to global right-side panel */}
     </Stack>
   )
 }

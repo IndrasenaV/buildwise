@@ -7,7 +7,7 @@ const { getPromptText, getTradePrompt, getPrompt } = require('../services/prompt
 const { KnowledgeDocument } = require('../models/KnowledgeDocument');
 const { ingestPdf, ingestText } = require('../services/vectorService');
 const { extractTextFromUrl } = require('../services/langchainService');
-const { executeWithLangChain, extractTextFromUrl } = require('../services/langchainService');
+const { executeWithLangChain } = require('../services/langchainService');
 const { storeChunk, searchSimilar } = require('../services/vectorService');
 
 const analyzeSchema = Joi.object({
@@ -550,16 +550,29 @@ async function createKnowledge(req, res) {
   const schema = Joi.object({
     url: Joi.string().uri().required(),
     title: Joi.string().required(),
-    trade: Joi.string().allow('').optional(),
-    city: Joi.string().allow('').optional(),
-    state: Joi.string().allow('').optional(),
+    trade: Joi.string().allow('').optional(), // legacy
+    city: Joi.string().allow('').optional(),  // legacy
+    state: Joi.string().allow('').optional(), // legacy
+    keywords: Joi.array().items(Joi.string()).optional(),
+    customKeywords: Joi.array().items(Joi.string()).optional(),
+    trades: Joi.array().items(Joi.string()).optional(),
+    cities: Joi.array().items(Joi.string()).optional(),
+    states: Joi.array().items(Joi.string()).optional(),
+    zipCodes: Joi.array().items(Joi.string()).optional(),
+    docTypes: Joi.array().items(Joi.string()).optional(),
     contentType: Joi.string().allow('').optional(),
   });
   const { homeId: homeIdParam } = req.params || {};
   const { value, error } = schema.validate(req.body || {}, { abortEarly: false });
   if (error) return res.status(400).json({ message: 'Validation failed', details: error.details });
 
-  const { url, title, trade = '', city = '', state = '', contentType = '' } = value;
+  const {
+    url, title,
+    trade = '', city = '', state = '', // legacy single
+    keywords = [], customKeywords = [],
+    trades = [], cities = [], states = [], zipCodes = [], docTypes = [],
+    contentType = '',
+  } = value;
 
   try {
     const homeId = homeIdParam || 'global';
@@ -568,15 +581,22 @@ async function createKnowledge(req, res) {
       title,
       url,
       s3Key: '',
-      trade,
-      city,
-      state,
+      trade, city, state,
+      keywords, customKeywords,
+      trades, cities, states, zipCodes, docTypes,
       contentType,
       chunkCount: 0,
     });
     // Ingest
     let count = 0;
-    const meta = { docId: String(doc._id), title, trade, city, state, contentType, source: 'kb_doc' };
+    const meta = {
+      docId: String(doc._id),
+      title,
+      contentType,
+      source: 'kb_doc',
+      trade, city, state,
+      keywords, customKeywords, trades, cities, states, zipCodes, docTypes,
+    };
     if (/\.pdf($|[\?#])/i.test(url) || /application\/pdf/i.test(contentType)) {
       count = await ingestPdf(url, homeId, meta);
     } else {
@@ -604,6 +624,88 @@ async function listKnowledge(req, res) {
 }
 
 /**
+ * Return taxonomy suggestions (distinct values) for knowledge docs
+ */
+async function listKnowledgeTaxonomy(req, res) {
+  const pipeline = [
+    {
+      $project: {
+        keywords: { $ifNull: ['$keywords', []] },
+        customKeywords: { $ifNull: ['$customKeywords', []] },
+        trades: { $ifNull: ['$trades', []] },
+        cities: { $ifNull: ['$cities', []] },
+        states: { $ifNull: ['$states', []] },
+        zipCodes: { $ifNull: ['$zipCodes', []] },
+        docTypes: { $ifNull: ['$docTypes', []] },
+        // legacy single fields included for completeness
+        trade: 1,
+        city: 1,
+        state: 1,
+      }
+    },
+    {
+      $group: {
+        _id: null,
+        keywords: { $addToSet: '$keywords' },
+        customKeywords: { $addToSet: '$customKeywords' },
+        trades: { $addToSet: '$trades' },
+        cities: { $addToSet: '$cities' },
+        states: { $addToSet: '$states' },
+        zipCodes: { $addToSet: '$zipCodes' },
+        docTypes: { $addToSet: '$docTypes' },
+        legacyTrades: { $addToSet: '$trade' },
+        legacyCities: { $addToSet: '$city' },
+        legacyStates: { $addToSet: '$state' },
+      }
+    },
+    {
+      $project: {
+        _id: 0,
+        keywords: { $setUnion: ['$keywords', '$customKeywords'] },
+        trades: { $setUnion: ['$trades', '$legacyTrades'] },
+        cities: { $setUnion: ['$cities', '$legacyCities'] },
+        states: { $setUnion: ['$states', '$legacyStates'] },
+        zipCodes: '$zipCodes',
+        docTypes: '$docTypes',
+      }
+    }
+  ];
+  try {
+    const rows = await KnowledgeDocument.aggregate(pipeline);
+    const first = rows[0] || {};
+    // flatten nested arrays of arrays
+    function flatUnique(arr) {
+      const vals = [];
+      (arr || []).forEach((a) => {
+        if (Array.isArray(a)) a.forEach((v) => vals.push(v));
+        else if (a) vals.push(a);
+      });
+      // dedupe case-insensitive
+      const seen = new Set();
+      const out = [];
+      for (const v of vals) {
+        const key = String(v || '').trim().toLowerCase();
+        if (!key) continue;
+        if (!seen.has(key)) { seen.add(key); out.push(String(v).trim()); }
+      }
+      out.sort();
+      return out;
+    }
+    const result = {
+      keywords: flatUnique(first.keywords),
+      trades: flatUnique(first.trades),
+      cities: flatUnique(first.cities),
+      states: flatUnique(first.states),
+      zipCodes: flatUnique(first.zipCodes),
+      docTypes: flatUnique(first.docTypes),
+    };
+    return res.json(result);
+  } catch (e) {
+    return res.status(500).json({ message: e.message || 'Failed to load taxonomy' });
+  }
+}
+
+/**
  * Delete a knowledge document and its chunks
  */
 async function deleteKnowledge(req, res) {
@@ -613,10 +715,11 @@ async function deleteKnowledge(req, res) {
   const doc = await KnowledgeDocument.findOneAndDelete(filter);
   if (!doc) return res.status(404).json({ message: 'Not found' });
   const { KnowledgeChunk } = require('../models/KnowledgeChunk');
-  await KnowledgeChunk.deleteMany({ 'metadata.docId': String(docId), homeId });
+  await KnowledgeChunk.deleteMany({ 'metadata.docId': String(docId), ...(homeIdParam ? { homeId: homeIdParam } : {}) });
   return res.json({ ok: true });
 }
 
 module.exports.createKnowledge = createKnowledge;
 module.exports.listKnowledge = listKnowledge;
 module.exports.deleteKnowledge = deleteKnowledge;
+module.exports.listKnowledgeTaxonomy = listKnowledgeTaxonomy;

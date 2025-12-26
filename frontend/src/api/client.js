@@ -240,8 +240,8 @@ export const api = {
     }),
   analyzeArchitecture: ({ urls, homeId }) =>
     apiRequest('/ai/analyze-architecture', { method: 'POST', body: JSON.stringify({ urls, homeId }) }),
-  chat: ({ homeId, message, history }) =>
-    apiRequest('/ai/chat', { method: 'POST', body: JSON.stringify({ homeId, message, history }) }),
+  chat: ({ homeId, message, history, promptKey }) =>
+    apiRequest('/ai/chat', { method: 'POST', body: JSON.stringify({ homeId, message, history, ...(promptKey ? { promptKey } : {}) }) }),
   // Architecture interview questions (public for authenticated users)
   getArchitectureQuestions: () => apiRequest('/ai/architecture-questions'),
   updateArchitectureQuestions: (payload) => apiRequest('/ai/architecture-questions', { method: 'PUT', body: JSON.stringify(payload || {}) }),

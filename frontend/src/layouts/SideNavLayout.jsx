@@ -34,6 +34,7 @@ import useMediaQuery from '@mui/material/useMediaQuery'
 import DesignServicesOutlinedIcon from '@mui/icons-material/DesignServicesOutlined'
 import ChatIcon from '@mui/icons-material/Chat'
 import SettingsIcon from '@mui/icons-material/Settings'
+import AgentChat from '../components/AgentChat.jsx'
 
 const drawerWidth = 260
 
@@ -284,17 +285,35 @@ export default function SideNavLayout() {
           </ListItem>
         </Box>
       </Drawer>
-      <Box component="main" sx={{ flexGrow: 1, p: 3, pt: isMobile ? 8 : 3, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-        <Container maxWidth={location.pathname.includes('/documents') ? false : 'lg'} sx={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
-          <Box sx={{ flexGrow: 1 }}>
-            <Outlet />
-          </Box>
-          <Box sx={{ mt: 6, mb: 2, textAlign: 'center' }}>
-            <Typography variant="body2" color="text.secondary">
-              © {new Date().getFullYear()} Laitysol LLC. All Rights Reserved.
-            </Typography>
-          </Box>
-        </Container>
+      <Box component="main" sx={{ flexGrow: 1, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, minHeight: '100vh' }}>
+        {/* Center content area */}
+        <Box sx={{ flexGrow: 1, p: 3, pt: isMobile ? 8 : 3, display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
+          <Container maxWidth={location.pathname.includes('/documents') ? false : 'lg'} sx={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
+            <Box sx={{ flexGrow: 1 }}>
+              <Outlet />
+            </Box>
+            <Box sx={{ mt: 6, mb: 2, textAlign: 'center' }}>
+              <Typography variant="body2" color="text.secondary">
+                © {new Date().getFullYear()} Laitysol LLC. All Rights Reserved.
+              </Typography>
+            </Box>
+          </Container>
+        </Box>
+        {/* Right chat panel */}
+        <Box
+          sx={{
+            width: { xs: '100%', md: 380 },
+            minWidth: { md: 340 },
+            maxWidth: { md: 420 },
+            height: { xs: '60vh', md: '100vh' },
+            position: { xs: 'static', md: 'sticky' },
+            top: { xs: 0, md: 0 },
+            display: 'flex',
+            flexDirection: 'column'
+          }}
+        >
+          <AgentChat homeId={currentHomeId} />
+        </Box>
       </Box>
     </Box>
   )

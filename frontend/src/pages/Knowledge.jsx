@@ -9,6 +9,8 @@ import Grid from '@mui/material/Grid'
 import TextField from '@mui/material/TextField'
 import IconButton from '@mui/material/IconButton'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
+import Autocomplete from '@mui/material/Autocomplete'
+import Chip from '@mui/material/Chip'
 
 export default function Knowledge() {
   const navigate = useNavigate()
@@ -20,6 +22,8 @@ export default function Knowledge() {
   const [state, setState] = useState('')
   const [file, setFile] = useState(null)
   const fileRef = useRef(null)
+  const [keywordOptions, setKeywordOptions] = useState([])
+  const [keywordValues, setKeywordValues] = useState([])
 
   const API = (path) => `${import.meta.env.VITE_API_BASE || (import.meta.env.PROD ? '/api' : 'http://localhost:5051/api')}${path}`
   const authHeaders = () => (localStorage.getItem('token') ? { Authorization: `Bearer ${localStorage.getItem('token')}` } : {})
@@ -33,7 +37,18 @@ export default function Knowledge() {
     } catch {}
   }
 
-  useEffect(() => { refresh() }, [])
+  async function loadTaxonomy() {
+    try {
+      const res = await fetch(API('/ai/knowledge-taxonomy'), { headers: { ...authHeaders() } })
+      if (!res.ok) throw new Error(await res.text())
+      const json = await res.json()
+      const union = Array.from(new Set([...(json.keywords || []), ...(json.trades || []), ...(json.cities || []), ...(json.states || []), ...(json.zipCodes || []), ...(json.docTypes || [])]))
+      union.sort()
+      setKeywordOptions(union)
+    } catch {}
+  }
+
+  useEffect(() => { refresh(); loadTaxonomy() }, [])
 
   async function onUpload() {
     if (!file || !title.trim()) return
@@ -46,18 +61,25 @@ export default function Knowledge() {
       if (!uploadRes.ok) throw new Error(await uploadRes.text())
       const uploaded = await uploadRes.json()
       const fileUrl = uploaded?.data?.fileUrl
+      const knownSet = new Set(keywordOptions.map(v => String(v).toLowerCase()))
+      const keywords = []
+      const customKeywords = []
+      for (const k of (keywordValues || [])) {
+        const key = String(k || '').trim()
+        if (!key) continue
+        if (knownSet.has(key.toLowerCase())) keywords.push(key); else customKeywords.push(key)
+      }
       const payload = {
         url: fileUrl,
         title: title.trim(),
-        trade: (trade || '').trim(),
-        city: (city || '').trim(),
-        state: (state || '').trim(),
+        keywords,
+        customKeywords,
         contentType: file?.type || ''
       }
       const res = await fetch(API('/ai/knowledge'), { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() }, body: JSON.stringify(payload) })
       if (!res.ok) throw new Error(await res.text())
       await refresh()
-      setTitle(''); setTrade(''); setCity(''); setState(''); setFile(null); if (fileRef.current) fileRef.current.value = ''
+      setTitle(''); setTrade(''); setCity(''); setState(''); setKeywordValues([]); setFile(null); if (fileRef.current) fileRef.current.value = ''
     } catch {} finally { setBusy(false) }
   }
 
@@ -94,21 +116,29 @@ export default function Knowledge() {
           <Grid item xs={12} md={4}>
             <TextField fullWidth size="small" label="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
           </Grid>
-          <Grid item xs={12} md={2}>
-            <TextField fullWidth size="small" label="Trade (optional)" value={trade} onChange={(e) => setTrade(e.target.value)} />
-          </Grid>
-          <Grid item xs={6} md={2}>
-            <TextField fullWidth size="small" label="City" value={city} onChange={(e) => setCity(e.target.value)} />
-          </Grid>
-          <Grid item xs={6} md={2}>
-            <TextField fullWidth size="small" label="State" value={state} onChange={(e) => setState(e.target.value)} />
+          <Grid item xs={12} md={6}>
+            <Autocomplete
+              multiple
+              freeSolo
+              options={keywordOptions}
+              value={keywordValues}
+              onChange={(_e, vals) => setKeywordValues(vals)}
+              renderTags={(value, getTagProps) =>
+                value.map((option, index) => (
+                  <Chip variant="outlined" label={option} {...getTagProps({ index })} />
+                ))
+              }
+              renderInput={(params) => (
+                <TextField {...params} size="small" label="Keywords (suggested + custom)" placeholder="Type and press Enter" />
+              )}
+            />
           </Grid>
           <Grid item xs={12} md={2}>
             <input ref={fileRef} type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} />
           </Grid>
         </Grid>
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-          Supported: PDF (best), plain text. Other formats will be treated as text if possible.
+          Add keywords like trades, locations, zip codes, document types (e.g., “bid quotation”), etc. Supported: PDF (best), plain text.
         </Typography>
       </Paper>
       <Paper variant="outlined" sx={{ p: 2 }}>
