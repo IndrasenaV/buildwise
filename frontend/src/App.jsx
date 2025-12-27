@@ -12,6 +12,7 @@ import HomeTrades from './pages/HomeTrades.jsx'
 import HomeBidDetail from './pages/HomeBidDetail.jsx'
 import HomeBudget from './pages/HomeBudget.jsx'
 import HomeDashboard from './pages/HomeDashboard.jsx'
+import HomePermits from './pages/HomePermits.jsx'
 import Templates from './pages/Templates.jsx'
 import HomeMessages from './pages/HomeMessages.jsx'
 import TemplateEditor from './pages/TemplateEditor.jsx'
@@ -49,6 +50,7 @@ function App() {
         <Route path="/homes/:id/planning/cabinets" element={<PlanningCabinets />} />
         <Route path="/homes/:id/planning/knowledge" element={<PlanningKnowledge />} />
         <Route path="/homes/:id/planning/flooring" element={<PlanningFlooring />} />
+        <Route path="/homes/:id/permits" element={<HomePermits />} />
         <Route path="/homes/:id/tools" element={<HomeTools />} />
         <Route path="/homes/:id/:phase" element={<HomeDetail />} />
         <Route path="/homes/:id/trades" element={<HomeTrades />} />

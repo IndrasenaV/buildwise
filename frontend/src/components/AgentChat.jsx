@@ -130,7 +130,8 @@ function chooseDefaultAgent(pathname) {
   if (p.includes('/budget')) return 'budget';
   if (p.includes('/trades')) return 'trades';
   if (p.includes('/schedule')) return 'schedule';
-  if (p.includes('/dashboard')) return 'schedule';
+  if (p.includes('/permits')) return 'product';
+  if (p.includes('/dashboard')) return 'product';
   if (p.includes('/documents')) return 'documents';
   if (p.includes('/messages')) return 'messages';
   if (p.includes('/planning')) return 'architect';

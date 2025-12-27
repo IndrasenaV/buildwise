@@ -5,7 +5,6 @@ import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import Alert from '@mui/material/Alert'
-import TextField from '@mui/material/TextField'
 import Box from '@mui/material/Box'
 import Divider from '@mui/material/Divider'
 import List from '@mui/material/List'
@@ -120,9 +119,6 @@ export default function HomeDashboard() {
   const navigate = useNavigate()
   const [home, setHome] = useState(null)
   const [error, setError] = useState('')
-  const [reqDraft, setReqDraft] = useState('')
-  const [reqSaving, setReqSaving] = useState(false)
-  const [reqSaved, setReqSaved] = useState(false)
 
   useEffect(() => {
     let mounted = true
@@ -130,8 +126,6 @@ export default function HomeDashboard() {
       .then((h) => {
         if (!mounted) return
         setHome(h)
-        try { setReqDraft(h?.requirements || '') } catch {}
-        setReqSaved(false)
       })
       .catch((e) => { if (mounted) setError(e.message) })
     return () => { mounted = false }
@@ -139,6 +133,11 @@ export default function HomeDashboard() {
 
   const trades = home?.trades || []
   const schedules = home?.schedules || []
+  const permitDocs = useMemo(() => (home?.documents || []).filter(d => (d.category || '') === 'permit'), [home])
+  const hasFinalArchitecture = useMemo(() => {
+    const arch = (home?.documents || []).filter(d => String(d.category || '').startsWith('architecture_'))
+    return !!arch.find(d => d.isFinal)
+  }, [home])
 
   const phaseTaskStats = useMemo(() => {
     function tasksForPhase(trade, phase) {
@@ -158,20 +157,7 @@ export default function HomeDashboard() {
     })
   }, [trades])
 
-  const currentPhase = useMemo(() => {
-    const firstIncomplete = phaseTaskStats.find((p) => p.total > 0 && p.done < p.total)
-    if (firstIncomplete) return firstIncomplete.phase
-    // if no tasks at all, default to preconstruction; if all complete, show last phase
-    const anyTasks = phaseTaskStats.some((p) => p.total > 0)
-    return anyTasks ? 'interior' : 'preconstruction'
-  }, [phaseTaskStats])
-
-  const nextSchedule = useMemo(() => {
-    const now = Date.now()
-    const items = (schedules || []).filter((s) => s && s.startsAt && new Date(s.startsAt).getTime() > now)
-    items.sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime())
-    return items[0] || null
-  }, [schedules])
+  // High-level next step across major phases
 
   const actionsRequired = useMemo(() => {
     const tasks = trades.flatMap((trade) => (trade.tasks || []).map((t) => ({ trade, task: t })))
@@ -198,6 +184,13 @@ export default function HomeDashboard() {
     return phaseTaskStats.map(p => ({ phase: p.phase, total: p.total, done: p.done }))
   }, [phaseTaskStats])
 
+  const nextHighLevelStep = useMemo(() => {
+    if (!hasFinalArchitecture) return { key: 'planning', label: 'Planning', href: `/homes/${id}/planning` }
+    if (!trades.length) return { key: 'budget', label: 'Budget', href: `/homes/${id}/budget` }
+    if (!permitDocs.length) return { key: 'permits', label: 'Permits', href: `/homes/${id}/permits` }
+    return { key: 'preconstruction', label: 'Preconstruction', href: `/homes/${id}/preconstruction` }
+  }, [hasFinalArchitecture, trades, permitDocs, id])
+
   const fmtMoney = (n) => Number(n || 0).toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 2 })
   const fmtDate = (d) => {
     try { return new Date(d).toLocaleString() } catch { return String(d || '') }
@@ -211,106 +204,143 @@ export default function HomeDashboard() {
     <Stack spacing={2}>
       {error && <Alert severity="error">{error}</Alert>}
 
-      <Paper variant="outlined" sx={{ p: 2 }}>
-        <Typography variant="h6" gutterBottom>Guided Tour</Typography>
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr auto' }, alignItems: 'center', gap: 2 }}>
-          <Typography variant="body2" color="text.secondary">
-            {(() => {
-              const archDocs = (home.documents || []).filter(d => String(d.category || '').startsWith('architecture_'))
-              if (!archDocs.length) return 'Start by uploading your Architecture diagram in Planning.'
-              const final = archDocs.find(d => d.isFinal) || archDocs[0]
-              if (!(final?.analysis && (final.analysis.houseType || final.analysis.roofType || final.analysis.exteriorType))) {
-                return 'Run Architecture Analysis to auto-detect house, roof, and exterior types.'
-              }
-              return 'Review Architecture Analysis or proceed to set up trades and schedules.'
-            })()}
-          </Typography>
-          <Box sx={{ justifySelf: 'end' }}>
-            {(() => {
-              const archDocs = (home.documents || []).filter(d => String(d.category || '').startsWith('architecture_'))
-              if (!archDocs.length) {
-                return <Button variant="contained" size="small" onClick={() => navigate(`/homes/${id}/planning?openUpload=architecture_base`)}>Upload Architecture</Button>
-              }
-              const final = archDocs.find(d => d.isFinal) || archDocs[0]
-              if (!(final?.analysis && (final.analysis.houseType || final.analysis.roofType || final.analysis.exteriorType))) {
-                return <Button variant="contained" size="small" onClick={() => navigate(`/homes/${id}/planning`)}>Open Planning</Button>
-              }
-              return <Button variant="outlined" size="small" onClick={() => navigate(`/homes/${id}/planning`)}>View Analysis</Button>
-            })()}
-          </Box>
-        </Box>
-      </Paper>
+      {/* Guided Tour removed */}
 
-      <Paper variant="outlined" sx={{ p: 2 }}>
-        <Typography variant="h6" gutterBottom>Homeowner Requirements (optional)</Typography>
+      {/* Homeowner Requirements removed */}
+
+      {/* Overview removed */}
+
+      <Paper variant="outlined" sx={{ p: 3, border: '2px solid', borderColor: 'primary.main', bgcolor: 'background.paper', display: 'none' }}>
+        <Typography variant="h5" gutterBottom>Project Flow</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-          Add goals, preferences, and constraints (e.g., “maximize daylight in bedrooms”, “target budget $500k”, “quiet office”, “age-in-place”). We’ll use this to tailor analysis and suggestions.
+          Plan → Budget (bids) → Permits → Execution (Preconstruction, Exterior, Interior/Finish Out)
         </Typography>
-        {!!reqSaved && <Alert severity="success" sx={{ mb: 1 }}>Saved</Alert>}
-        <TextField
-          placeholder="Describe requirements, priorities, and must-haves…"
-          value={reqDraft}
-          onChange={(e) => { setReqDraft(e.target.value); setReqSaved(false) }}
-          multiline
-          minRows={4}
-          fullWidth
-        />
-        <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-          <Button
-            variant="contained"
-            disabled={reqSaving}
-            onClick={async () => {
-              try {
-                setReqSaving(true)
-                const updated = await api.updateHome(id, { requirements: reqDraft })
-                setHome(updated)
-                setReqSaved(true)
-              } catch (e) {
-                setError(e.message || 'Save failed')
-              } finally {
-                setReqSaving(false)
-              }
-            }}
-          >
-            {reqSaving ? 'Saving…' : 'Save requirements'}
-          </Button>
-          <Button
-            disabled={reqSaving || (reqDraft || '') === (home?.requirements || '')}
-            onClick={() => { setReqDraft(home?.requirements || ''); setReqSaved(false) }}
-          >
-            Reset
-          </Button>
-        </Stack>
-      </Paper>
-
-      <Paper variant="outlined" sx={{ p: 2 }}>
-        <Typography variant="h6" gutterBottom>Overview</Typography>
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 2 }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
           <Box>
-            <Typography variant="body2" color="text.secondary">Current Phase</Typography>
-            <Typography variant="h6">{PHASE_LABELS[currentPhase]}</Typography>
-            <Button size="small" sx={{ mt: 1 }} onClick={() => navigate(`/homes/${id}/${currentPhase}`)}>View phase</Button>
+            <Typography variant="subtitle2" sx={{ mb: .5 }}>Planning</Typography>
+            <Typography variant="body2" color="text.secondary">Upload and analyze plans, define windows/doors, flooring, cabinets, appliances, and add project knowledge.</Typography>
+            <Button size="small" sx={{ mt: 1 }} onClick={() => navigate(`/homes/${id}/planning`)}>Open Planning</Button>
           </Box>
           <Box>
-            <Typography variant="body2" color="text.secondary">Scheduled Next</Typography>
-            {nextSchedule ? (
-              <>
-                <Typography variant="subtitle2">{nextSchedule.title}</Typography>
-                <Typography variant="body2" color="text.secondary">{fmtDate(nextSchedule.startsAt)}</Typography>
-                <Button size="small" sx={{ mt: 1 }} onClick={() => navigate(`/homes/${id}/schedule`)}>Open schedule</Button>
-              </>
-            ) : (
-              <Typography variant="body2" color="text.secondary">No upcoming items</Typography>
-            )}
+            <Typography variant="subtitle2" sx={{ mb: .5 }}>Budget (Bids)</Typography>
+            <Typography variant="body2" color="text.secondary">Collect trade bids, compare scope and value, and finalize selections.</Typography>
+            <Button size="small" sx={{ mt: 1 }} onClick={() => navigate(`/homes/${id}/budget`)}>Open Budget</Button>
           </Box>
           <Box>
-            <Typography variant="body2" color="text.secondary">Actions Needed</Typography>
-            <Typography variant="h6">{actionsRequired.length}</Typography>
-            <Button size="small" sx={{ mt: 1 }} onClick={() => navigate(`/homes/${id}/trades`)}>View tasks</Button>
+            <Typography variant="subtitle2" sx={{ mb: .5 }}>Permits</Typography>
+            <Typography variant="body2" color="text.secondary">Organize city-required forms and approvals for your project.</Typography>
+            <Button size="small" sx={{ mt: 1 }} onClick={() => navigate(`/homes/${id}/permits`)}>Open Permits</Button>
           </Box>
+          <Box>
+            <Typography variant="subtitle2" sx={{ mb: .5 }}>Execution</Typography>
+            <Typography variant="body2" color="text.secondary">Plan and track tasks across Preconstruction, Exterior, and Interior/Finish Out phases.</Typography>
+            <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: 'wrap', gap: 1 }}>
+              <Button size="small" variant="outlined" onClick={() => navigate(`/homes/${id}/preconstruction`)}>Preconstruction</Button>
+              <Button size="small" variant="outlined" onClick={() => navigate(`/homes/${id}/exterior`)}>Exterior</Button>
+              <Button size="small" variant="outlined" onClick={() => navigate(`/homes/${id}/interior`)}>Interior / Finish</Button>
+            </Stack>
+          </Box>
+        </Box>
+        <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography variant="body2" sx={{ fontWeight: 600 }}>Next step:</Typography>
+          <Button size="small" variant="contained" onClick={() => navigate(nextHighLevelStep.href)}>{nextHighLevelStep.label}</Button>
         </Box>
       </Paper>
 
+      <Paper variant="outlined" sx={{ p: 4, border: '2px solid', borderColor: 'primary.main', bgcolor: 'background.paper' }}>
+        <Typography variant="h5" gutterBottom>Project Flow</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          Plan → Budget (bids) → Permits → Execution (Preconstruction, Exterior, Interior/Finish Out)
+        </Typography>
+        {(() => {
+          const steps = [
+            {
+              key: 'planning',
+              title: 'Planning',
+              description: 'Upload and analyze plans; choose windows/doors, flooring, cabinets; align on scope.',
+              route: `/homes/${id}/planning`,
+            },
+            {
+              key: 'budget',
+              title: 'Budget (Bids)',
+              description: 'Collect and compare trade bids; clarify scope; select vendors and finalize costs.',
+              route: `/homes/${id}/budget`,
+            },
+            {
+              key: 'permits',
+              title: 'Permits',
+              description: 'Assemble permit package; respond to city comments; secure approvals.',
+              route: `/homes/${id}/permits`,
+            },
+            {
+              key: 'preconstruction',
+              title: 'Preconstruction',
+              description: 'Finalize schedule, confirm long‑lead items, prepare site & logistics.',
+              route: `/homes/${id}/preconstruction`,
+            },
+            {
+              key: 'exterior',
+              title: 'Exterior',
+              description: 'Structure, roofing, windows/doors, waterproofing, cladding.',
+              route: `/homes/${id}/exterior`,
+            },
+            {
+              key: 'interlude',
+              title: 'Interior &amp; Finish Out',
+              description: 'MEP rough‑ins, insulation, drywall, flooring, cabinets, trim &amp; fixtures.',
+              route: `/homes/${id}/interior`,
+            },
+          ]
+          const doneMap = {
+            planning: !!(hasFinalArchitecture),
+            budget: (trades || []).length > 0,
+            permits: (permitDocs || []).length > 0,
+            preconstruction: false,
+            exterior: false,
+            interlude: false,
+          }
+          const nextKey = nextHighLevelStep?.key
+          return (
+            <Box sx={{ position: 'relative', pl: 3 }}>
+              <Box sx={{ position: 'absolute', left: 18, top: 10, bottom: 10, width: 2, bgcolor: 'divider' }} />
+              {steps.map((s, idx) => {
+                const status = doneMap[s.key]
+                  ? 'done'
+                  : s.key === nextKey
+                  ? 'current'
+                  : 'todo'
+                const dotColor =
+                  status === 'done'
+                    ? 'success.main'
+                    : status === 'current'
+                    ? 'primary.main'
+                    : 'divider'
+                return (
+                  <Box key={s.key} sx={{ display: 'flex', alignItems: 'flex-start', position: 'relative' }}>
+                    <Box sx={{ mr: 2, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: dotColor, mt: 0.5 }} />
+                    </Box>
+                    <Box sx={{ pb: 3 }}>
+                      <Typography variant="h6" sx={{ fontWeight: 700, color: status === 'current' ? 'primary.main' : 'text.primary' }}>
+                        {idx + 1}. {s.title}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">{s.description}</Typography>
+                      <Button
+                        size="small"
+                        sx={{ mt: 1 }}
+                        variant={status === 'current' ? 'contained' : 'outlined'}
+                        onClick={() => navigate(s.route)}
+                      >
+                        {status === 'done' ? 'View' : `Go to ${s.title}`}
+                      </Button>
+                    </Box>
+                  </Box>
+                )
+              })}
+            </Box>
+          )
+        })()}
+      </Paper>
       <Paper variant="outlined" sx={{ p: 2 }}>
         <Typography variant="h6" gutterBottom>Construction Progress</Typography>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '260px 1fr' }, alignItems: 'center', gap: 2 }}>

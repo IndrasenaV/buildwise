@@ -177,7 +177,7 @@ export default function SideNavLayout() {
             <Divider />
             <List subheader={<ListSubheader component="div" disableSticky sx={{ bgcolor: 'transparent' }}>{homeTitle || 'Selected Home'}</ListSubheader>}>
               <ListSubheader component="div" disableSticky sx={{ bgcolor: 'transparent', color: 'text.secondary', fontSize: 12, lineHeight: '28px' }}>
-                Progress by Phase
+                Project Flow
               </ListSubheader>
               <ListItem disablePadding>
                 <ListItemButton selected={location.pathname.includes('/planning')} onClick={() => go(`/homes/${currentHomeId}/planning`)}>
@@ -186,9 +186,21 @@ export default function SideNavLayout() {
                 </ListItemButton>
               </ListItem>
               <ListItem disablePadding>
+                <ListItemButton selected={location.pathname.includes('/budget')} onClick={() => go(`/homes/${currentHomeId}/budget`)}>
+                  <ListItemIcon><AttachMoneyIcon /></ListItemIcon>
+                  <ListItemText primary="Budget" />
+                </ListItemButton>
+              </ListItem>
+              <ListItem disablePadding>
+                <ListItemButton selected={location.pathname.includes('/permits')} onClick={() => go(`/homes/${currentHomeId}/permits`)}>
+                  <ListItemIcon><DescriptionIcon /></ListItemIcon>
+                  <ListItemText primary="Permits" />
+                </ListItemButton>
+              </ListItem>
+              <ListItem disablePadding>
                 <ListItemButton selected={location.pathname.includes('/preconstruction')} onClick={() => go(`/homes/${currentHomeId}/preconstruction`)}>
                   <ListItemIcon><DesignServicesIcon /></ListItemIcon>
-                  <ListItemText primary="PreConstruction" />
+                  <ListItemText primary="Preconstruction" />
                 </ListItemButton>
               </ListItem>
               <ListItem disablePadding>
@@ -214,12 +226,6 @@ export default function SideNavLayout() {
                 </ListItemButton>
               </ListItem>
               <ListItem disablePadding>
-                <ListItemButton selected={location.pathname.includes('/budget')} onClick={() => go(`/homes/${currentHomeId}/budget`)}>
-                  <ListItemIcon><AttachMoneyIcon /></ListItemIcon>
-                  <ListItemText primary="Budget" />
-                </ListItemButton>
-              </ListItem>
-              <ListItem disablePadding>
                 <ListItemButton selected={location.pathname.includes('/messages')} onClick={() => go(`/homes/${currentHomeId}/messages`)}>
                   <ListItemIcon><ChatIcon /></ListItemIcon>
                   <ListItemText primary="Messages" />
@@ -235,12 +241,6 @@ export default function SideNavLayout() {
                 <ListItemButton selected={location.pathname.includes('/trades')} onClick={() => go(`/homes/${currentHomeId}/trades`)}>
                   <ListItemIcon><BuildIcon /></ListItemIcon>
                   <ListItemText primary="Trades" />
-                </ListItemButton>
-              </ListItem>
-              <ListItem disablePadding>
-                <ListItemButton selected={location.pathname.includes('/planning')} onClick={() => go(`/homes/${currentHomeId}/planning`)}>
-                  <ListItemIcon><DescriptionIcon /></ListItemIcon>
-                  <ListItemText primary="Planning" />
                 </ListItemButton>
               </ListItem>
               <ListItem disablePadding>
