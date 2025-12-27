@@ -15,6 +15,8 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Tooltip from '@mui/material/Tooltip';
 import InfoIcon from '@mui/icons-material/Info';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
+import PushPinIcon from '@mui/icons-material/PushPin';
+import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined';
 
 const AGENTS = [
   // Planning: Architect
@@ -105,10 +107,20 @@ const AGENTS = [
     preface: 'You help draft clear, concise project communications for owners, architects, and trades.',
     welcome: 'Hi! I’m your Communications Assistant. I can help draft and clarify project messages.',
   },
+  // Product
+  {
+    id: 'product',
+    title: 'Product Assistant',
+    promptKey: 'assistant.product',
+    preface: 'You are the Buildwise AI product assistant. Explain features, where to find things, recommended workflows, and how to use tools. Be clear and concise, and guide the user step by step.',
+    welcome: 'Hi! I’m the Product Assistant. I can explain how to use Buildwise AI and where to find what you need.',
+  },
 ];
 
 function chooseDefaultAgent(pathname) {
   const p = String(pathname || '').toLowerCase();
+  // Non-home routes default to Product Assistant
+  if (!p.includes('/homes/')) return 'product';
   if (p.includes('/planning/windows-doors')) return 'windows';
   if (p.includes('/planning/flooring')) return 'flooring';
   if (p.includes('/planning/cabinets')) return 'cabinets';
@@ -118,11 +130,13 @@ function chooseDefaultAgent(pathname) {
   if (p.includes('/budget')) return 'budget';
   if (p.includes('/trades')) return 'trades';
   if (p.includes('/schedule')) return 'schedule';
+  if (p.includes('/dashboard')) return 'schedule';
   if (p.includes('/documents')) return 'documents';
   if (p.includes('/messages')) return 'messages';
   if (p.includes('/planning')) return 'architect';
   if (p.includes('/preconstruction') || p.includes('/exterior') || p.includes('/interior')) return 'schedule';
-  return 'architect';
+  // Fallback to Product Assistant for unmatched routes
+  return 'product';
 }
 
 export default function AgentChat({ homeId }) {
@@ -195,6 +209,16 @@ export default function AgentChat({ homeId }) {
             <SwapHorizIcon />
           </IconButton>
         </Tooltip>
+        <Tooltip title={userPinned ? 'Unpin agent' : 'Pin agent'}>
+          <IconButton
+            size="small"
+            onClick={() => setUserPinned((v) => !v)}
+            aria-label={userPinned ? 'Unpin agent' : 'Pin agent'}
+            sx={{ ml: 1 }}
+          >
+            {userPinned ? <PushPinIcon /> : <PushPinOutlinedIcon />}
+          </IconButton>
+        </Tooltip>
         <Menu
           anchorEl={menuAnchor}
           open={Boolean(menuAnchor)}
@@ -208,7 +232,6 @@ export default function AgentChat({ homeId }) {
               selected={a.id === selectedAgentId}
               onClick={() => {
                 setSelectedAgentId(a.id);
-                setUserPinned(true);
                 setMenuAnchor(null);
               }}
             >
