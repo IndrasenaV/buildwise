@@ -350,12 +350,12 @@ async function analyzeArchitecture(req, res) {
     const accessibilityComfort = typeof parsed.accessibilityComfort === 'object' && parsed.accessibilityComfort ? parsed.accessibilityComfort : { metrics: {}, issues: [] };
     const optimizationSuggestions = Array.isArray(parsed.optimizationSuggestions)
       ? parsed.optimizationSuggestions.map((s) => {
-          if (typeof s === 'string') return { title: s, description: '', impact: '' };
-          const title = String(s?.title || s?.idea || '').trim();
-          const description = String(s?.description || '').trim();
-          const impact = String(s?.impact || '').trim().toLowerCase();
-          return title ? { title, description, impact } : null;
-        }).filter(Boolean)
+        if (typeof s === 'string') return { title: s, description: '', impact: '' };
+        const title = String(s?.title || s?.idea || '').trim();
+        const description = String(s?.description || '').trim();
+        const impact = String(s?.impact || '').trim().toLowerCase();
+        return title ? { title, description, impact } : null;
+      }).filter(Boolean)
       : [];
     return res.json({
       houseType,
@@ -451,7 +451,7 @@ async function analyzeArchitectureUrls(urls, model, extraContext) {
     optimizationSuggestions: z.array(z.object({
       title: z.string(),
       description: z.string().nullable().optional(),
-      impact: z.enum(['low','medium','high']).nullable().optional(),
+      impact: z.enum(['low', 'medium', 'high']).nullable().optional(),
     })).nullable(),
   });
 
@@ -513,7 +513,7 @@ async function chat(req, res) {
       if (promptKey && String(promptKey).trim()) {
         prefix = await getPromptText(String(promptKey).trim());
       }
-    } catch (_e) {}
+    } catch (_e) { }
     const systemPrompt = `${prefix ? `${prefix}\n\n` : ''}You are an expert architect assistant.
     Use the following context from the home's architecture plans to answer the user's question.
     If the context doesn't contain the answer, say you don't know based on the current plans.

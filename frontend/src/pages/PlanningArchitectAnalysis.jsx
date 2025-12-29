@@ -116,6 +116,7 @@ export default function PlanningArchitectAnalysis() {
               <Tab label="Lighting" value="lighting" />
               <Tab label="Accessibility" value="access" />
               <Tab label="Suggestions" value="suggestions" />
+              <Tab label="Gap Analysis" value="feedback" />
               <Tab label="Tasks" value="tasks" />
               <Tab label="Raw" value="raw" />
             </Tabs>
@@ -347,6 +348,58 @@ export default function PlanningArchitectAnalysis() {
                 ))}
               </List>
             </Paper>
+          )}
+
+          {tab === 'feedback' && (
+            <Stack spacing={2}>
+              <Paper variant="outlined" sx={{ p: 2 }}>
+                <Typography variant="subtitle2" sx={{ mb: 1 }}>Requirements Alignment</Typography>
+                {result?.feedback?.summary ? (
+                  <Typography variant="body2" sx={{ mb: 2 }}>{result.feedback.summary}</Typography>
+                ) : (!result?.feedback || (!result.feedback.matches?.length && !result.feedback.mismatches?.length)) ? (
+                  <Typography variant="body2" color="text.secondary">No aligned requirements found. Try running the analysis again with updated requirements.</Typography>
+                ) : null}
+
+                {!!(result?.feedback?.matches || []).length && (
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="subtitle2" color="success.main" sx={{ mb: .5, fontWeight: 600 }}>Aligned Requirements</Typography>
+                    <List dense disablePadding>
+                      {(result.feedback.matches).map((m, i) => (
+                        <ListItem key={i}>
+                          <ListItemText primary={m} sx={{ '& .MuiListItemText-primary': { fontSize: 13 } }} />
+                        </ListItem>
+                      ))}
+                    </List>
+                  </Box>
+                )}
+
+                {!!(result?.feedback?.mismatches || []).length && (
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="subtitle2" color="error.main" sx={{ mb: .5, fontWeight: 600 }}>Mismatches & Gaps</Typography>
+                    <List dense disablePadding>
+                      {(result.feedback.mismatches).map((m, i) => (
+                        <ListItem key={i}>
+                          <ListItemText primary={m} sx={{ '& .MuiListItemText-primary': { fontSize: 13 } }} />
+                        </ListItem>
+                      ))}
+                    </List>
+                  </Box>
+                )}
+
+                {!!(result?.feedback?.suggestions || []).length && (
+                  <Box>
+                    <Typography variant="subtitle2" color="info.main" sx={{ mb: .5, fontWeight: 600 }}>Resolution Suggestions</Typography>
+                    <List dense disablePadding>
+                      {(result.feedback.suggestions).map((s, i) => (
+                        <ListItem key={i}>
+                          <ListItemText primary={s} sx={{ '& .MuiListItemText-primary': { fontSize: 13 } }} />
+                        </ListItem>
+                      ))}
+                    </List>
+                  </Box>
+                )}
+              </Paper>
+            </Stack>
           )}
 
           {tab === 'tasks' && (

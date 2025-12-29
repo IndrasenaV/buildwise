@@ -121,6 +121,7 @@ router.post('/:homeId/documents/:docId/analyze-architecture', async (req, res) =
             costAnalysis: typeof result.costAnalysis === 'object' && result.costAnalysis ? result.costAnalysis : { summary: '', highImpactItems: [], valueEngineeringIdeas: [] },
             accessibilityComfort: typeof result.accessibilityComfort === 'object' && result.accessibilityComfort ? result.accessibilityComfort : { metrics: {}, issues: [] },
             optimizationSuggestions: Array.isArray(result.optimizationSuggestions) ? result.optimizationSuggestions : [],
+            feedback: typeof result.feedback === 'object' && result.feedback ? result.feedback : { summary: '', matches: [], mismatches: [], suggestions: [] },
             raw: result.raw || '',
             analyzed: true,
             analyzedAt: new Date(),
