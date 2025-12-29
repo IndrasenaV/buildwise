@@ -348,7 +348,15 @@ async function analyzeArchitecture(req, res) {
     const roomAnalysis = Array.isArray(parsed.roomAnalysis) ? parsed.roomAnalysis : [];
     const costAnalysis = typeof parsed.costAnalysis === 'object' && parsed.costAnalysis ? parsed.costAnalysis : { summary: '', highImpactItems: [], valueEngineeringIdeas: [] };
     const accessibilityComfort = typeof parsed.accessibilityComfort === 'object' && parsed.accessibilityComfort ? parsed.accessibilityComfort : { metrics: {}, issues: [] };
-    const optimizationSuggestions = Array.isArray(parsed.optimizationSuggestions) ? parsed.optimizationSuggestions : [];
+    const optimizationSuggestions = Array.isArray(parsed.optimizationSuggestions)
+      ? parsed.optimizationSuggestions.map((s) => {
+          if (typeof s === 'string') return { title: s, description: '', impact: '' };
+          const title = String(s?.title || s?.idea || '').trim();
+          const description = String(s?.description || '').trim();
+          const impact = String(s?.impact || '').trim().toLowerCase();
+          return title ? { title, description, impact } : null;
+        }).filter(Boolean)
+      : [];
     return res.json({
       houseType,
       roofType,
@@ -440,7 +448,11 @@ async function analyzeArchitectureUrls(urls, model, extraContext) {
         recommendation: z.string(),
       })).nullable(),
     }).nullable(),
-    optimizationSuggestions: z.array(z.string()).nullable(),
+    optimizationSuggestions: z.array(z.object({
+      title: z.string(),
+      description: z.string().nullable().optional(),
+      impact: z.enum(['low','medium','high']).nullable().optional(),
+    })).nullable(),
   });
 
   const { data: parsed, usage } = await executeWithLangChain({

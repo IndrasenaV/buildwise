@@ -394,13 +394,59 @@ export default function PlanningArchitect() {
         </Paper>
       )}
       <Paper variant="outlined" sx={{ p: 2 }}>
-        <Typography variant="h6" gutterBottom>Architecture</Typography>
-        <Stack spacing={2}>
-          <Section title="Base Architecture" catKey="architecture_base" optional={false} />
-          <Section title="Structural (optional)" catKey="architecture_structural" optional />
-          <Section title="Foundation Letter (optional)" catKey="architecture_foundation" optional />
-          <Section title="MEP Planning (optional)" catKey="architecture_mep" optional />
-        </Stack>
+        <Typography variant="h6" gutterBottom>Plans & Analysis</Typography>
+        {(() => {
+          const items = byCategory.architecture_base || []
+          const finalItem = items.find((d) => d.isFinal) || items[0]
+          if (!items.length) {
+            return (
+              <Stack spacing={1}>
+                <Typography variant="body2" color="text.secondary">
+                  No base architecture plans uploaded. Upload your plan set to start analysis.
+                </Typography>
+                <Button variant="contained" onClick={() => { setUploadForCategory('architecture_base'); setUploadOpen(true) }}>
+                  Upload Plans
+                </Button>
+              </Stack>
+            )
+          }
+          return (
+            <Stack spacing={1}>
+              <Typography variant="body2">
+                Current {finalItem?.isFinal ? 'final' : 'latest'}: v{finalItem?.version || '—'} — {finalItem?.title || finalItem?.fileName || 'Document'}
+              </Typography>
+              {finalItem?.analysis ? (
+                <Box sx={{ mt: .5 }}>
+                  <Typography variant="subtitle2" sx={{ mb: .5 }}>Detected</Typography>
+                  <Typography variant="caption" sx={{ display: 'block' }}>
+                    House: {finalItem.analysis.houseType || '—'} · Roof: {finalItem.analysis.roofType || '—'} · Exterior: {finalItem.analysis.exteriorType || '—'}
+                  </Typography>
+                  {!!(finalItem.analysis?.suggestions || []).length && (
+                    <Typography variant="caption" color="text.secondary">
+                      Suggestions available · View full analysis for details
+                    </Typography>
+                  )}
+                </Box>
+              ) : (
+                <Typography variant="caption" color="text.secondary">No analysis found yet. Open analysis to run.</Typography>
+              )}
+              <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                <Button
+                  variant="contained"
+                  onClick={() => navigate(`/homes/${id}/planning/architect/analysis/${finalItem?._id}`)}
+                >
+                  {finalItem?.analysis ? 'View Analysis' : 'Open Analysis'}
+                </Button>
+                <Button
+                  variant="outlined"
+                  onClick={() => { setUploadForCategory('architecture_base'); setUploadOpen(true) }}
+                >
+                  Upload New Version
+                </Button>
+              </Stack>
+            </Stack>
+          )
+        })()}
       </Paper>
       <UploadDocumentDialog
         open={uploadOpen}
