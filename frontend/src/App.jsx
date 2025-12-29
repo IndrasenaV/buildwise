@@ -30,6 +30,13 @@ import PlanningAppliances from './pages/PlanningAppliances.jsx'
 import PlanningCabinets from './pages/PlanningCabinets.jsx'
 import PlanningKnowledge from './pages/PlanningKnowledge.jsx'
 import Knowledge from './pages/Knowledge.jsx'
+import PlanningElectrical from './pages/PlanningElectrical.jsx'
+import PlanningPlumbing from './pages/PlanningPlumbing.jsx'
+import PlanningDrywallPaint from './pages/PlanningDrywallPaint.jsx'
+import PlanningHVAC from './pages/PlanningHVAC.jsx'
+import PlanningInsulation from './pages/PlanningInsulation.jsx'
+import PlanningExteriorMaterials from './pages/PlanningExteriorMaterials.jsx'
+import PlanningCountertops from './pages/PlanningCountertops.jsx'
 
 function App() {
   return (
@@ -50,6 +57,13 @@ function App() {
         <Route path="/homes/:id/planning/cabinets" element={<PlanningCabinets />} />
         <Route path="/homes/:id/planning/knowledge" element={<PlanningKnowledge />} />
         <Route path="/homes/:id/planning/flooring" element={<PlanningFlooring />} />
+        <Route path="/homes/:id/planning/electrical" element={<PlanningElectrical />} />
+        <Route path="/homes/:id/planning/plumbing" element={<PlanningPlumbing />} />
+        <Route path="/homes/:id/planning/drywall-paint" element={<PlanningDrywallPaint />} />
+        <Route path="/homes/:id/planning/hvac" element={<PlanningHVAC />} />
+        <Route path="/homes/:id/planning/insulation" element={<PlanningInsulation />} />
+        <Route path="/homes/:id/planning/exterior-materials" element={<PlanningExteriorMaterials />} />
+        <Route path="/homes/:id/planning/countertops" element={<PlanningCountertops />} />
         <Route path="/homes/:id/permits" element={<HomePermits />} />
         <Route path="/homes/:id/tools" element={<HomeTools />} />
         <Route path="/homes/:id/:phase" element={<HomeDetail />} />

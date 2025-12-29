@@ -9,11 +9,16 @@ import Box from '@mui/material/Box'
 // Removed grid/card imports as the quick-access section is removed
 import PageHeader from '../components/PageHeader.jsx'
 import ArchitectureIcon from '@mui/icons-material/Architecture'
-import DoorFrontIcon from '@mui/icons-material/DoorFront'
 import TextureIcon from '@mui/icons-material/Texture'
 import CheckBoxIcon from '@mui/icons-material/CheckBox'
-import KitchenIcon from '@mui/icons-material/Kitchen'
 import CabinetIcon from '@mui/icons-material/Kitchen'
+import ElectricalServicesIcon from '@mui/icons-material/ElectricalServices'
+import PlumbingIcon from '@mui/icons-material/Plumbing'
+import FormatPaintIcon from '@mui/icons-material/FormatPaint'
+import AcUnitIcon from '@mui/icons-material/AcUnit'
+import RoofingIcon from '@mui/icons-material/Roofing'
+import LayersIcon from '@mui/icons-material/Layers'
+import CountertopsIcon from '@mui/icons-material/Countertops'
 // import MenuBookIcon from '@mui/icons-material/MenuBook'
 import UploadDocumentDialog from '../components/UploadDocumentDialog.jsx'
 
@@ -49,7 +54,7 @@ export default function HomePlanning() {
       <Paper variant="outlined" sx={{ p: 4 }}>
         <Typography variant="h5" gutterBottom>Planning Flow</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          Complete Architect first, then plan Windows &amp; Doors, Flooring, Cabinets, and Appliances.
+          Follow the typical construction order: Architect, HVAC, Plumbing, Electricals, Exterior Materials, Insulation, Drywall/Paint, Cabinets, Flooring, Countertops.
         </Typography>
         {(() => {
           const steps = [
@@ -63,19 +68,51 @@ export default function HomePlanning() {
               done: Array.isArray(home?.documents) && (home?.documents || []).some((d) => String(d?.category || '').startsWith('architecture_') && d?.isFinal),
             },
             {
-              key: 'windows',
-              title: 'Windows &amp; Doors',
-              description: 'Select window &amp; door types and glass; estimate by room.',
-              route: `/homes/${id}/planning/windows-doors`,
-              icon: <DoorFrontIcon color="primary" />,
+              key: 'hvac',
+              title: 'HVAC',
+              description: 'Plan system type, zones, and rough-ins per area.',
+              route: `/homes/${id}/planning/hvac`,
+              icon: <AcUnitIcon color="primary" />,
               enabled: !!((home?.documents || []).some((d) => String(d?.category || '').startsWith('architecture_') && d?.isFinal)),
             },
             {
-              key: 'flooring',
-              title: 'Flooring',
-              description: 'Choose carpet, tile, or hardwood per room; balance selections to budget.',
-              route: `/homes/${id}/planning/flooring`,
-              icon: <TextureIcon color="primary" />,
+              key: 'plumbing',
+              title: 'Plumbing',
+              description: 'Plan fixture locations, counts, and rough‑ins per room.',
+              route: `/homes/${id}/planning/plumbing`,
+              icon: <PlumbingIcon color="primary" />,
+              enabled: !!((home?.documents || []).some((d) => String(d?.category || '').startsWith('architecture_') && d?.isFinal)),
+            },
+            {
+              key: 'electrical',
+              title: 'Electricals',
+              description: 'Plan circuits, lighting, and low-voltage needs.',
+              route: `/homes/${id}/planning/electrical`,
+              icon: <ElectricalServicesIcon color="primary" />,
+              enabled: !!((home?.documents || []).some((d) => String(d?.category || '').startsWith('architecture_') && d?.isFinal)),
+            },
+            {
+              key: 'exterior_materials',
+              title: 'Exterior Materials',
+              description: 'Select roofing, cladding, windows/doors finishes, and weatherproofing notes.',
+              route: `/homes/${id}/planning/exterior-materials`,
+              icon: <RoofingIcon color="primary" />,
+              enabled: !!((home?.documents || []).some((d) => String(d?.category || '').startsWith('architecture_') && d?.isFinal)),
+            },
+            {
+              key: 'insulation',
+              title: 'Insulation',
+              description: 'Define wall/ceiling insulation types and R-values per area.',
+              route: `/homes/${id}/planning/insulation`,
+              icon: <LayersIcon color="primary" />,
+              enabled: !!((home?.documents || []).some((d) => String(d?.category || '').startsWith('architecture_') && d?.isFinal)),
+            },
+            {
+              key: 'drywall_paint',
+              title: 'Drywall &amp; Paint',
+              description: 'Define wall/ceiling finish, paint schedule, and special areas.',
+              route: `/homes/${id}/planning/drywall-paint`,
+              icon: <FormatPaintIcon color="primary" />,
               enabled: !!((home?.documents || []).some((d) => String(d?.category || '').startsWith('architecture_') && d?.isFinal)),
             },
             {
@@ -87,11 +124,19 @@ export default function HomePlanning() {
               enabled: !!((home?.documents || []).some((d) => String(d?.category || '').startsWith('architecture_') && d?.isFinal)),
             },
             {
-              key: 'appliances',
-              title: 'Appliances',
-              description: 'Plan kitchen &amp; laundry appliances and rough‑in needs.',
-              route: `/homes/${id}/planning/appliances`,
-              icon: <KitchenIcon color="primary" />,
+              key: 'flooring',
+              title: 'Flooring',
+              description: 'Choose carpet, tile, or hardwood per room; balance selections to budget.',
+              route: `/homes/${id}/planning/flooring`,
+              icon: <TextureIcon color="primary" />,
+              enabled: !!((home?.documents || []).some((d) => String(d?.category || '').startsWith('architecture_') && d?.isFinal)),
+            },
+            {
+              key: 'countertops',
+              title: 'Countertops',
+              description: 'Select countertop materials and edges for kitchens &amp; baths.',
+              route: `/homes/${id}/planning/countertops`,
+              icon: <CountertopsIcon color="primary" />,
               enabled: !!((home?.documents || []).some((d) => String(d?.category || '').startsWith('architecture_') && d?.isFinal)),
             },
             // Knowledge step intentionally removed

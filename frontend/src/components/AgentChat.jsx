@@ -55,9 +55,65 @@ const AGENTS = [
   {
     id: 'appliances',
     title: 'Appliances Assistant',
-    promptKey: '', // seed until DB prompt exists
+    promptKey: 'assistant.appliances',
     preface: 'You specialize in appliance selection (kitchen and laundry). Provide guidance on sizing, fuel types, efficiency, noise, ventilation, and rough-in considerations. Keep within budget.',
     welcome: 'Hi! I’m your Appliances Assistant. Ask me about selecting kitchen and laundry appliances within budget.',
+  },
+  // Planning: HVAC
+  {
+    id: 'hvac',
+    title: 'HVAC Assistant',
+    promptKey: 'assistant.hvac',
+    preface: 'You specialize in HVAC planning. Propose system types, zoning, ventilation and IAQ guidance based on rooms, levels, and square footage.',
+    welcome: 'Hi! I’m your HVAC Assistant. I can help with system type, zoning, ventilation, and IAQ.',
+  },
+  // Planning: Electrical
+  {
+    id: 'electrical',
+    title: 'Electrical Assistant',
+    promptKey: 'assistant.electrical',
+    preface: 'You specialize in electrical planning. Help design circuits, lighting, and low-voltage runs with practical code-aware guidance.',
+    welcome: 'Hi! I’m your Electrical Assistant. I can help plan circuits, lighting, and low-voltage rough-ins.',
+  },
+  // Planning: Plumbing
+  {
+    id: 'plumbing',
+    title: 'Plumbing Assistant',
+    promptKey: 'assistant.plumbing',
+    preface: 'You specialize in plumbing planning. Help enumerate fixtures and rough-ins per room and highlight special venting or slope needs.',
+    welcome: 'Hi! I’m your Plumbing Assistant. I can help plan fixtures and rough-ins by room.',
+  },
+  // Planning: Exterior Materials
+  {
+    id: 'exterior',
+    title: 'Exterior Materials Assistant',
+    promptKey: 'assistant.exterior_materials',
+    preface: 'You specialize in exterior materials. Help select roofing, cladding, trim, and finishes with weatherproofing details.',
+    welcome: 'Hi! I’m your Exterior Materials Assistant. I can help with roofing, cladding, and finishes.',
+  },
+  // Planning: Insulation
+  {
+    id: 'insulation',
+    title: 'Insulation Assistant',
+    promptKey: 'assistant.insulation',
+    preface: 'You specialize in insulation planning. Recommend types and R-values by area, with air sealing and vapor control reminders.',
+    welcome: 'Hi! I’m your Insulation Assistant. I can help choose insulation types and R-values.',
+  },
+  // Planning: Drywall & Paint
+  {
+    id: 'drywall_paint',
+    title: 'Drywall & Paint Assistant',
+    promptKey: 'assistant.drywall_paint',
+    preface: 'You specialize in drywall and paint. Define finish levels and paint schedules with sequencing guidance.',
+    welcome: 'Hi! I’m your Drywall & Paint Assistant. I can help define finishes and paint schedules.',
+  },
+  // Planning: Countertops
+  {
+    id: 'countertops',
+    title: 'Countertops Assistant',
+    promptKey: 'assistant.countertops',
+    preface: 'You specialize in countertop planning. Help select materials, thickness, edges, and splash with install considerations.',
+    welcome: 'Hi! I’m your Countertops Assistant. I can help choose materials and edges.',
   },
   // Planning: Knowledge/Research
   {
@@ -126,6 +182,13 @@ function chooseDefaultAgent(pathname) {
   if (p.includes('/planning/cabinets')) return 'cabinets';
   if (p.includes('/planning/appliances')) return 'appliances';
   if (p.includes('/planning/knowledge')) return 'knowledge';
+  if (p.includes('/planning/hvac')) return 'hvac';
+  if (p.includes('/planning/insulation')) return 'insulation';
+  if (p.includes('/planning/exterior-materials')) return 'exterior';
+  if (p.includes('/planning/countertops')) return 'countertops';
+  if (p.includes('/planning/electrical')) return 'electrical';
+  if (p.includes('/planning/plumbing')) return 'plumbing';
+  if (p.includes('/planning/drywall-paint')) return 'drywall_paint';
   if (p.includes('/planning/architect')) return 'architect';
   if (p.includes('/budget')) return 'budget';
   if (p.includes('/trades')) return 'trades';

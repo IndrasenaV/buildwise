@@ -338,6 +338,26 @@ const HomeSchema = new mongoose.Schema(
         type: PlanningSectionSchema,
         default: { title: 'Plumbing Planning', status: 'todo', steps: [], notes: '' },
       },
+      drywall_paint: {
+        type: PlanningSectionSchema,
+        default: { title: 'Drywall & Paint Planning', status: 'todo', steps: [], notes: '' },
+      },
+      hvac: {
+        type: PlanningSectionSchema,
+        default: { title: 'HVAC Planning', status: 'todo', steps: [], notes: '' },
+      },
+      insulation: {
+        type: PlanningSectionSchema,
+        default: { title: 'Insulation Planning', status: 'todo', steps: [], notes: '' },
+      },
+      exterior_materials: {
+        type: PlanningSectionSchema,
+        default: { title: 'Exterior Materials Planning', status: 'todo', steps: [], notes: '' },
+      },
+      countertops: {
+        type: PlanningSectionSchema,
+        default: { title: 'Countertops Planning', status: 'todo', steps: [], notes: '' },
+      },
     },
     schedules: [ScheduleSchema],
     documents: [DocumentSchema],
