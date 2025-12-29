@@ -108,6 +108,12 @@ const DocumentSchema = new mongoose.Schema(
           impact: { type: String, default: '' }, // low | medium | high
         }
       ],
+      feedback: {
+        summary: { type: String, default: '' },
+        matches: [{ type: String }],
+        mismatches: [{ type: String }],
+        suggestions: [{ type: String }]
+      },
       analyzedAt: { type: Date },
     },
     uploadedBy: {

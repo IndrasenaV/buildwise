@@ -440,7 +440,17 @@ async function analyzeArchitectureUrls(urls, model, extraContext) {
         recommendation: z.string(),
       })).nullable(),
     }).nullable(),
-    optimizationSuggestions: z.array(z.string()).nullable(),
+    optimizationSuggestions: z.array(z.object({
+      title: z.string(),
+      description: z.string(),
+      impact: z.enum(['low', 'medium', 'high']).nullable(),
+    })).nullable(),
+    feedback: z.object({
+      summary: z.string().describe("A summary of how the plan aligns with the user's requirements"),
+      matches: z.array(z.string()).describe("List of requirements that are met by the plan"),
+      mismatches: z.array(z.string()).describe("List of requirements that are NOT met by the plan or contradict it"),
+      suggestions: z.array(z.string()).describe("Suggestions to resolve mismatches"),
+    }).nullable(),
   });
 
   const { data: parsed, usage } = await executeWithLangChain({
@@ -501,7 +511,7 @@ async function chat(req, res) {
       if (promptKey && String(promptKey).trim()) {
         prefix = await getPromptText(String(promptKey).trim());
       }
-    } catch (_e) {}
+    } catch (_e) { }
     const systemPrompt = `${prefix ? `${prefix}\n\n` : ''}You are an expert architect assistant.
     Use the following context from the home's architecture plans to answer the user's question.
     If the context doesn't contain the answer, say you don't know based on the current plans.

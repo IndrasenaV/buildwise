@@ -58,9 +58,9 @@ export default function PlanningArchitect() {
   useEffect(() => {
     api.getHome(id).then((h) => {
       setHome(h)
-      try { setReqDraft(h?.requirements || '') } catch {}
+      try { setReqDraft(h?.requirements || '') } catch { }
       setReqSaved(false)
-    }).catch(() => {})
+    }).catch(() => { })
   }, [id])
 
   useEffect(() => {
@@ -68,7 +68,7 @@ export default function PlanningArchitect() {
     api.getArchitectureQuestions().then((res) => {
       if (!mounted) return
       setKb(res?.questions || null)
-    }).catch(() => {})
+    }).catch(() => { })
     return () => { mounted = false }
   }, [])
 
@@ -254,7 +254,7 @@ export default function PlanningArchitect() {
                         </IconButton>
                       </span>
                     </Tooltip>
-                    {!isFinal && ['architecture_base','architecture_structural','architecture_foundation','architecture_mep'].includes(catKey) && (
+                    {!isFinal && ['architecture_base', 'architecture_structural', 'architecture_foundation', 'architecture_mep'].includes(catKey) && (
                       <Tooltip title="Mark as Final">
                         <span>
                           <IconButton
@@ -265,7 +265,7 @@ export default function PlanningArchitect() {
                                 setBusy(true)
                                 const updated = await api.updateDocument(id, d._id, { isFinal: true })
                                 setHome(updated)
-                              } catch {}
+                              } catch { }
                               finally { setBusy(false) }
                             }}
                           >
@@ -363,34 +363,34 @@ export default function PlanningArchitect() {
               Open Guided Requirement Questionnaire
             </Button>
           </Box>
-        {!!answeredEntries.length && (
-          <Paper variant="outlined" sx={{ p: 2, mt: 2 }}>
-            <Accordion defaultExpanded={false}>
-              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                  Answered Interview Questions ({answeredEntries.length})
-                </Typography>
-              </AccordionSummary>
-              <AccordionDetails>
-                <Grid container spacing={2}>
-                  {answeredEntries.map(([qid, val]) => (
-                    <Grid key={qid} item xs={12} sm={6}>
-                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: .5 }}>
-                        {idToLabel[qid] || qid}
-                      </Typography>
-                      <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                        {String(val)}
-                      </Typography>
-                    </Grid>
-                  ))}
-                </Grid>
-                <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-                  <Button size="small" onClick={() => navigate(`/homes/${id}/planning/architect/interview`)}>Edit in Questionnaire</Button>
-                </Stack>
-              </AccordionDetails>
-            </Accordion>
-          </Paper>
-        )}
+          {!!answeredEntries.length && (
+            <Paper variant="outlined" sx={{ p: 2, mt: 2 }}>
+              <Accordion defaultExpanded={false}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                    Answered Interview Questions ({answeredEntries.length})
+                  </Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Grid container spacing={2}>
+                    {answeredEntries.map(([qid, val]) => (
+                      <Grid key={qid} item xs={12} sm={6}>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: .5 }}>
+                          {idToLabel[qid] || qid}
+                        </Typography>
+                        <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                          {String(val)}
+                        </Typography>
+                      </Grid>
+                    ))}
+                  </Grid>
+                  <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                    <Button size="small" onClick={() => navigate(`/homes/${id}/planning/architect/interview`)}>Edit in Questionnaire</Button>
+                  </Stack>
+                </AccordionDetails>
+              </Accordion>
+            </Paper>
+          )}
         </Paper>
       )}
       <Paper variant="outlined" sx={{ p: 2 }}>
@@ -440,7 +440,7 @@ export default function PlanningArchitect() {
               select
               fullWidth
             >
-              {['planning','preconstruction','exterior','interior'].map((p) => (<MenuItem key={p} value={p}>{p}</MenuItem>))}
+              {['planning', 'preconstruction', 'exterior', 'interior'].map((p) => (<MenuItem key={p} value={p}>{p}</MenuItem>))}
             </TextField>
             <TextField
               label="Trade"
@@ -463,7 +463,7 @@ export default function PlanningArchitect() {
                 const res = await api.addTask(id, addTaskDlg.tradeId, { title: addTaskDlg.title, description: addTaskDlg.description, phaseKey: addTaskDlg.phaseKey })
                 setHome(res.home)
                 setAddTaskDlg({ open: false, title: '', description: '', tradeId: '', phaseKey: 'planning' })
-              } catch {}
+              } catch { }
             }}
           >
             Add
@@ -471,250 +471,250 @@ export default function PlanningArchitect() {
         </DialogActions>
       </Dialog>
       {false && (
-      <Dialog open={analyzeDlg.open} onClose={() => (!analyzeDlg.busy ? setAnalyzeDlg((d) => ({ ...d, open: false })) : null)} fullWidth maxWidth="md">
-        <DialogTitle>Architecture Analysis</DialogTitle>
-        <DialogContent dividers>
-          {analyzeDlg.busy ? (
-            <Stack alignItems="center" sx={{ py: 4 }}>
-              <CircularProgress />
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>Analyzing…</Typography>
-            </Stack>
-          ) : (
-            <Stack spacing={2}>
-              {analyzeDlg.result?.error && <Typography variant="body2" color="error.main">{analyzeDlg.result.error}</Typography>}
-              <Box>
-                <Typography variant="subtitle2">Detected</Typography>
-                <Typography variant="body2">House Type: {analyzeDlg.result?.houseType || '—'}</Typography>
-                <Typography variant="body2">Roof Type: {analyzeDlg.result?.roofType || '—'}</Typography>
-                <Typography variant="body2">Exterior Type: {analyzeDlg.result?.exteriorType || '—'}</Typography>
-              </Box>
-              {analyzeDlg.result?.functionalScores && (
-                <Paper variant="outlined" sx={{ p: 2 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1 }}>Functional Overview</Typography>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} md={6}>
-                      <FunctionalRadar scores={analyzeDlg.result.functionalScores} />
+        <Dialog open={analyzeDlg.open} onClose={() => (!analyzeDlg.busy ? setAnalyzeDlg((d) => ({ ...d, open: false })) : null)} fullWidth maxWidth="md">
+          <DialogTitle>Architecture Analysis</DialogTitle>
+          <DialogContent dividers>
+            {analyzeDlg.busy ? (
+              <Stack alignItems="center" sx={{ py: 4 }}>
+                <CircularProgress />
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>Analyzing…</Typography>
+              </Stack>
+            ) : (
+              <Stack spacing={2}>
+                {analyzeDlg.result?.error && <Typography variant="body2" color="error.main">{analyzeDlg.result.error}</Typography>}
+                <Box>
+                  <Typography variant="subtitle2">Detected</Typography>
+                  <Typography variant="body2">House Type: {analyzeDlg.result?.houseType || '—'}</Typography>
+                  <Typography variant="body2">Roof Type: {analyzeDlg.result?.roofType || '—'}</Typography>
+                  <Typography variant="body2">Exterior Type: {analyzeDlg.result?.exteriorType || '—'}</Typography>
+                </Box>
+                {analyzeDlg.result?.functionalScores && (
+                  <Paper variant="outlined" sx={{ p: 2 }}>
+                    <Typography variant="subtitle2" sx={{ mb: 1 }}>Functional Overview</Typography>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} md={6}>
+                        <FunctionalRadar scores={analyzeDlg.result.functionalScores} />
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <Stack spacing={1}>
+                          {Object.entries(analyzeDlg.result.functionalScores).map(([k, v]) => (
+                            <Box key={k}>
+                              <Stack direction="row" justifyContent="space-between">
+                                <Typography variant="caption" sx={{ textTransform: 'capitalize' }}>{k}</Typography>
+                                <Typography variant="caption">{Math.round((v || 0) * 100)}%</Typography>
+                              </Stack>
+                              <LinearProgress variant="determinate" value={Math.round((v || 0) * 100)} />
+                            </Box>
+                          ))}
+                        </Stack>
+                      </Grid>
                     </Grid>
-                    <Grid item xs={12} md={6}>
-                      <Stack spacing={1}>
-                        {Object.entries(analyzeDlg.result.functionalScores).map(([k, v]) => (
-                          <Box key={k}>
+                  </Paper>
+                )}
+                {!!(analyzeDlg.result?.roomAnalysis || []).length && (
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ mb: .5 }}>Detailed Room Analysis</Typography>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Room</TableCell>
+                          <TableCell>Level</TableCell>
+                          <TableCell>Area (sq ft)</TableCell>
+                          <TableCell>Dimensions (ft)</TableCell>
+                          <TableCell>Windows</TableCell>
+                          <TableCell>Doors</TableCell>
+                          <TableCell>Notes</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {(analyzeDlg.result?.roomAnalysis || []).map((r, i) => (
+                          <TableRow key={i}>
+                            <TableCell>{r.name || '—'}</TableCell>
+                            <TableCell>{r.level || '—'}</TableCell>
+                            <TableCell>{r.areaSqFt || 0}</TableCell>
+                            <TableCell>{(r.dimensions && (r.dimensions.lengthFt || r.dimensions.widthFt)) ? `${r.dimensions.lengthFt || 0} × ${r.dimensions.widthFt || 0}` : '—'}</TableCell>
+                            <TableCell>{typeof r.windows === 'number' ? r.windows : '—'}</TableCell>
+                            <TableCell>{typeof r.doors === 'number' ? r.doors : '—'}</TableCell>
+                            <TableCell>{r.notes || '—'}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </Box>
+                )}
+                {(analyzeDlg.result?.costAnalysis && (analyzeDlg.result?.costAnalysis?.summary || (analyzeDlg.result?.costAnalysis?.highImpactItems || []).length || (analyzeDlg.result?.costAnalysis?.valueEngineeringIdeas || []).length)) ? (
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ mb: .5 }}>Cost Efficiency Analysis</Typography>
+                    {analyzeDlg.result?.costAnalysis?.summary ? (
+                      <Typography variant="body2" sx={{ mb: 1 }}>{analyzeDlg.result.costAnalysis.summary}</Typography>
+                    ) : null}
+                    {!!(analyzeDlg.result?.costAnalysis?.highImpactItems || []).length && (
+                      <Paper variant="outlined" sx={{ p: 2, mb: 1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>Key Cost Drivers vs Typical</Typography>
+                        <CostDriversChart
+                          data={(analyzeDlg.result?.costAnalysis?.highImpactItems || []).map((it) => ({
+                            label: it.item,
+                            project: Number(it.projectValue ?? 0),
+                            typical: Number(it.typicalValue ?? 0),
+                          }))}
+                        />
+                      </Paper>
+                    )}
+                    {!!(analyzeDlg.result?.costAnalysis?.highImpactItems || []).length && (
+                      <Box sx={{ mb: 1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600, mb: .5 }}>High-Impact Items</Typography>
+                        <List dense disablePadding>
+                          {(analyzeDlg.result?.costAnalysis?.highImpactItems || []).map((it, i) => (
+                            <div key={i}>
+                              <ListItem>
+                                <ListItemText
+                                  primary={it.item || 'Item'}
+                                  secondary={
+                                    <span>
+                                      {it.rationale || '—'}
+                                      {it.metricName ? ` · ${it.metricName}: ${it.projectValue ?? '—'} (typical ${it.typicalValue ?? '—'})` : ''}
+                                      {it.estCostImpact ? ` · Est. Impact: ${typeof it.estCostImpact === 'number' ? `$${it.estCostImpact.toLocaleString()}` : it.estCostImpact}` : ''}
+                                    </span>
+                                  }
+                                />
+                              </ListItem>
+                              {i < (analyzeDlg.result?.costAnalysis?.highImpactItems || []).length - 1 && <Divider component="li" />}
+                            </div>
+                          ))}
+                        </List>
+                      </Box>
+                    )}
+                    {!!(analyzeDlg.result?.costAnalysis?.valueEngineeringIdeas || []).length && (
+                      <Box>
+                        <Typography variant="body2" sx={{ fontWeight: 600, mb: .5 }}>Value Engineering Ideas</Typography>
+                        <List dense disablePadding>
+                          {(analyzeDlg.result?.costAnalysis?.valueEngineeringIdeas || []).map((it, i) => (
+                            <div key={i}>
+                              <ListItem>
+                                <ListItemText
+                                  primary={it.idea || 'Idea'}
+                                  secondary={`${it.trade ? `Trade: ${it.trade} · ` : ''}${it.estSavings ? `Est. Savings: ${it.estSavings}` : ''}`}
+                                />
+                              </ListItem>
+                              {i < (analyzeDlg.result?.costAnalysis?.valueEngineeringIdeas || []).length - 1 && <Divider component="li" />}
+                            </div>
+                          ))}
+                        </List>
+                      </Box>
+                    )}
+                  </Box>
+                ) : null}
+                {(analyzeDlg.result?.accessibilityComfort && ((analyzeDlg.result?.accessibilityComfort?.issues || []).length || (analyzeDlg.result?.accessibilityComfort?.metrics && Object.keys(analyzeDlg.result.accessibilityComfort.metrics).length))) ? (
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ mb: .5 }}>Accessibility & Comfort</Typography>
+                    {analyzeDlg.result?.accessibilityComfort?.metrics ? (
+                      <Box sx={{ mb: 1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600, mb: .5 }}>Metrics</Typography>
+                        <List dense disablePadding>
+                          {Object.entries(analyzeDlg.result.accessibilityComfort.metrics).map(([k, v]) => (
+                            <ListItem key={k}><ListItemText primary={`${k}: ${v}`} /></ListItem>
+                          ))}
+                        </List>
+                      </Box>
+                    ) : null}
+                    {!!(analyzeDlg.result?.accessibilityComfort?.issues || []).length && (
+                      <Box>
+                        <Typography variant="body2" sx={{ fontWeight: 600, mb: .5 }}>Issues</Typography>
+                        <List dense disablePadding>
+                          {(analyzeDlg.result?.accessibilityComfort?.issues || []).map((it, i) => (
+                            <div key={i}>
+                              <ListItem>
+                                <ListItemText
+                                  primary={`${it.area || 'Area'}${it.severity ? ` · ${it.severity}` : ''}`}
+                                  secondary={`${it.issue || '—'}${it.recommendation ? ` · Rec: ${it.recommendation}` : ''}`}
+                                />
+                              </ListItem>
+                              {i < (analyzeDlg.result?.accessibilityComfort?.issues || []).length - 1 && <Divider component="li" />}
+                            </div>
+                          ))}
+                        </List>
+                      </Box>
+                    )}
+                  </Box>
+                ) : null}
+                {!!(analyzeDlg.result?.suggestions || []).length && (
+                  <Box>
+                    <Typography variant="subtitle2">Suggestions</Typography>
+                    <List dense disablePadding>
+                      {(analyzeDlg.result?.suggestions || []).map((s, i) => (
+                        <div key={i}>
+                          <ListItem><ListItemText primary={s} /></ListItem>
+                          {i < (analyzeDlg.result?.suggestions || []).length - 1 && <Divider component="li" />}
+                        </div>
+                      ))}
+                    </List>
+                  </Box>
+                )}
+                {(analyzeDlg.result?.lightingAnalysis && ((analyzeDlg.result?.lightingAnalysis?.rooms || []).length || analyzeDlg.result?.lightingAnalysis?.summary)) && (
+                  <Paper variant="outlined" sx={{ p: 2 }}>
+                    <Typography variant="subtitle2" sx={{ mb: .5 }}>Lighting & Daylight</Typography>
+                    {analyzeDlg.result?.lightingAnalysis?.summary ? (
+                      <Typography variant="body2" sx={{ mb: 1 }}>{analyzeDlg.result.lightingAnalysis.summary}</Typography>
+                    ) : null}
+                    {!!(analyzeDlg.result?.lightingAnalysis?.rooms || []).length && (
+                      <Box>
+                        {(analyzeDlg.result?.lightingAnalysis?.rooms || []).map((r, i) => (
+                          <Box key={i} sx={{ mb: 1 }}>
                             <Stack direction="row" justifyContent="space-between">
-                              <Typography variant="caption" sx={{ textTransform: 'capitalize' }}>{k}</Typography>
-                              <Typography variant="caption">{Math.round((v || 0) * 100)}%</Typography>
+                              <Typography variant="caption">{r.name} {r.orientation ? `· ${r.orientation}` : ''} {typeof r.glazingAreaPct === 'number' ? `· ${r.glazingAreaPct}% glazing` : ''}</Typography>
+                              <Typography variant="caption">{Math.round((r.daylightScore || 0) * 100)}%</Typography>
                             </Stack>
-                            <LinearProgress variant="determinate" value={Math.round((v || 0) * 100)} />
+                            <LinearProgress variant="determinate" value={Math.round((r.daylightScore || 0) * 100)} />
                           </Box>
                         ))}
-                      </Stack>
-                    </Grid>
-                  </Grid>
-                </Paper>
-              )}
-              {!!(analyzeDlg.result?.roomAnalysis || []).length && (
-                <Box>
-                  <Typography variant="subtitle2" sx={{ mb: .5 }}>Detailed Room Analysis</Typography>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Room</TableCell>
-                        <TableCell>Level</TableCell>
-                        <TableCell>Area (sq ft)</TableCell>
-                        <TableCell>Dimensions (ft)</TableCell>
-                        <TableCell>Windows</TableCell>
-                        <TableCell>Doors</TableCell>
-                        <TableCell>Notes</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {(analyzeDlg.result?.roomAnalysis || []).map((r, i) => (
-                        <TableRow key={i}>
-                          <TableCell>{r.name || '—'}</TableCell>
-                          <TableCell>{r.level || '—'}</TableCell>
-                          <TableCell>{r.areaSqFt || 0}</TableCell>
-                          <TableCell>{(r.dimensions && (r.dimensions.lengthFt || r.dimensions.widthFt)) ? `${r.dimensions.lengthFt || 0} × ${r.dimensions.widthFt || 0}` : '—'}</TableCell>
-                          <TableCell>{typeof r.windows === 'number' ? r.windows : '—'}</TableCell>
-                          <TableCell>{typeof r.doors === 'number' ? r.doors : '—'}</TableCell>
-                          <TableCell>{r.notes || '—'}</TableCell>
-                        </TableRow>
+                      </Box>
+                    )}
+                  </Paper>
+                )}
+                {!!(analyzeDlg.result?.optimizationSuggestions || []).length && (
+                  <Box>
+                    <Typography variant="subtitle2">Smart Optimization Suggestions</Typography>
+                    <List dense disablePadding>
+                      {(analyzeDlg.result?.optimizationSuggestions || []).map((s, i) => (
+                        <div key={i}>
+                          <ListItem>
+                            <ListItemText
+                              primary={`${s.title || s || 'Suggestion'}${s.impact ? ` · ${s.impact}` : ''}`}
+                              secondary={s.description || '—'}
+                            />
+                          </ListItem>
+                          {i < (analyzeDlg.result?.optimizationSuggestions || []).length - 1 && <Divider component="li" />}
+                        </div>
                       ))}
-                    </TableBody>
-                  </Table>
-                </Box>
-              )}
-              {(analyzeDlg.result?.costAnalysis && (analyzeDlg.result?.costAnalysis?.summary || (analyzeDlg.result?.costAnalysis?.highImpactItems || []).length || (analyzeDlg.result?.costAnalysis?.valueEngineeringIdeas || []).length)) ? (
-                <Box>
-                  <Typography variant="subtitle2" sx={{ mb: .5 }}>Cost Efficiency Analysis</Typography>
-                  {analyzeDlg.result?.costAnalysis?.summary ? (
-                    <Typography variant="body2" sx={{ mb: 1 }}>{analyzeDlg.result.costAnalysis.summary}</Typography>
-                  ) : null}
-                  {!!(analyzeDlg.result?.costAnalysis?.highImpactItems || []).length && (
-                    <Paper variant="outlined" sx={{ p: 2, mb: 1 }}>
-                      <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>Key Cost Drivers vs Typical</Typography>
-                      <CostDriversChart
-                        data={(analyzeDlg.result?.costAnalysis?.highImpactItems || []).map((it) => ({
-                          label: it.item,
-                          project: Number(it.projectValue ?? 0),
-                          typical: Number(it.typicalValue ?? 0),
-                        }))}
-                      />
-                    </Paper>
-                  )}
-                  {!!(analyzeDlg.result?.costAnalysis?.highImpactItems || []).length && (
-                    <Box sx={{ mb: 1 }}>
-                      <Typography variant="body2" sx={{ fontWeight: 600, mb: .5 }}>High-Impact Items</Typography>
-                      <List dense disablePadding>
-                        {(analyzeDlg.result?.costAnalysis?.highImpactItems || []).map((it, i) => (
-                          <div key={i}>
-                            <ListItem>
-                              <ListItemText
-                                primary={it.item || 'Item'}
-                                secondary={
-                                  <span>
-                                    {it.rationale || '—'}
-                                    {it.metricName ? ` · ${it.metricName}: ${it.projectValue ?? '—'} (typical ${it.typicalValue ?? '—'})` : ''}
-                                    {it.estCostImpact ? ` · Est. Impact: ${typeof it.estCostImpact === 'number' ? `$${it.estCostImpact.toLocaleString()}` : it.estCostImpact}` : ''}
-                                  </span>
-                                }
-                              />
-                            </ListItem>
-                            {i < (analyzeDlg.result?.costAnalysis?.highImpactItems || []).length - 1 && <Divider component="li" />}
-                          </div>
-                        ))}
-                      </List>
-                    </Box>
-                  )}
-                  {!!(analyzeDlg.result?.costAnalysis?.valueEngineeringIdeas || []).length && (
-                    <Box>
-                      <Typography variant="body2" sx={{ fontWeight: 600, mb: .5 }}>Value Engineering Ideas</Typography>
-                      <List dense disablePadding>
-                        {(analyzeDlg.result?.costAnalysis?.valueEngineeringIdeas || []).map((it, i) => (
-                          <div key={i}>
-                            <ListItem>
-                              <ListItemText
-                                primary={it.idea || 'Idea'}
-                                secondary={`${it.trade ? `Trade: ${it.trade} · ` : ''}${it.estSavings ? `Est. Savings: ${it.estSavings}` : ''}`}
-                              />
-                            </ListItem>
-                            {i < (analyzeDlg.result?.costAnalysis?.valueEngineeringIdeas || []).length - 1 && <Divider component="li" />}
-                          </div>
-                        ))}
-                      </List>
-                    </Box>
-                  )}
-                </Box>
-              ) : null}
-              {(analyzeDlg.result?.accessibilityComfort && ((analyzeDlg.result?.accessibilityComfort?.issues || []).length || (analyzeDlg.result?.accessibilityComfort?.metrics && Object.keys(analyzeDlg.result.accessibilityComfort.metrics).length))) ? (
-                <Box>
-                  <Typography variant="subtitle2" sx={{ mb: .5 }}>Accessibility & Comfort</Typography>
-                  {analyzeDlg.result?.accessibilityComfort?.metrics ? (
-                    <Box sx={{ mb: 1 }}>
-                      <Typography variant="body2" sx={{ fontWeight: 600, mb: .5 }}>Metrics</Typography>
-                      <List dense disablePadding>
-                        {Object.entries(analyzeDlg.result.accessibilityComfort.metrics).map(([k, v]) => (
-                          <ListItem key={k}><ListItemText primary={`${k}: ${v}`} /></ListItem>
-                        ))}
-                      </List>
-                    </Box>
-                  ) : null}
-                  {!!(analyzeDlg.result?.accessibilityComfort?.issues || []).length && (
-                    <Box>
-                      <Typography variant="body2" sx={{ fontWeight: 600, mb: .5 }}>Issues</Typography>
-                      <List dense disablePadding>
-                        {(analyzeDlg.result?.accessibilityComfort?.issues || []).map((it, i) => (
-                          <div key={i}>
-                            <ListItem>
-                              <ListItemText
-                                primary={`${it.area || 'Area'}${it.severity ? ` · ${it.severity}` : ''}`}
-                                secondary={`${it.issue || '—'}${it.recommendation ? ` · Rec: ${it.recommendation}` : ''}`}
-                              />
-                            </ListItem>
-                            {i < (analyzeDlg.result?.accessibilityComfort?.issues || []).length - 1 && <Divider component="li" />}
-                          </div>
-                        ))}
-                      </List>
-                    </Box>
-                  )}
-                </Box>
-              ) : null}
-              {!!(analyzeDlg.result?.suggestions || []).length && (
-                <Box>
-                  <Typography variant="subtitle2">Suggestions</Typography>
-                  <List dense disablePadding>
-                    {(analyzeDlg.result?.suggestions || []).map((s, i) => (
-                      <div key={i}>
-                        <ListItem><ListItemText primary={s} /></ListItem>
-                        {i < (analyzeDlg.result?.suggestions || []).length - 1 && <Divider component="li" />}
-                      </div>
-                    ))}
-                  </List>
-                </Box>
-              )}
-              {(analyzeDlg.result?.lightingAnalysis && ((analyzeDlg.result?.lightingAnalysis?.rooms || []).length || analyzeDlg.result?.lightingAnalysis?.summary)) && (
-                <Paper variant="outlined" sx={{ p: 2 }}>
-                  <Typography variant="subtitle2" sx={{ mb: .5 }}>Lighting & Daylight</Typography>
-                  {analyzeDlg.result?.lightingAnalysis?.summary ? (
-                    <Typography variant="body2" sx={{ mb: 1 }}>{analyzeDlg.result.lightingAnalysis.summary}</Typography>
-                  ) : null}
-                  {!!(analyzeDlg.result?.lightingAnalysis?.rooms || []).length && (
-                    <Box>
-                      {(analyzeDlg.result?.lightingAnalysis?.rooms || []).map((r, i) => (
-                        <Box key={i} sx={{ mb: 1 }}>
-                          <Stack direction="row" justifyContent="space-between">
-                            <Typography variant="caption">{r.name} {r.orientation ? `· ${r.orientation}` : ''} {typeof r.glazingAreaPct === 'number' ? `· ${r.glazingAreaPct}% glazing` : ''}</Typography>
-                            <Typography variant="caption">{Math.round((r.daylightScore || 0) * 100)}%</Typography>
-                          </Stack>
-                          <LinearProgress variant="determinate" value={Math.round((r.daylightScore || 0) * 100)} />
-                        </Box>
+                    </List>
+                  </Box>
+                )}
+                {!!(analyzeDlg.result?.suggestedTasks || []).length && (
+                  <Box>
+                    <Typography variant="subtitle2">Suggested Tasks</Typography>
+                    <List dense disablePadding>
+                      {(analyzeDlg.result?.suggestedTasks || []).map((t, i) => (
+                        <div key={i}>
+                          <ListItem
+                            secondaryAction={
+                              <Button size="small" variant="outlined" onClick={() => setAddTaskDlg({ open: true, title: t.title, description: t.description || '', tradeId: '', phaseKey: (t.phaseKey || 'planning') })}>Add Task</Button>
+                            }
+                          >
+                            <ListItemText primary={t.title} secondary={(t.description || '').trim() || '—'} />
+                          </ListItem>
+                          {i < (analyzeDlg.result?.suggestedTasks || []).length - 1 && <Divider component="li" />}
+                        </div>
                       ))}
-                    </Box>
-                  )}
-                </Paper>
-              )}
-              {!!(analyzeDlg.result?.optimizationSuggestions || []).length && (
-                <Box>
-                  <Typography variant="subtitle2">Smart Optimization Suggestions</Typography>
-                  <List dense disablePadding>
-                    {(analyzeDlg.result?.optimizationSuggestions || []).map((s, i) => (
-                      <div key={i}>
-                        <ListItem>
-                          <ListItemText
-                            primary={`${s.title || 'Suggestion'}${s.impact ? ` · ${s.impact}` : ''}`}
-                            secondary={s.description || '—'}
-                          />
-                        </ListItem>
-                        {i < (analyzeDlg.result?.optimizationSuggestions || []).length - 1 && <Divider component="li" />}
-                      </div>
-                    ))}
-                  </List>
-                </Box>
-              )}
-              {!!(analyzeDlg.result?.suggestedTasks || []).length && (
-                <Box>
-                  <Typography variant="subtitle2">Suggested Tasks</Typography>
-                  <List dense disablePadding>
-                    {(analyzeDlg.result?.suggestedTasks || []).map((t, i) => (
-                      <div key={i}>
-                        <ListItem
-                          secondaryAction={
-                            <Button size="small" variant="outlined" onClick={() => setAddTaskDlg({ open: true, title: t.title, description: t.description || '', tradeId: '', phaseKey: (t.phaseKey || 'planning') })}>Add Task</Button>
-                          }
-                        >
-                          <ListItemText primary={t.title} secondary={(t.description || '').trim() || '—'} />
-                        </ListItem>
-                        {i < (analyzeDlg.result?.suggestedTasks || []).length - 1 && <Divider component="li" />}
-                      </div>
-                    ))}
-                  </List>
-                </Box>
-              )}
-            </Stack>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setAnalyzeDlg((d) => ({ ...d, open: false }))} disabled={analyzeDlg.busy}>Close</Button>
-        </DialogActions>
-      </Dialog>
+                    </List>
+                  </Box>
+                )}
+              </Stack>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setAnalyzeDlg((d) => ({ ...d, open: false }))} disabled={analyzeDlg.busy}>Close</Button>
+          </DialogActions>
+        </Dialog>
       )}
       {/* Page Classification Dialog */}
       <Dialog open={pageDlg.open} onClose={() => (!pageDlg.busy ? setPageDlg((s) => ({ ...s, open: false })) : null)} fullWidth maxWidth="lg">
