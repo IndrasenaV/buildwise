@@ -72,7 +72,7 @@ export default function HomeList() {
           homes.map((h) => (
             <Grid key={h._id} item xs={12} sm={6} md={4} lg={3}>
               <Card variant="outlined">
-                <CardActionArea onClick={() => navigate(`/homes/${h._id}/preconstruction`)}>
+                <CardActionArea onClick={() => navigate(`/homes/${h._id}/dashboard`)}>
                   <CardContent sx={{ display: 'grid', gap: 1 }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{h.name}</Typography>
                     <Typography variant="body2" color="text.secondary">{h.address || 'No address'}</Typography>

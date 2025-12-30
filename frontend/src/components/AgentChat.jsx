@@ -213,6 +213,49 @@ export default function AgentChat({ homeId }) {
   const messagesEndRef = useRef(null);
   const [menuAnchor, setMenuAnchor] = useState(null);
 
+  async function sendAssistantMessage(userText, overridePromptKey) {
+    if (!homeId || !String(userText || '').trim()) return;
+    const userMsg = { role: 'user', content: userText };
+    setMessagesByAgent((prev) => ({ ...prev, [selectedAgentId]: [ ...(prev[selectedAgentId] || []), userMsg ] }));
+    setIsLoading(true);
+    try {
+      const currentMsgs = (messagesByAgent[selectedAgentId] || []);
+      const history = currentMsgs.slice(-5).map((m) => ({ role: m.role, content: m.content }));
+      const message = agent?.preface ? `${agent.preface}\n\nUser: ${userMsg.content}` : userMsg.content;
+      const payload = { homeId, message, history };
+      const key = typeof overridePromptKey === 'string' && overridePromptKey.trim() ? overridePromptKey : (agent?.promptKey || '');
+      if (key) payload.promptKey = key;
+      const res = await api.chat(payload);
+      const aiMsg = { role: 'assistant', content: res.reply, context: res.contextUsed };
+      setMessagesByAgent((prev) => ({ ...prev, [selectedAgentId]: [ ...(prev[selectedAgentId] || []), aiMsg ] }));
+    } catch (_e) {
+      setMessagesByAgent((prev) => ({ ...prev, [selectedAgentId]: [ ...(prev[selectedAgentId] || []), { role: 'assistant', content: "Sorry, I couldn't get an answer right now." } ] }));
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    function onExternalPrompt(ev) {
+      try {
+        const detail = ev?.detail || {};
+        const text = String(detail.message || '').trim();
+        const desiredAgent = String(detail.agentId || '').trim();
+        const overridePromptKey = String(detail.promptKey || '').trim();
+        if (desiredAgent && !userPinned) {
+          setSelectedAgentId(desiredAgent);
+        }
+        if (text) {
+          // slight delay to allow agent switch state to apply
+          setTimeout(() => { sendAssistantMessage(text, overridePromptKey) }, desiredAgent ? 50 : 0);
+        }
+      } catch {}
+    }
+    window.addEventListener('agentchat:prompt', onExternalPrompt);
+    return () => window.removeEventListener('agentchat:prompt', onExternalPrompt);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userPinned, selectedAgentId, messagesByAgent, homeId]);
+
   useEffect(() => {
     // Auto-switch agent on route change unless user pinned a selection
     const next = chooseDefaultAgent(location.pathname);
