@@ -10,7 +10,7 @@
     "build:frontend": "npm --prefix ../frontend run build",
     "build:marketing": "npm --prefix ../marketing run build",
     "build:public": "npm run build:marketing && npm run build:frontend",
-    "build:ppt": "node src/scripts/generatePptFromMd.js docs/ai-toyota-showcase.md docs/ai-toyota-showcase.pptx",
+    "build:ppt": "node src/scripts/generatePptFromMd.js docs/ai-capability-buildwise-showcase.md docs/ai-capability-buildwise-showcase.pptx",
     "package:zip": "bash -lc 'cd .. && rm -f buildwise_server.zip && zip -r buildwise_server.zip backend -x \"backend/node_modules/**\"'",
     "lint": "echo \"No linter configured\"",
     "seed:templates": "node src/scripts/seedTemplates.js",

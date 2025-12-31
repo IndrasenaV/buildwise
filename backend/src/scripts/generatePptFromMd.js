@@ -45,8 +45,8 @@ function parseMarkdown(mdText) {
 }
 
 async function run() {
-  const inArg = process.argv[2] || 'docs/ai-toyota-showcase.md'
-  const outArg = process.argv[3] || 'docs/ai-toyota-showcase.pptx'
+  const inArg = process.argv[2] || 'docs/ai-capability-buildwise-showcase.md'
+  const outArg = process.argv[3] || 'docs/ai-capability-buildwise-showcase.pptx'
   const inPath = resolveFromRepoRoot(inArg)
   const outPath = resolveFromRepoRoot(outArg)
 
