@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { planningPathForTrade, budgetPathForTrade } from '../utils/tradeLinks'
 import { api } from '../api/client'
 import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
@@ -417,26 +418,8 @@ export default function HomeBidDetail() {
             size="small"
             variant="outlined"
             onClick={() => {
-              const tradeName = String(bid?.name || '').toLowerCase()
-              const base = `/homes/${id}/planning`
-              const map = [
-                { key: 'hvac', path: `${base}/hvac` },
-                { key: 'plumbing', path: `${base}/plumbing` },
-                { key: 'electrical', path: `${base}/electrical` },
-                { key: 'insulation', path: `${base}/insulation` },
-                { key: 'exterior', path: `${base}/exterior-materials` },
-                { key: 'countertop', path: `${base}/countertops` },
-                { key: 'countertops', path: `${base}/countertops` },
-                { key: 'cabinet', path: `${base}/cabinets` },
-                { key: 'cabinets', path: `${base}/cabinets` },
-                { key: 'floor', path: `${base}/flooring` },
-                { key: 'flooring', path: `${base}/flooring` },
-                { key: 'window', path: `${base}/windows-doors` },
-                { key: 'drywall', path: `${base}/drywall-paint` },
-                { key: 'paint', path: `${base}/drywall-paint` },
-              ]
-              const found = map.find(m => tradeName.includes(m.key))
-              if (found) navigate(found.path)
+              const path = planningPathForTrade(id, bid)
+              if (path) navigate(path)
             }}
           >
             1. Planning
@@ -444,7 +427,7 @@ export default function HomeBidDetail() {
           <Button
             size="small"
             variant="outlined"
-            onClick={() => navigate(`/homes/${id}/trades/${bidId}/budget`)}
+            onClick={() => navigate(budgetPathForTrade(id, bid))}
           >
             2. Budget
           </Button>

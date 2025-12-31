@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api/client'
+import { tradeMatchesPlanningSlug } from '../utils/tradeLinks'
 import PageHeader from '../components/PageHeader.jsx'
 import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
@@ -41,7 +42,7 @@ export default function PlanningHVAC() {
 
   const hvacTradeId = useMemo(() => {
     const trades = Array.isArray(home?.trades) ? home.trades : []
-    const match = trades.find((t) => String(t?.name || '').toLowerCase() === 'hvac')
+    const match = trades.find((t) => tradeMatchesPlanningSlug(t, 'hvac'))
     return match?._id || ''
   }, [home])
 
