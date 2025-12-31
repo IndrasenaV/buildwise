@@ -736,6 +736,12 @@ const bidUpdateSchema = Joi.object({
   totalPrice: Joi.number().min(0).optional(),
   totalPaid: Joi.number().min(0).optional(),
   notes: Joi.string().allow('').optional(),
+  plannedCostRange: Joi.object({
+    min: Joi.number().min(0).allow(null),
+    max: Joi.number().min(0).allow(null),
+  }).optional(),
+  planningSummary: Joi.object().unknown(true).optional(),
+  contractSignedAt: Joi.date().allow(null).optional(),
 });
 
 async function updateBid(req, res) {
@@ -804,6 +810,20 @@ async function updateBid(req, res) {
   if (value.totalPrice !== undefined) set['trades.$.totalPrice'] = value.totalPrice;
   if (value.totalPaid !== undefined) set['trades.$.totalPaid'] = value.totalPaid;
   if (value.notes !== undefined) set['trades.$.notes'] = value.notes;
+  if (value.plannedCostRange !== undefined) {
+    const r = value.plannedCostRange || {};
+    const min = (typeof r.min === 'number' && isFinite(r.min)) ? r.min : null;
+    const max = (typeof r.max === 'number' && isFinite(r.max)) ? r.max : null;
+    set['trades.$.plannedCostRange'] = { min, max };
+  }
+  if (value.planningSummary !== undefined) {
+    set['trades.$.planningSummary'] = value.planningSummary && typeof value.planningSummary === 'object'
+      ? value.planningSummary
+      : null;
+  }
+  if (value.contractSignedAt !== undefined) {
+    set['trades.$.contractSignedAt'] = value.contractSignedAt ? new Date(value.contractSignedAt) : null;
+  }
   const updateQuery = {
     $set: set,
   };

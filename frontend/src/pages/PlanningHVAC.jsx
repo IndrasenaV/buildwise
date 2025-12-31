@@ -39,6 +39,12 @@ export default function PlanningHVAC() {
     }).catch(() => {})
   }, [id])
 
+  const hvacTradeId = useMemo(() => {
+    const trades = Array.isArray(home?.trades) ? home.trades : []
+    const match = trades.find((t) => String(t?.name || '').toLowerCase() === 'hvac')
+    return match?._id || ''
+  }, [home])
+
   const hasFinalArchitecture = useMemo(() => {
     const docs = Array.isArray(home?.documents) ? home.documents : []
     const archDocs = docs.filter((d) => String(d?.category || '').startsWith('architecture_'))
@@ -170,11 +176,13 @@ export default function PlanningHVAC() {
   async function saveNotes() {
     try {
       setSaving(true)
-      // Placeholder local save; structure can be persisted later with a dedicated API
-      // eslint-disable-next-line no-console
-      console.log('HVAC plan (local only):', {
-        systemType, brand, zones, climate, efficiency, estTons, estCost, notes
-      })
+      // Persist planning summary and planned cost range into the HVAC trade
+      if (hvacTradeId) {
+        const planningSummary = { systemType, brand, zones, climate, efficiency, estTons, notes }
+        const plannedCostRange = { min: estCost.min, max: estCost.max }
+        const updated = await api.updateBid(id, hvacTradeId, { planningSummary, plannedCostRange })
+        setHome(updated)
+      }
     } finally {
       setSaving(false)
     }

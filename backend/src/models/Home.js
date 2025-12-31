@@ -204,6 +204,12 @@ const TradeSchema = new mongoose.Schema(
     contractSignedAt: { type: Date },
     totalPrice: { type: Number, default: 0 },
     totalPaid: { type: Number, default: 0 },
+    plannedCostRange: {
+      min: { type: Number, default: null },
+      max: { type: Number, default: null },
+      _id: false
+    },
+    planningSummary: { type: mongoose.Schema.Types.Mixed, default: null },
     additionalCosts: [
       {
         _id: { type: String, default: uuidv4 },
