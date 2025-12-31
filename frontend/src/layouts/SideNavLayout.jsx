@@ -53,6 +53,7 @@ export default function SideNavLayout() {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const [userRoles, setUserRoles] = useState([])
+  const [chatExpanded, setChatExpanded] = useState(false)
 
   useEffect(() => {
     try {
@@ -91,6 +92,24 @@ export default function SideNavLayout() {
       .then((u) => { if (mounted) setUserRoles(Array.isArray(u?.roles) ? u.roles : []) })
       .catch(() => { if (mounted) setUserRoles([]) })
     return () => { mounted = false }
+  }, [])
+
+  useEffect(() => {
+    function onToggleExpand() {
+      setChatExpanded((v) => !v)
+    }
+    function onSetExpand(ev) {
+      try {
+        const next = !!ev?.detail?.expanded
+        setChatExpanded(next)
+      } catch {}
+    }
+    window.addEventListener('agentchat:toggleExpand', onToggleExpand)
+    window.addEventListener('agentchat:setExpand', onSetExpand)
+    return () => {
+      window.removeEventListener('agentchat:toggleExpand', onToggleExpand)
+      window.removeEventListener('agentchat:setExpand', onSetExpand)
+    }
   }, [])
 
   function go(path) {
@@ -407,9 +426,9 @@ export default function SideNavLayout() {
         {/* Right chat panel */}
         <Box
           sx={{
-            width: { xs: '100%', md: 380 },
-            minWidth: { md: 340 },
-            maxWidth: { md: 420 },
+            width: { xs: '100%', md: chatExpanded ? 680 : 380 },
+            minWidth: { md: chatExpanded ? 520 : 340 },
+            maxWidth: { md: chatExpanded ? 900 : 420 },
             height: { xs: '60vh', md: '100vh' },
             position: { xs: 'static', md: 'sticky' },
             top: { xs: 0, md: 0 },

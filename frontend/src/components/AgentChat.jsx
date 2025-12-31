@@ -17,6 +17,18 @@ import InfoIcon from '@mui/icons-material/Info';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import PushPinIcon from '@mui/icons-material/PushPin';
 import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined';
+import OpenInFullIcon from '@mui/icons-material/OpenInFull';
+import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableContainer from '@mui/material/TableContainer';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import Chip from '@mui/material/Chip';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import CardHeader from '@mui/material/CardHeader';
 
 const AGENTS = [
   // Planning: Architect
@@ -226,7 +238,7 @@ export default function AgentChat({ homeId }) {
       const key = typeof overridePromptKey === 'string' && overridePromptKey.trim() ? overridePromptKey : (agent?.promptKey || '');
       if (key) payload.promptKey = key;
       const res = await api.chat(payload);
-      const aiMsg = { role: 'assistant', content: res.reply, context: res.contextUsed };
+      const aiMsg = { role: 'assistant', content: res.reply, context: res.contextUsed, rich: res.rich };
       setMessagesByAgent((prev) => ({ ...prev, [selectedAgentId]: [ ...(prev[selectedAgentId] || []), aiMsg ] }));
     } catch (_e) {
       setMessagesByAgent((prev) => ({ ...prev, [selectedAgentId]: [ ...(prev[selectedAgentId] || []), { role: 'assistant', content: "Sorry, I couldn't get an answer right now." } ] }));
@@ -291,7 +303,7 @@ export default function AgentChat({ homeId }) {
       const payload = { homeId, message, history };
       if (agent?.promptKey) payload.promptKey = agent.promptKey;
       const res = await api.chat(payload);
-      const aiMsg = { role: 'assistant', content: res.reply, context: res.contextUsed };
+      const aiMsg = { role: 'assistant', content: res.reply, context: res.contextUsed, rich: res.rich };
       setMessagesByAgent((prev) => ({ ...prev, [selectedAgentId]: [ ...(prev[selectedAgentId] || []), aiMsg ] }));
     } catch (_e) {
       setMessagesByAgent((prev) => ({ ...prev, [selectedAgentId]: [ ...(prev[selectedAgentId] || []), { role: 'assistant', content: "Sorry, I couldn't get an answer right now." } ] }));
@@ -307,6 +319,15 @@ export default function AgentChat({ homeId }) {
           <SmartToyIcon color="primary" />
           <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{agent?.title || 'Assistant'}</Typography>
         </Stack>
+        <Tooltip title="Expand/collapse chat">
+          <IconButton
+            size="small"
+            aria-label="Expand chat"
+            onClick={() => window.dispatchEvent(new CustomEvent('agentchat:toggleExpand'))}
+          >
+            <OpenInFullIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
         <Tooltip title="Change agent">
           <IconButton
             size="small"
@@ -370,7 +391,125 @@ export default function AgentChat({ homeId }) {
                   borderColor: 'divider'
                 }}
               >
-                <Typography variant="body2">{m.content}</Typography>
+                {m.role === 'assistant' && m.rich ? (
+                  <Stack spacing={1.5}>
+                    {m.rich.answer && (
+                      <Typography variant="body2">{m.rich.answer}</Typography>
+                    )}
+                    {Array.isArray(m.rich.comparisons) && m.rich.comparisons.map((cmp, idx) => (
+                      <Box key={idx}>
+                        {cmp.title && <Typography variant="subtitle2" sx={{ mb: 0.5 }}>{cmp.title}</Typography>}
+                        <TableContainer component={Paper} variant="outlined">
+                          <Table size="small">
+                            <TableHead>
+                              <TableRow>
+                                {cmp.columns.map((c, ci) => (
+                                  <TableCell key={ci} sx={{ fontWeight: 600 }}>{c}</TableCell>
+                                ))}
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {cmp.rows.map((row, ri) => (
+                                <TableRow key={ri}>
+                                  {row.map((cell, ci) => (
+                                    <TableCell key={ci}>
+                                      <Typography variant="body2">{cell}</Typography>
+                                    </TableCell>
+                                  ))}
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                      </Box>
+                    ))}
+                    {Array.isArray(m.rich.options) && m.rich.options.length > 0 && (
+                      <Stack spacing={1}>
+                        {m.rich.options.map((opt, oi) => (
+                          <Card key={oi} variant="outlined">
+                            {opt.name && <CardHeader title={opt.name} sx={{ py: 1.0 }} />}
+                            <CardContent sx={{ pt: 0, '&:last-child': { pb: 1 } }}>
+                              <Stack spacing={1}>
+                                {(opt.pros && opt.pros.length > 0) || (opt.cons && opt.cons.length > 0) ? (
+                                  <Stack direction="row" spacing={2} alignItems="flex-start">
+                                    {opt.pros && opt.pros.length > 0 && (
+                                      <Box sx={{ flex: 1 }}>
+                                        <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>Pros</Typography>
+                                        <Stack component="ul" sx={{ m: 0, pl: 2 }} spacing={0.5}>
+                                          {opt.pros.map((p, pi) => <Typography key={pi} component="li" variant="body2">{p}</Typography>)}
+                                        </Stack>
+                                      </Box>
+                                    )}
+                                    {opt.cons && opt.cons.length > 0 && (
+                                      <Box sx={{ flex: 1 }}>
+                                        <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>Cons</Typography>
+                                        <Stack component="ul" sx={{ m: 0, pl: 2 }} spacing={0.5}>
+                                          {opt.cons.map((c, ci) => <Typography key={ci} component="li" variant="body2">{c}</Typography>)}
+                                        </Stack>
+                                      </Box>
+                                    )}
+                                  </Stack>
+                                ) : null}
+                                {opt.attributes && (
+                                  <TableContainer component={Paper} variant="outlined">
+                                    <Table size="small">
+                                      <TableBody>
+                                        {Array.isArray(opt.attributes)
+                                          ? opt.attributes.map((pair, pk) => (
+                                              <TableRow key={pk}>
+                                                <TableCell sx={{ fontWeight: 600, width: '35%' }}>{pair?.key}</TableCell>
+                                                <TableCell>{pair?.value}</TableCell>
+                                              </TableRow>
+                                            ))
+                                          : Object.entries(opt.attributes || {}).map(([k, v]) => (
+                                              <TableRow key={k}>
+                                                <TableCell sx={{ fontWeight: 600, width: '35%' }}>{k}</TableCell>
+                                                <TableCell>{v}</TableCell>
+                                              </TableRow>
+                                            ))
+                                        }
+                                      </TableBody>
+                                    </Table>
+                                  </TableContainer>
+                                )}
+                                {opt.cost && (opt.cost.min || opt.cost.max || opt.cost.note) && (
+                                  <Typography variant="body2">
+                                    {typeof opt.cost.min === 'number' || typeof opt.cost.max === 'number'
+                                      ? `Estimated cost: ${opt.cost.min ? `$${Math.round(opt.cost.min).toLocaleString()}` : '—'}${opt.cost.max ? ` – $${Math.round(opt.cost.max).toLocaleString()}` : ''}${opt.cost.unit ? ` ${opt.cost.unit}` : ''}`
+                                      : null}
+                                    {opt.cost.note ? ` ${opt.cost.note}` : ''}
+                                  </Typography>
+                                )}
+                                {(typeof opt.score === 'number' || typeof opt.recommendation === 'boolean') && (
+                                  <Stack direction="row" spacing={1} alignItems="center">
+                                    {typeof opt.score === 'number' && <Chip size="small" label={`Score: ${Math.round(opt.score)}`} />}
+                                    {typeof opt.recommendation === 'boolean' && <Chip size="small" color={opt.recommendation ? 'success' : 'default'} label={opt.recommendation ? 'Recommended' : 'Consider'} />}
+                                  </Stack>
+                                )}
+                              </Stack>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </Stack>
+                    )}
+                    {Array.isArray(m.rich.followUps) && m.rich.followUps.length > 0 && (
+                      <Stack direction="row" spacing={1} flexWrap="wrap">
+                        {m.rich.followUps.map((q, qi) => (
+                          <Chip
+                            key={qi}
+                            size="small"
+                            variant="outlined"
+                            label={q}
+                            onClick={() => sendAssistantMessage(q)}
+                            sx={{ mb: 0.5 }}
+                          />
+                        ))}
+                      </Stack>
+                    )}
+                  </Stack>
+                ) : (
+                  <Typography variant="body2">{m.content}</Typography>
+                )}
               </Paper>
               {m.context && m.context.length > 0 && (
                 <Box sx={{ mt: 0.5, ml: 1 }}>
