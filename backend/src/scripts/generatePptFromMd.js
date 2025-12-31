@@ -87,7 +87,7 @@ async function run() {
       slide.addText(s.title, { x: 0.5, y: 0.5, w: 9, h: 0.6, fontSize: 28, bold: true })
     }
     if (Array.isArray(s.bullets) && s.bullets.length) {
-      // Split bullets if they are too long
+      // Split bullets if they are too long (preserve bullets by newlines)
       const items = []
       for (const b of s.bullets) {
         if (b.length > 120) {
@@ -97,8 +97,7 @@ async function run() {
           items.push(b)
         }
       }
-      const textRuns = items.map((t) => ({ text: String(t) }))
-      slide.addText(textRuns, {
+      slide.addText(items.join('\n'), {
         x: 0.75, y: 1.2, w: 8.5, h: 4.5, fontSize: 18, bullet: true, lineSpacingMultiple: 1.1
       })
     }

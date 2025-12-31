@@ -1,215 +1,273 @@
-## 1) AI Capability Overview — Our Team
+# Loopway — Applied AI Product Portfolio  
+### BuildWise (Construction Intelligence)  
+### Nexsense (Smart-City Intelligence)
 
-- We design, build, and ship AI systems end-to-end (prompts, parsers, data pipelines, UI).
-- Capable of multimodal analysis, deterministic outputs, retrieval, guardrails, and observability.
-- Proven delivery: from problem framing to production launch.
-- Screenshot: Title/Architecture overview.
+---
 
+## BuildWise — AI-Enabled Construction Planning & Decision Assistant
 
-## 2) From Capability to Product: BuildWise
+BuildWise is an AI-driven platform that helps builders, planners, and trade partners move from **plans + requirements → structured decisions, options, and budgets** — with reliability, citations, and workflow continuity.
 
-- Built an AI-enabled construction management product: planning, analysis, rich chat, and budgeting.
-- Combines customer requirements, plan analysis, and trade workflows into actionable outputs.
-- Showcases our approach to context engineering and reliable structured responses.
-- Screenshot: BuildWise home/overview.
+It demonstrates Loopway’s strength in:
 
+- structured outputs  
+- deterministic JSON contracts  
+- multimodal plan analysis  
+- retrieval-augmented reasoning  
+- workflow-aware UX
 
-## 3) System Overview
+---
 
-- LLM Orchestration: LangChain with structured output enforcement.
-- Deterministic Parsing: Zod schemas to guarantee correct JSON shape.
-- Knowledge Center: OCR + PDF extraction → chunking → embeddings → vector search.
-- RAG: Retrieve relevant chunks with sources; cite evidence.
-- Rich UI: Structured chat responses (tables/options/follow-ups); planning + budget flows.
-- Screenshot: High-level architecture diagram.
+## 1) Core AI Architecture
 
-```mermaid
-flowchart LR
-  U[User] --> CH(Chat & Planning UI)
-  CH -->|Prompt + Context| ORCH[LLM Orchestration]
-  ORCH -->|Deterministic JSON| PARSER[Zod Structured Parser]
-  ORCH -->|Retrieve| RAG[(Vector DB)]
-  SUBGRAPH Knowledge Center
-    ING[OCR/PDF Extract] --> CHUNK[Chunk + Metadata]
-    CHUNK --> EMB[Embeddings]
-    EMB --> RAG
-  END
-  PARSER --> RESP[Rich Structured Response]
-  RESP --> CH
-```
+BuildWise uses a **structured AI orchestration stack** designed for predictable outputs:
 
+- LangChain orchestration with schema-enforced responses  
+- Zod-based deterministic structured JSON parsers  
+- OCR + PDF parsing pipeline (plans, specs, images)  
+- Metadata tagging (rooms, trades, sheets, levels)
+- Chunking + embeddings for targeted retrieval
+- Vector search for semantic relevance
+- RAG with citations and evidence references
 
-## 4) Prompts Library
+This ensures the system:
 
-- Centralized prompt keys for consistent authoring and reuse per workflow/trade.
-- Template variables and actions (analyze/compare/generate) with role/context guidance.
-- Versionable and testable prompts; agent-specific tuning.
-- Screenshot: Prompts admin/listing screen.
+- returns **stable, machine-consumable outputs**
+- supports **composable UI rendering**
+- avoids free-form hallucinated responses
+- integrates cleanly into planning & budget workflows
 
+---
 
-## 5) Deterministic Output Parser (Structured JSON)
+## 2) Knowledge Center & Multimodal Ingestion
 
-- Zod + LangChain `withStructuredOutput` to enforce strict schema.
-- Required fields by contract; nullable/defaults for optionality.
-- Schema: answer, comparisons (tables), options (cards), followUps, sources.
-- Backward compatibility: normalization when legacy fields differ.
-- Screenshot: Zod schema snippet and rendered rich response.
+BuildWise ingests:
 
+- plans & blueprints (PDF)
+- images and annotated markups
+- trade documents
+- customer requirements
 
-## 6) Knowledge Center: OCR and PDF Extraction
+Pipeline includes:
 
-- Multi-modal ingestion: PDFs (plans/specs) and images.
-- OCR and parsing (incl. LlamaParse) → clean text + structural metadata.
-- Chunking with metadata (home/trade/doc/page) for targeted retrieval.
-- Vector index with embeddings for semantic search.
-- Screenshot: Knowledge ingest log and document list.
+- OCR + LLM parsing  
+- text normalization  
+- structural metadata extraction  
+- chunking by:
+  - home / project
+  - trade
+  - sheet / page
+  - region (when coordinates exist)
 
-```mermaid
-flowchart TD
-  SRC[PDFs / Images] --> OCR[OCR / Parsers]
-  OCR --> CLEAN[Normalize + Structure]
-  CLEAN --> CHUNK[Chunking + Metadata\n(home/trade/doc/page)]
-  CHUNK --> EMB[Embeddings]
-  EMB --> VDB[(Vector Index)]
-```
+These chunks feed the **vector index**, enabling:
 
+- high-precision retrieval  
+- trade-specific context targeting  
+- source-aware reasoning
 
-## 7) Retrieval-Augmented Generation (RAG)
+---
 
-- Build queries from user prompt + selected documents/context.
-- Retrieve top-k semantic chunks; pack context window with sources.
-- Answers return citations; UI shows source titles/links.
-- Screenshot: Chat response with sources; “View source” demo.
+## 3) Structured RAG Responses
 
-```mermaid
-sequenceDiagram
-  participant User
-  participant UI as Chat UI
-  participant Orchestrator
-  participant VDB as Vector DB
-  participant LLM
+When a user asks a question or runs an analysis:
 
-  User->>UI: Ask question
-  UI->>Orchestrator: Prompt + context
-  Orchestrator->>VDB: Retrieve relevant chunks
-  VDB-->>Orchestrator: Top-k passages + sources
-  Orchestrator->>LLM: Compose prompt + context
-  LLM-->>Orchestrator: Structured JSON answer
-  Orchestrator-->>UI: Answer + citations
-```
+1. Relevant chunks are retrieved  
+2. Context is packed with sources  
+3. The LLM returns **strict JSON** including:
 
+- answer summary
+- comparison tables
+- option cards
+- follow-up actions
+- citations & document references
 
-## 8) Customized Chat Window (Rich, Structured UI)
+This supports:
 
-- Structured JSON → UI renders tables (comparisons), option cards (pros/cons/attributes/cost), follow-up question chips.
-- Event-driven UX: clicking follow-ups sends templated prompts; easy workflow chaining.
-- Multimodal: Optionally include images/PDFs for plan analysis.
-- Screenshot: Chat UI with comparisons, options, and follow-ups.
+- explainable decisions
+- repeatable workflows
+- auditable rationale
 
+---
 
-## 9) Plan Analysis + Requirements Fusion
+## 4) Plan Analysis + Requirements Fusion
 
-- Architecture Analysis: detect rooms, areas, and metadata from plans.
-- Trade Planning (e.g., HVAC): zones, capacity (tons), cost ranges, brand guidance.
-- Merge explicit customer requirements to tailor options and recommendations.
-- Screenshot: Planning screen showing detected rooms and trade recommendations.
+BuildWise fuses:
 
-```mermaid
-flowchart LR
-  REQ[Customer Requirements] --> FUSE[Context Fusion]
-  PLAN[Plan Analysis\n(rooms, areas, metadata)] --> FUSE
-  FUSE --> PLAN_SUM[Planning Summary\n(selections, zones, capacity)]
-  PLAN_SUM --> COST[Planned Cost Range]
-  PLAN_SUM --> TRADE{Per-Trade Data}
-  COST --> TRADE
-```
+- plan analysis results  
+- customer-stated requirements  
+- trade logic & domain knowledge
 
+Examples:
 
-## 10) Budget and Trade Financials
+- room & area detection  
+- trade planning (HVAC zones / tonnage ranges)
+- capacity guidance
+- cost band estimation
+- recommended configuration options
 
-- Per-trade planned cost range (from planning) vs. actual price; bids/contracts/invoices tracking.
-- Dedicated Budget page: bid comparison (PDFs), contracts upload, invoice management, payment status.
-- Trade detail “3-step” header: Planning → Budget → Execution navigation.
-- Screenshot: Budget overview and Trade Budget detail.
+Outputs are packaged as:
 
+- structured planning summary  
+- per-trade breakdown  
+- cost & execution guidance
 
-## 11) Context Engineering Methodology
+---
 
-- Intake: Collect problem, goals, constraints, and available data.
-- Feasibility: Validate if AI is the right tool; align on success metrics.
-- Architecture: Models, retrieval (RAG), parsers, orchestration, guardrails.
-- Implementation: Prompts + structured outputs + data pipelines + rich UX.
-- Delivery: Evals, telemetry, cost controls, iteration loop.
-- Screenshot: Method checklist.
+## 5) Rich Structured Chat + Workflow UI
 
-```mermaid
-flowchart LR
-  I[Intake] --> F{Feasible with AI?}
-  F -- Yes --> A[Architecture]
-  F -- No --> ALT[Alternate Solution]
-  A --> IMP[Implementation]
-  IMP --> D[Delivery]
-  D --> ITR[Iterate & Evals]
-  ITR --> I
-```
+The chat experience renders **structured AI outputs**, including:
 
+- comparison tables
+- option cards (pros / cons / attributes / ranges)
+- follow-up prompts as action chips
+- planning → budgeting workflow transitions
 
-## 12) Enterprise Readiness
+Users can:
 
-- Observability: AI logs, prompts/outputs, latency/cost dashboards.
-- Evals: Scenario tests to prevent regressions in structured outputs and accuracy.
-- Security/Privacy: Scoped data access, source tracking, PII handling options.
-- Cost & Performance: Caching, retrieval tuning, structured outputs to reduce retries.
-- Screenshot: Logs/evals dashboard mock.
+- refine decisions
+- branch scenarios
+- attach docs & plans
+- move outputs into budgeting
 
+BuildWise functions as a:
 
-## 13) Industry Use-Case Alignment (Examples)
+> **Planning + Knowledge + Structured Decision AI layer for construction workflows**
 
-- Operations & Quality: SOP retrieval, deviation analysis, structured checklists.
-- Procurement & Bids: Side-by-side comparisons, requirement matching, lifecycle cost.
-- Service & Maintenance: Multimodal troubleshooting (images/manuals) with cited steps.
-- Metrics: Time-to-answer, citation coverage, task completion accuracy.
-- Screenshot: Example comparison table tailored to a target process.
+---
 
+# 🌆 Nexsense — Smart-City Digital Twin & Vision AI Intelligence Platform
 
-## 14) Tech Stack Summary
+Nexsense is a **smart-city operations intelligence platform** combining:
 
-- Backend: Node/Express, LangChain, Zod for structured outputs, Joi for REST validation.
-- Knowledge: OCR/PDF parsing (incl. LlamaParse), vector index for embeddings/RAG.
-- Frontend: React + MUI; rich structured chat renderers; planning and budget UIs.
-- Integrations: Event-driven prompts, multimodal analysis, bid comparison flows.
-- Screenshot: Stack diagram.
+- Vision AI  
+- IoT & sensor telemetry  
+- crowd & traffic analytics  
+- incident detection & correlation  
+- AI-assisted operator workflows
 
-```mermaid
-graph LR
-  subgraph Frontend
-    FE[React + MUI]
-    FE --> UIComp[Rich Chat + Planning UIs]
-  end
-  subgraph Backend
-    BE[Node/Express]
-    LC[LangChain Orchestration]
-    ZOD[Zod Structured Parser]
-    BE --> LC
-    LC --> ZOD
-  end
-  subgraph Knowledge
-    OCR[OCR / PDF Parsing]
-    EMB[Embeddings]
-    VDB[(Vector DB)]
-    OCR --> EMB
-    EMB --> VDB
-  end
-  UIComp --> BE
-  BE --> VDB
-```
+Where BuildWise focuses on **plan intelligence**,  
+Nexsense focuses on **city & infrastructure intelligence**.
 
+---
 
-## 15) Next Steps
+## 1) Smart-City Data Fusion Core
 
-- Select pilot scope and data sources; define KPIs and acceptance criteria.
-- Configure ingestion and RAG domains; tailor prompts and schemas.
-- Run evaluations; iterate on UX and guardrails; plan rollout.
-- Screenshot: Project plan/timeline.
+Nexsense ingests:
 
+- camera snapshots & detections
+- incident clips
+- IoT telemetry streams
+- asset & zone metadata
+- historical event logs
 
+Data is normalized into:
+
+- assets  
+- zones  
+- cameras  
+- events  
+- time-series traces
+
+This powers:
+
+- real-time situational awareness  
+- correlation analysis  
+- temporal pattern discovery
+
+---
+
+## 2) Vision AI Capabilities
+
+Nexsense applies Vision AI for:
+
+- crowd density estimation  
+- queue & congestion analytics  
+- pedestrian–vehicle interaction awareness  
+- risk-zone monitoring  
+- near-miss event detection  
+- safety hazard indicators
+
+Outputs include:
+
+- event type
+- confidence score
+- affected assets / zones
+- severity level
+- recommended operator actions
+
+---
+
+## 3) GenAI-Driven Incident Intelligence
+
+GenAI analyzes and contextualizes events:
+
+- explains what happened  
+- correlates across cameras + sensors  
+- identifies contributing factors  
+- recommends operational response paths
+
+Structured outputs include:
+
+- incident summary
+- impacted locations / assets
+- safety implications
+- escalation recommendations
+- source references (logs / detections / images)
+
+This helps operators move from:
+
+> **raw alerts → actionable understanding**
+
+---
+
+## 4) Timeline Replay & Historical Insight
+
+Nexsense supports:
+
+- event history timeline
+- back-in-time navigation
+- cross-sensor playback
+- incident evolution tracking
+
+Use cases:
+
+- crowd movement reconstruction
+- operations audit review
+- safety & risk analysis
+- “what changed over time” diagnostics
+
+---
+
+## 5) Operator-Focused AI UX
+
+Outputs render as:
+
+- structured incident summaries
+- risk scoring cards
+- correlation insight panels
+- recommended playbooks
+- one-click follow-up actions
+
+The platform enables:
+
+- faster response
+- clearer decision-making
+- safer operational outcomes
+
+---
+
+# Loopway Positioning
+
+Together, **BuildWise** and **Nexsense** demonstrate Loopway’s expertise in:
+
+- applied AI system design
+- structured output engineering
+- multimodal reasoning
+- RAG & context fusion
+- Vision AI + GenAI orchestration
+- workflow-embedded intelligence
+- enterprise-grade observability & guardrails
+
+Loopway is positioned as:
+
+> **an expert partner for designing, implementing, and operationalizing AI systems — not prototypes — but real, production-ready platforms.**
