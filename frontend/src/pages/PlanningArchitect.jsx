@@ -50,7 +50,8 @@ export default function PlanningArchitect() {
   const [pageDlg, setPageDlg] = useState({ open: false, busy: false, error: '', docId: '', pages: [] })
   // Legacy dialog references guarded off; define to avoid reference errors
   const [analyzeDlg, setAnalyzeDlg] = useState({ open: false, busy: false, result: null })
-  const [reqDraft, setReqDraft] = useState('')
+  const [reqList, setReqList] = useState([])
+  const [newReq, setNewReq] = useState('')
   const [reqSaving, setReqSaving] = useState(false)
   const [reqSaved, setReqSaved] = useState(false)
   const [kb, setKb] = useState(null)
@@ -58,7 +59,15 @@ export default function PlanningArchitect() {
   useEffect(() => {
     api.getHome(id).then((h) => {
       setHome(h)
-      try { setReqDraft(h?.requirements || '') } catch { }
+      try {
+        const list = Array.isArray(h?.requirementsList) ? h.requirementsList : []
+        if (list.length) {
+          setReqList(list.map((s) => String(s || '')))
+        } else {
+          const single = String(h?.requirements || '').trim()
+          setReqList(single ? [single] : [])
+        }
+      } catch { }
       setReqSaved(false)
     }).catch(() => { })
   }, [id])
@@ -323,15 +332,61 @@ export default function PlanningArchitect() {
             Add goals, preferences, and constraints to tailor architecture analysis and suggestions.
           </Typography>
           {reqSaved && <Typography variant="caption" color="success.main">Saved</Typography>}
-          <TextField
-            placeholder="Describe requirements, priorities, and must-haves…"
-            value={reqDraft}
-            onChange={(e) => { setReqDraft(e.target.value); setReqSaved(false) }}
-            multiline
-            minRows={4}
-            fullWidth
-            sx={{ mt: 1 }}
-          />
+          <Stack spacing={1} sx={{ mt: 1 }}>
+            <Stack direction="row" spacing={1}>
+              <TextField
+                placeholder="Add a requirement (e.g., 4-bedroom, natural light, open kitchen)"
+                value={newReq}
+                onChange={(e) => { setNewReq(e.target.value); setReqSaved(false) }}
+                fullWidth
+              />
+              <Button
+                variant="outlined"
+                disabled={reqSaving || !String(newReq || '').trim()}
+                onClick={() => {
+                  const v = String(newReq || '').trim()
+                  if (!v) return
+                  setReqList((lst) => [...lst, v])
+                  setNewReq('')
+                }}
+              >
+                Add
+              </Button>
+            </Stack>
+            <List dense disablePadding>
+              {reqList.map((item, idx) => (
+                <div key={idx}>
+                  <ListItem
+                    secondaryAction={
+                      <IconButton edge="end" color="error" onClick={() => {
+                        setReqList((lst) => lst.filter((_, i) => i !== idx))
+                        setReqSaved(false)
+                      }}>
+                        <DeleteOutlineIcon fontSize="small" />
+                      </IconButton>
+                    }
+                  >
+                    <TextField
+                      value={item}
+                      onChange={(e) => {
+                        const v = e.target.value
+                        setReqList((lst) => lst.map((it, i) => (i === idx ? v : it)))
+                        setReqSaved(false)
+                      }}
+                      fullWidth
+                      size="small"
+                    />
+                  </ListItem>
+                  {idx < reqList.length - 1 && <Divider component="li" />}
+                </div>
+              ))}
+              {!reqList.length && (
+                <ListItem>
+                  <ListItemText primary="No requirements added yet." secondary="Use the field above to add your first requirement." />
+                </ListItem>
+              )}
+            </List>
+          </Stack>
           <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
             <Button
               variant="contained"
@@ -339,7 +394,13 @@ export default function PlanningArchitect() {
               onClick={async () => {
                 try {
                   setReqSaving(true)
-                  const updated = await api.updateHome(id, { requirements: reqDraft })
+                  const cleaned = reqList.map((s) => String(s || '').trim()).filter(Boolean)
+                  const payload = {
+                    requirementsList: cleaned,
+                    // keep legacy freeform string updated for back-compat elsewhere
+                    requirements: cleaned.join('\n')
+                  }
+                  const updated = await api.updateHome(id, payload)
                   setHome(updated)
                   setReqSaved(true)
                 } catch {
@@ -352,8 +413,18 @@ export default function PlanningArchitect() {
               {reqSaving ? 'Saving…' : 'Save requirements'}
             </Button>
             <Button
-              disabled={reqSaving || (reqDraft || '') === (home?.requirements || '')}
-              onClick={() => { setReqDraft(home?.requirements || ''); setReqSaved(false) }}
+              disabled={reqSaving}
+              onClick={() => {
+                const list = Array.isArray(home?.requirementsList) ? home.requirementsList : []
+                if (list.length) {
+                  setReqList(list.map((s) => String(s || '')))
+                } else {
+                  const single = String(home?.requirements || '').trim()
+                  setReqList(single ? [single] : [])
+                }
+                setNewReq('')
+                setReqSaved(false)
+              }}
             >
               Reset
             </Button>

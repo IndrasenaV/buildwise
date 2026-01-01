@@ -61,6 +61,12 @@ router.post('/:homeId/documents/:docId/analyze-architecture', async (req, res) =
 
     // Build extra context from homeowner requirements and interview
     const parts = [];
+    if (Array.isArray(home.requirementsList) && home.requirementsList.length) {
+      const items = home.requirementsList.map((s) => String(s || '').trim()).filter(Boolean);
+      if (items.length) {
+        parts.push(`Homeowner requirements (list):\n- ${items.join('\n- ')}`);
+      }
+    }
     if ((home.requirements || '').trim()) {
       parts.push(`Homeowner freeform requirements:\n${home.requirements}`);
     }
