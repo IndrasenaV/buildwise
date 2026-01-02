@@ -508,19 +508,21 @@ async function chat(req, res) {
     console.log('[Chat] Retrieved Chunks:', JSON.stringify(similarChunks, null, 2));
 
     // 2. Build system prompt with optional seeded assistant prompt from DB + context
-    let prefix = '';
+    let assistantPrefix = '';
     try {
       if (promptKey && String(promptKey).trim()) {
-        prefix = await getPromptText(String(promptKey).trim());
+        assistantPrefix = await getPromptText(String(promptKey).trim());
       }
     } catch (_e) { }
-    const systemPrompt = `${prefix ? `${prefix}\n\n` : ''}You are an expert architect assistant.
-    Use the following context from the home's architecture plans to answer the user's question.
-    If the context doesn't contain the answer, say you don't know based on the current plans.
-    
-    Context:
-    ${contextText}
-    `;
+    // Prefer strict JSON-only system prompt for structured responses
+    let systemPrompt = '';
+    try {
+      const jsonOnly = await getPromptText('system.jsonOnly');
+      systemPrompt = `${jsonOnly}\n\n${assistantPrefix ? assistantPrefix + '\n\n' : ''}Use the following project context when relevant:\n${contextText}`;
+    } catch (_e) {
+      // Fallback if jsonOnly prompt is missing
+      systemPrompt = `${assistantPrefix ? `${assistantPrefix}\n\n` : ''}You are a helpful assistant. When appropriate, respond in JSON following the provided schema.\n\nProject Context:\n${contextText}`;
+    }
     console.log('[Chat] System Prompt:', systemPrompt);
 
     // 3. Construct conversation history for Memory
@@ -530,19 +532,58 @@ async function chat(req, res) {
     }
     console.log('[Chat] Final User Prompt to LLM:', userPromptWithHistory);
 
-    // 4. Call LLM
+    // 4. Define structured response schema (Zod)
+    const RichOptionSchema = z.object({
+      name: z.string().describe('Option name, e.g., brand or system type'),
+      pros: z.array(z.string()).describe('Pros list'),
+      cons: z.array(z.string()).describe('Cons list'),
+      attributes: z.array(z.object({
+        key: z.string(),
+        value: z.string(),
+      })).describe('List of key/value attributes to display'),
+      cost: z.object({
+        min: z.number().nullable(),
+        max: z.number().nullable(),
+        unit: z.string().nullable(),
+        note: z.string().nullable(),
+      }),
+      recommendation: z.boolean().nullable().describe('Whether this is recommended'),
+      score: z.number().nullable().describe('Relative score 0-100'),
+    });
+    const RichComparisonSchema = z.object({
+      title: z.string().nullable(),
+      columns: z.array(z.string()).min(1),
+      rows: z.array(z.array(z.string())).describe('Each row length equals columns length'),
+    });
+    const RichResponseSchema = z.object({
+      version: z.literal('1.0'),
+      answer: z.string().describe('Short, user-friendly answer in 3-6 sentences'),
+      comparisons: z.array(RichComparisonSchema),
+      options: z.array(RichOptionSchema),
+      followUps: z.array(z.string()).describe('Helpful follow-up questions'),
+      sources: z.array(z.object({ title: z.string().nullable(), url: z.string().nullable() })),
+    });
+
+    // 5. Call LLM with structured schema
     const { text, usage } = await executeWithLangChain({
       systemPrompt,
       userPrompt: userPromptWithHistory,
       model: 'gpt-4o-mini',
-      temperature: 0.3
+      temperature: 0.3,
+      schema: RichResponseSchema,
     });
 
     // 5. Respond
     // Ideally save message to DB here if threadId exists
 
+    const rich = parseJsonLoose(text);
+    const replyText = (rich && typeof rich.answer === 'string' && rich.answer.trim())
+      ? rich.answer
+      : (typeof text === 'string' ? text : 'Here is a structured response.');
+
     res.json({
-      reply: text,
+      reply: replyText,
+      rich: rich || undefined,
       contextUsed: similarChunks.map(c => c.content.slice(0, 100) + '...'),
       usage
     });

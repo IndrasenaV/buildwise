@@ -204,6 +204,12 @@ const TradeSchema = new mongoose.Schema(
     contractSignedAt: { type: Date },
     totalPrice: { type: Number, default: 0 },
     totalPaid: { type: Number, default: 0 },
+    plannedCostRange: {
+      min: { type: Number, default: null },
+      max: { type: Number, default: null },
+      _id: false
+    },
+    planningSummary: { type: mongoose.Schema.Types.Mixed, default: null },
     additionalCosts: [
       {
         _id: { type: String, default: uuidv4 },
@@ -369,6 +375,18 @@ const HomeSchema = new mongoose.Schema(
     documents: [DocumentSchema],
     // Optional freeform homeowner requirements used to guide analysis
     requirements: { type: String, default: '' },
+    // New: structured list of homeowner requirements
+    requirementsList: [
+      {
+        _id: { type: String, default: uuidv4 },
+        text: { type: String, required: true },
+        tags: [{ type: String }],
+        category: { type: String, default: '' }, // optional primary category
+        priority: { type: String, enum: ['must', 'should', 'nice', ''], default: '' },
+        source: { type: mongoose.Schema.Types.Mixed, default: null }, // e.g., { type: 'manual'|'paste'|'interview'|'analysis'|'doc', refId, note }
+        createdAt: { type: Date, default: Date.now },
+      }
+    ],
     // Structured interview answers for architecture planning (dynamic Q&A)
     requirementsInterview: { type: mongoose.Schema.Types.Mixed, default: null },
     // Flooring selections per room (free-form structure managed by UI)

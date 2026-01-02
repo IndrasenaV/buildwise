@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api/client'
+import { tradeMatchesPlanningSlug } from '../utils/tradeLinks'
 import PageHeader from '../components/PageHeader.jsx'
 import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
@@ -15,6 +16,9 @@ import RadioGroup from '@mui/material/RadioGroup'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
+import Tooltip from '@mui/material/Tooltip'
+import IconButton from '@mui/material/IconButton'
+import SmartToyIcon from '@mui/icons-material/SmartToy'
 
 export default function PlanningHVAC() {
   const { id } = useParams()
@@ -24,6 +28,8 @@ export default function PlanningHVAC() {
   const [systemType, setSystemType] = useState('heat_pump') // heat_pump | gas_furnace_ac | mini_split
   const [brand, setBrand] = useState('')
   const [zones, setZones] = useState(1)
+  const [climate, setClimate] = useState('mixed') // hot_humid | mixed | cool
+  const [efficiency, setEfficiency] = useState('standard') // standard | high | premium
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -33,6 +39,12 @@ export default function PlanningHVAC() {
       setNotes(String(saved))
     }).catch(() => {})
   }, [id])
+
+  const hvacTradeId = useMemo(() => {
+    const trades = Array.isArray(home?.trades) ? home.trades : []
+    const match = trades.find((t) => tradeMatchesPlanningSlug(t, 'hvac'))
+    return match?._id || ''
+  }, [home])
 
   const hasFinalArchitecture = useMemo(() => {
     const docs = Array.isArray(home?.documents) ? home.documents : []
@@ -109,14 +121,69 @@ export default function PlanningHVAC() {
     setZones(zoneSuggestion)
   }, [zoneSuggestion])
 
+  const sqftPerTon = useMemo(() => {
+    if (climate === 'hot_humid') return 500
+    if (climate === 'cool') return 700
+    return 600 // mixed/default
+  }, [climate])
+
+  const estTons = useMemo(() => {
+    if (!totalSqFt) return 0
+    const raw = totalSqFt / sqftPerTon
+    // round up to nearest 0.5 ton
+    return Math.ceil(raw * 2) / 2
+  }, [totalSqFt, sqftPerTon])
+
+  const efficiencyMultiplier = useMemo(() => {
+    if (efficiency === 'high') return 1.1
+    if (efficiency === 'premium') return 1.25
+    return 1.0
+  }, [efficiency])
+
+  function estimateCost() {
+    let min = 0
+    let max = 0
+    if (systemType === 'mini_split') {
+      // cost per head/zone
+      const perZoneMin = 3000
+      const perZoneMax = 5500
+      min = zones * perZoneMin
+      max = zones * perZoneMax
+    } else if (systemType === 'heat_pump') {
+      // base covers ~2.5–3.5 ton system
+      const baseMin = 9000
+      const baseMax = 14000
+      const zoningExtraMin = 1400
+      const zoningExtraMax = 2600
+      const extraZones = Math.max(0, Number(zones || 1) - 1)
+      min = baseMin + (extraZones * zoningExtraMin)
+      max = baseMax + (extraZones * zoningExtraMax)
+    } else {
+      // gas furnace + AC
+      const baseMin = 8000
+      const baseMax = 13000
+      const zoningExtraMin = 1200
+      const zoningExtraMax = 2400
+      const extraZones = Math.max(0, Number(zones || 1) - 1)
+      min = baseMin + (extraZones * zoningExtraMin)
+      max = baseMax + (extraZones * zoningExtraMax)
+    }
+    min = Math.round(min * efficiencyMultiplier)
+    max = Math.round(max * efficiencyMultiplier)
+    return { min, max }
+  }
+  const estCost = estimateCost()
+
   async function saveNotes() {
     try {
       setSaving(true)
-      // Placeholder local save; structure can be persisted later with a dedicated API
-      // eslint-disable-next-line no-console
-      console.log('HVAC plan (local only):', {
-        systemType, brand, zones, notes
-      })
+      // Persist planning summary and planned cost range into the HVAC trade
+      if (hvacTradeId) {
+        const planningSummary = { systemType, brand, zones, climate, efficiency, estTons, notes }
+        const plannedCostRange = { min: estCost.min, max: estCost.max }
+        const updated = await api.updateBid(id, hvacTradeId, { planningSummary, plannedCostRange })
+        setHome(updated)
+      }
     } finally {
       setSaving(false)
     }
@@ -164,7 +231,27 @@ export default function PlanningHVAC() {
             <Typography variant="body2">Levels detected: {levels.length || 1}</Typography>
           </Grid>
           <Grid item xs={12} md={6}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>System selection</Typography>
+            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>System selection</Typography>
+              <Tooltip title="Compare systems with AI">
+                <IconButton
+                  size="small"
+                  aria-label="Compare systems"
+                  onClick={() => {
+                    const msg = [
+                      `Compare HVAC system options for a home ~${Math.round(totalSqFt).toLocaleString()} sq ft across ${levels.length || 1} level(s).`,
+                      `Climate: ${climate.replace('_', ' ')}. Planned zones: ${zones}. Estimated capacity: ${estTons ? `${estTons.toFixed(1)} tons` : 'n/a'}.`,
+                      `Compare Heat pump vs Gas furnace + AC vs Mini-splits.`,
+                      `Cover: install cost ranges, operating costs/efficiency, comfort (zoning), noise, IAQ/ventilation fit, maintenance, and common pitfalls.`,
+                      `Recommend which is best for this context and list what to confirm next (load calc, duct routes, returns, thermostat placement).`
+                    ].join(' ')
+                    window.dispatchEvent(new CustomEvent('agentchat:prompt', { detail: { message: msg, agentId: 'hvac', promptKey: 'assistant.hvac' } }))
+                  }}
+                >
+                  <SmartToyIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Stack>
             <RadioGroup
               value={systemType}
               onChange={(e) => setSystemType(e.target.value)}
@@ -180,10 +267,33 @@ export default function PlanningHVAC() {
             </Box>
             <Divider sx={{ my: 1 }} />
             <Typography variant="subtitle2" sx={{ mb: .5 }}>Preferred brand</Typography>
-            <Select size="small" fullWidth value={brand} onChange={(e) => setBrand(e.target.value)}>
-              <MenuItem value=""><em>No preference</em></MenuItem>
-              {brandOptions.map((b) => <MenuItem key={b} value={b}>{b}</MenuItem>)}
-            </Select>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Box sx={{ flex: 1 }}>
+                <Select size="small" fullWidth value={brand} onChange={(e) => setBrand(e.target.value)}>
+                  <MenuItem value=""><em>No preference</em></MenuItem>
+                  {brandOptions.map((b) => <MenuItem key={b} value={b}>{b}</MenuItem>)}
+                </Select>
+              </Box>
+              <Tooltip title="Ask AI about this brand">
+                <IconButton
+                  size="small"
+                  aria-label="Ask AI"
+                  onClick={() => {
+                    const b = brand || 'top HVAC brands';
+                    const msg = [
+                      `We are planning HVAC for a home ~${Math.round(totalSqFt).toLocaleString()} sq ft across ${levels.length || 1} level(s).`,
+                      `Climate: ${climate.replace('_', ' ')}. Current zones planned: ${zones}. System type preference: ${systemType}.`,
+                      `Please compare ${b} to typical alternatives on reliability, warranty support, noise, dealer network quality, and value.`,
+                      `Recommend efficiency tiers appropriate for this case; avoid specific model SKUs unless necessary.`,
+                      `Also note any installation considerations or pitfalls that impact long-term performance.`
+                    ].join(' ')
+                    window.dispatchEvent(new CustomEvent('agentchat:prompt', { detail: { message: msg, agentId: 'hvac', promptKey: 'assistant.hvac' } }))
+                  }}
+                >
+                  <SmartToyIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Stack>
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: .5 }}>
               Brands vary by local dealer quality. Prioritize installer reputation and warranty support.
             </Typography>
@@ -199,6 +309,31 @@ export default function PlanningHVAC() {
                 sx={{ width: 120 }}
               />
               <Typography variant="body2" color="text.secondary">Suggested: {zoneSuggestion}</Typography>
+            </Stack>
+            <Divider sx={{ my: 1 }} />
+            <Typography variant="subtitle2" sx={{ mb: .5 }}>Climate & sizing</Typography>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+              <Select size="small" value={climate} onChange={(e) => setClimate(e.target.value)} sx={{ minWidth: 180 }}>
+                <MenuItem value="hot_humid">Hot/Humid (≈ 500 sqft/ton)</MenuItem>
+                <MenuItem value="mixed">Mixed (≈ 600 sqft/ton)</MenuItem>
+                <MenuItem value="cool">Cool/Mild (≈ 700 sqft/ton)</MenuItem>
+              </Select>
+              <Select size="small" value={efficiency} onChange={(e) => setEfficiency(e.target.value)} sx={{ minWidth: 180 }}>
+                <MenuItem value="standard">Efficiency: Standard</MenuItem>
+                <MenuItem value="high">Efficiency: High (+10%)</MenuItem>
+                <MenuItem value="premium">Efficiency: Premium (+25%)</MenuItem>
+              </Select>
+            </Stack>
+            <Stack spacing={0.5} sx={{ mt: 1 }}>
+              <Typography variant="body2">
+                Estimated capacity: {estTons ? `${estTons.toFixed(1)} tons` : '—'} ({Math.round(totalSqFt).toLocaleString()} sqft ÷ {sqftPerTon} sqft/ton)
+              </Typography>
+              <Typography variant="body2">
+                Estimated installed cost: ${estCost.min.toLocaleString()} – ${estCost.max.toLocaleString()}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Rough budget guidance only. Actual sizing requires load calculations (Manual J/S/D) and site specifics.
+              </Typography>
             </Stack>
             {!!specialZoneHints.length && (
               <Box sx={{ mt: 1 }}>

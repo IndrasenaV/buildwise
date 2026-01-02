@@ -163,11 +163,23 @@ async function createHome(req, res) {
   return res.status(201).json(home);
 }
 
+const requirementItemSchema = Joi.object({
+  _id: Joi.string().optional(),
+  text: Joi.string().required(),
+  tags: Joi.array().items(Joi.string().trim()).optional(),
+  category: Joi.string().allow('').optional(),
+  priority: Joi.string().valid('must', 'should', 'nice', '').optional(),
+  source: Joi.object().unknown(true).optional(),
+  createdAt: Joi.date().optional(),
+});
+
 const homeUpdateSchema = Joi.object({
   name: Joi.string().optional(),
   address: Joi.string().allow('').optional(),
   clientName: Joi.string().allow('').optional(),
   requirements: Joi.string().allow('').optional(),
+  // Accept strings for back-compat or full objects
+  requirementsList: Joi.array().items(Joi.alternatives().try(Joi.string().allow('').trim(), requirementItemSchema)).optional(),
   flooring: Joi.object().unknown(true).optional(),
   windowsDoors: Joi.object().unknown(true).optional(),
   appliances: Joi.object().unknown(true).optional(),
@@ -189,6 +201,25 @@ async function updateHome(req, res) {
   const { value, error } = homeUpdateSchema.validate(req.body || {}, { abortEarly: false });
   if (error) {
     return res.status(400).json({ message: 'Validation failed', details: error.details });
+  }
+  // Normalize requirementsList to objects with _id and text
+  if (Array.isArray(value.requirementsList)) {
+    value.requirementsList = value.requirementsList.map((it) => {
+      if (typeof it === 'string') {
+        const txt = String(it || '').trim();
+        return { _id: uuidv4(), text: txt, tags: [], category: '', priority: '', createdAt: new Date(), source: { type: 'manual' } };
+      }
+      const normalized = {
+        _id: it._id || uuidv4(),
+        text: String(it.text || '').trim(),
+        tags: Array.isArray(it.tags) ? it.tags.filter(Boolean).map(String) : [],
+        category: typeof it.category === 'string' ? it.category : '',
+        priority: (['must', 'should', 'nice'].includes(String(it.priority)) ? String(it.priority) : ''),
+        source: it.source || null,
+        createdAt: it.createdAt ? new Date(it.createdAt) : new Date(),
+      };
+      return normalized;
+    }).filter((it) => it.text);
   }
   const home = await Home.findByIdAndUpdate(homeId, { $set: value }, { new: true });
   if (!home) {
@@ -736,6 +767,12 @@ const bidUpdateSchema = Joi.object({
   totalPrice: Joi.number().min(0).optional(),
   totalPaid: Joi.number().min(0).optional(),
   notes: Joi.string().allow('').optional(),
+  plannedCostRange: Joi.object({
+    min: Joi.number().min(0).allow(null),
+    max: Joi.number().min(0).allow(null),
+  }).optional(),
+  planningSummary: Joi.object().unknown(true).optional(),
+  contractSignedAt: Joi.date().allow(null).optional(),
 });
 
 async function updateBid(req, res) {
@@ -804,6 +841,20 @@ async function updateBid(req, res) {
   if (value.totalPrice !== undefined) set['trades.$.totalPrice'] = value.totalPrice;
   if (value.totalPaid !== undefined) set['trades.$.totalPaid'] = value.totalPaid;
   if (value.notes !== undefined) set['trades.$.notes'] = value.notes;
+  if (value.plannedCostRange !== undefined) {
+    const r = value.plannedCostRange || {};
+    const min = (typeof r.min === 'number' && isFinite(r.min)) ? r.min : null;
+    const max = (typeof r.max === 'number' && isFinite(r.max)) ? r.max : null;
+    set['trades.$.plannedCostRange'] = { min, max };
+  }
+  if (value.planningSummary !== undefined) {
+    set['trades.$.planningSummary'] = value.planningSummary && typeof value.planningSummary === 'object'
+      ? value.planningSummary
+      : null;
+  }
+  if (value.contractSignedAt !== undefined) {
+    set['trades.$.contractSignedAt'] = value.contractSignedAt ? new Date(value.contractSignedAt) : null;
+  }
   const updateQuery = {
     $set: set,
   };

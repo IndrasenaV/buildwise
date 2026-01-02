@@ -110,6 +110,7 @@ export default function HomeBudget() {
   }, [id])
 
   const trades = home?.trades || []
+  const allDocs = Array.isArray(home?.documents) ? home.documents : []
 
   const summary = useMemo(() => {
     const totalBudget = trades.reduce((s, t) => s + (Number(t.totalPrice) || 0), 0)
@@ -180,13 +181,23 @@ export default function HomeBudget() {
             const extras = (t.additionalCosts || []).reduce((s, c) => s + (Number(c.amount) || 0), 0)
             const variance = (invoiced + extras) - budget
             const overrun = variance > 0
+            const plannedMin = (t.plannedCostRange && typeof t.plannedCostRange.min === 'number') ? t.plannedCostRange.min : null
+            const plannedMax = (t.plannedCostRange && typeof t.plannedCostRange.max === 'number') ? t.plannedCostRange.max : null
+            const tradeDocs = allDocs.filter((d) => d?.pinnedTo?.type === 'trade' && d?.pinnedTo?.id === t._id)
+            const bidCount = tradeDocs.filter((d) => String(d?.category || '').toLowerCase() === 'bid').length
+            const contractCount = tradeDocs.filter((d) => String(d?.category || '').toLowerCase() === 'contract').length
+            const hasContract = !!t.contractSignedAt || contractCount > 0
             return (
               <div key={t._id}>
                 <ListItem
-                  onClick={() => navigate(`/homes/${id}/trades/${t._id}`)}
+                  onClick={() => navigate(`/homes/${id}/trades/${t._id}/budget`)}
                   sx={{ cursor: 'pointer' }}
                   secondaryAction={
-                    overrun ? <Chip color="error" size="small" label={`Overrun ${fmt(variance)}`} /> : <Chip color="success" size="small" label="On Budget" />
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Chip variant="outlined" size="small" label={`Bids ${bidCount}`} />
+                      <Chip variant="outlined" size="small" color={hasContract ? 'success' : 'default'} label={hasContract ? 'Contract' : 'No Contract'} />
+                      {overrun ? <Chip color="error" size="small" label={`Overrun ${fmt(variance)}`} /> : <Chip color="success" size="small" label="On Budget" />}
+                    </Box>
                   }
                 >
                   <ListItemText
@@ -198,6 +209,9 @@ export default function HomeBudget() {
                         <span>Paid: {fmt(paid)}</span>
                         <span>Extras: {fmt(extras)}</span>
                         <span>Variance: {fmt(variance)}</span>
+                        {(plannedMin !== null || plannedMax !== null) && (
+                          <span>Planned: {plannedMin !== null ? fmt(plannedMin) : '—'} – {plannedMax !== null ? fmt(plannedMax) : '—'}</span>
+                        )}
                       </Box>
                     }
                   />

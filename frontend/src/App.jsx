@@ -37,6 +37,7 @@ import PlanningHVAC from './pages/PlanningHVAC.jsx'
 import PlanningInsulation from './pages/PlanningInsulation.jsx'
 import PlanningExteriorMaterials from './pages/PlanningExteriorMaterials.jsx'
 import PlanningCountertops from './pages/PlanningCountertops.jsx'
+import TradeBudget from './pages/TradeBudget.jsx'
 
 function App() {
   return (
@@ -69,6 +70,7 @@ function App() {
         <Route path="/homes/:id/:phase" element={<HomeDetail />} />
         <Route path="/homes/:id/trades" element={<HomeTrades />} />
         <Route path="/homes/:id/trades/:bidId" element={<HomeBidDetail />} />
+        <Route path="/homes/:id/trades/:bidId/budget" element={<TradeBudget />} />
         <Route path="/homes/:id/documents" element={<HomeDocuments />} />
         <Route path="/homes/:id/contacts" element={<HomeContacts />} />
         <Route path="/homes/:id/schedule" element={<HomeSchedule />} />

@@ -18,6 +18,7 @@ import DownloadIcon from '@mui/icons-material/Download'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import PageHeader from '../components/PageHeader.jsx'
 import UploadDocumentDialog from '../components/UploadDocumentDialog.jsx'
+import AddIcon from '@mui/icons-material/Add'
 import Link from '@mui/material/Link'
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
@@ -25,6 +26,7 @@ import DialogContent from '@mui/material/DialogContent'
 import DialogActions from '@mui/material/DialogActions'
 import TextField from '@mui/material/TextField'
 import MenuItem from '@mui/material/MenuItem'
+import Autocomplete from '@mui/material/Autocomplete'
 import CircularProgress from '@mui/material/CircularProgress'
 import List from '@mui/material/List'
 import ListItem from '@mui/material/ListItem'
@@ -50,7 +52,8 @@ export default function PlanningArchitect() {
   const [pageDlg, setPageDlg] = useState({ open: false, busy: false, error: '', docId: '', pages: [] })
   // Legacy dialog references guarded off; define to avoid reference errors
   const [analyzeDlg, setAnalyzeDlg] = useState({ open: false, busy: false, result: null })
-  const [reqDraft, setReqDraft] = useState('')
+  const [reqList, setReqList] = useState([])
+  const [newReq, setNewReq] = useState('')
   const [reqSaving, setReqSaving] = useState(false)
   const [reqSaved, setReqSaved] = useState(false)
   const [kb, setKb] = useState(null)
@@ -58,10 +61,41 @@ export default function PlanningArchitect() {
   useEffect(() => {
     api.getHome(id).then((h) => {
       setHome(h)
-      try { setReqDraft(h?.requirements || '') } catch { }
+      try {
+        const raw = Array.isArray(h?.requirementsList) ? h.requirementsList : []
+        if (raw.length) {
+          const normalized = raw.map((it) => {
+            if (typeof it === 'string') return { text: String(it || ''), tags: [] }
+            return { text: String(it?.text || ''), tags: Array.isArray(it?.tags) ? it.tags : [] }
+          }).filter((it) => it.text)
+          setReqList(normalized)
+        } else {
+          const single = String(h?.requirements || '').trim()
+          setReqList(single ? [{ text: single, tags: [] }] : [])
+        }
+      } catch { }
       setReqSaved(false)
     }).catch(() => { })
   }, [id])
+  // Simple heuristic categorizer to add tags
+  function categorizeRequirement(text) {
+    const t = String(text || '').toLowerCase()
+    const tags = []
+    if (/bed|bedroom|bath|kitchen|living|garage|office|study|dining/.test(t)) tags.push('rooms')
+    if (/square ?feet|sqft|sf|area|size|layout|open concept|open-plan/.test(t)) tags.push('layout')
+    if (/window|light|sunlight|daylight|natural light/.test(t)) tags.push('lighting')
+    if (/door|entry|hallway|wheelchair|accessib|ada|ramp/.test(t)) tags.push('accessibility')
+    if (/budget|cost|price|afford|savings|value/.test(t)) tags.push('budget')
+    if (/deadline|timeline|schedule|move[- ]?in|completion/.test(t)) tags.push('timeline')
+    if (/style|modern|traditional|farmhouse|contemporary|aesthetic/.test(t)) tags.push('style')
+    if (/solar|efficient|insulation|hvac|energy|green|sustain/.test(t)) tags.push('sustainability')
+    if (/patio|deck|yard|garden|outdoor|pool/.test(t)) tags.push('outdoor')
+    if (/plumbing|electrical|hvac|mechanical|appliance/.test(t)) tags.push('utilities')
+    if (/must[- ]?have|require|mandatory|need/.test(t)) tags.push('priority:must')
+    if (/nice[- ]?to[- ]?have|optional|wish/.test(t)) tags.push('priority:nice')
+    return Array.from(new Set(tags))
+  }
+
 
   useEffect(() => {
     let mounted = true
@@ -126,7 +160,7 @@ export default function PlanningArchitect() {
             {title} {!optional && !items.length ? <span style={{ color: '#ff7961', fontWeight: 400, fontSize: 12 }}>(required)</span> : null}
           </Typography>
           <Button size="small" variant="outlined" onClick={() => { setUploadForCategory(catKey); setUploadOpen(true) }}>
-            {items.length ? 'Upload New Version' : 'Upload'}
+            Upload
           </Button>
         </Box>
         {finalItem && (
@@ -163,7 +197,7 @@ export default function PlanningArchitect() {
                 <div key={idx}>
                   <ListItem
                     secondaryAction={
-                      <Button size="small" variant="outlined" onClick={() => setAddTaskDlg({ open: true, title: t.title, description: t.description || '', tradeId: '', phaseKey: (t.phaseKey || 'planning') })}>Add Task</Button>
+                      <Button size="small" variant="outlined" onClick={() => setAddTaskDlg({ open: true, title: t.title, description: t.description || '', tradeId: '', phaseKey: (t.phaseKey || 'planning') })}>Add</Button>
                     }
                   >
                     <ListItemText
@@ -309,12 +343,6 @@ export default function PlanningArchitect() {
           { label: 'Planning', href: `/homes/${id}/planning` },
           { label: 'Architect' }
         ]}
-        actions={
-          <Stack direction="row" spacing={1}>
-            <Button variant="outlined" onClick={() => navigate(`/homes/${id}/planning/architect/interview`)}>Guided Requirement Questionnaire</Button>
-            <Button variant="contained" onClick={() => { setUploadForCategory('architecture_base'); setUploadOpen(true) }}>Upload</Button>
-          </Stack>
-        }
       />
       {home && (
         <Paper variant="outlined" sx={{ p: 2 }}>
@@ -323,15 +351,97 @@ export default function PlanningArchitect() {
             Add goals, preferences, and constraints to tailor architecture analysis and suggestions.
           </Typography>
           {reqSaved && <Typography variant="caption" color="success.main">Saved</Typography>}
-          <TextField
-            placeholder="Describe requirements, priorities, and must-haves…"
-            value={reqDraft}
-            onChange={(e) => { setReqDraft(e.target.value); setReqSaved(false) }}
-            multiline
-            minRows={4}
-            fullWidth
-            sx={{ mt: 1 }}
-          />
+          <Stack spacing={1} sx={{ mt: 1 }}>
+            <Stack direction="row" spacing={1}>
+              <TextField
+                placeholder="Add a requirement (e.g., 4-bedroom, natural light, open kitchen)"
+                value={newReq}
+                onChange={(e) => { setNewReq(e.target.value); setReqSaved(false) }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const v = String(newReq || '').trim()
+                  if (!v) return
+                  const tags = categorizeRequirement(v)
+                  setReqList((lst) => [...lst, { text: v, tags }])
+                    setNewReq('')
+                    e.preventDefault()
+                  }
+                }}
+                fullWidth
+              />
+              <IconButton
+                color="primary"
+                size="small"
+                aria-label="Add"
+                disabled={reqSaving || !String(newReq || '').trim()}
+                onClick={() => {
+                  const v = String(newReq || '').trim()
+                if (!v) return
+                const tags = categorizeRequirement(v)
+                setReqList((lst) => [...lst, { text: v, tags }])
+                  setNewReq('')
+                }}
+              >
+                <AddIcon fontSize="small" />
+              </IconButton>
+            </Stack>
+            <Box sx={{ maxHeight: 320, overflowY: 'auto' }}>
+              <List dense disablePadding>
+                {reqList.map((item, idx) => (
+                  <div key={idx}>
+                    <ListItem
+                      secondaryAction={
+                        <IconButton edge="end" color="error" onClick={() => {
+                          setReqList((lst) => lst.filter((_, i) => i !== idx))
+                          setReqSaved(false)
+                        }}>
+                          <DeleteOutlineIcon fontSize="small" />
+                        </IconButton>
+                      }
+                    >
+                      <TextField
+                      value={item.text}
+                        onChange={(e) => {
+                          const v = e.target.value
+                        setReqList((lst) => lst.map((it, i) => (i === idx ? { ...it, text: v } : it)))
+                          setReqSaved(false)
+                        }}
+                        fullWidth
+                        size="small"
+                      />
+                    <Box sx={{ width: 8 }} />
+                    <Autocomplete
+                      multiple
+                      freeSolo
+                      size="small"
+                      options={[]}
+                      value={Array.isArray(item.tags) ? item.tags : []}
+                      onChange={(_e, newValue) => {
+                        setReqList((lst) => lst.map((it, i) => (i === idx ? { ...it, tags: newValue } : it)))
+                        setReqSaved(false)
+                      }}
+                      renderTags={(value, getTagProps) =>
+                        value.map((option, index) => (
+                          <Chip {...getTagProps({ index })} key={`${option}-${index}`} label={option} size="small" />
+                        ))
+                      }
+                      renderInput={(params) => (
+                        <TextField {...params} placeholder="tags" />
+                      )}
+                      sx={{ minWidth: 160, maxWidth: 240 }}
+                    />
+                    </ListItem>
+                    {idx < reqList.length - 1 && <Divider component="li" />}
+                  </div>
+                ))}
+                {!reqList.length && (
+                  <ListItem>
+                    <ListItemText primary="No requirements added yet." secondary="Use the field above to add your first requirement." />
+                  </ListItem>
+                )}
+              </List>
+            </Box>
+          </Stack>
           <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
             <Button
               variant="contained"
@@ -339,7 +449,16 @@ export default function PlanningArchitect() {
               onClick={async () => {
                 try {
                   setReqSaving(true)
-                  const updated = await api.updateHome(id, { requirements: reqDraft })
+                  const cleaned = reqList.map((it) => ({
+                    text: String(it?.text || '').trim(),
+                    tags: Array.isArray(it?.tags) ? it.tags : []
+                  })).filter((it) => it.text)
+                  const payload = {
+                    requirementsList: cleaned,
+                    // keep legacy freeform string updated for back-compat elsewhere
+                    requirements: cleaned.map((it) => it.text).join('\n')
+                  }
+                  const updated = await api.updateHome(id, payload)
                   setHome(updated)
                   setReqSaved(true)
                 } catch {
@@ -349,18 +468,34 @@ export default function PlanningArchitect() {
                 }
               }}
             >
-              {reqSaving ? 'Saving…' : 'Save requirements'}
+              {reqSaving ? 'Saving…' : 'Save'}
             </Button>
             <Button
-              disabled={reqSaving || (reqDraft || '') === (home?.requirements || '')}
-              onClick={() => { setReqDraft(home?.requirements || ''); setReqSaved(false) }}
+              disabled={reqSaving}
+              onClick={() => {
+                try {
+                  const raw = Array.isArray(home?.requirementsList) ? home.requirementsList : []
+                  if (raw.length) {
+                    const normalized = raw.map((it) => {
+                      if (typeof it === 'string') return { text: String(it || ''), tags: [] }
+                      return { text: String(it?.text || ''), tags: Array.isArray(it?.tags) ? it.tags : [] }
+                    }).filter((it) => it.text)
+                    setReqList(normalized)
+                  } else {
+                    const single = String(home?.requirements || '').trim()
+                    setReqList(single ? [{ text: single, tags: [] }] : [])
+                  }
+                } catch {}
+                setNewReq('')
+                setReqSaved(false)
+              }}
             >
               Reset
             </Button>
           </Stack>
           <Box sx={{ mt: 2 }}>
             <Button variant="outlined" onClick={() => navigate(`/homes/${id}/planning/architect/interview`)}>
-              Open Guided Requirement Questionnaire
+              Questionnaire
             </Button>
           </Box>
           {!!answeredEntries.length && (
@@ -385,7 +520,7 @@ export default function PlanningArchitect() {
                     ))}
                   </Grid>
                   <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-                    <Button size="small" onClick={() => navigate(`/homes/${id}/planning/architect/interview`)}>Edit in Questionnaire</Button>
+                    <Button size="small" onClick={() => navigate(`/homes/${id}/planning/architect/interview`)}>Edit</Button>
                   </Stack>
                 </AccordionDetails>
               </Accordion>
@@ -405,7 +540,7 @@ export default function PlanningArchitect() {
                   No base architecture plans uploaded. Upload your plan set to start analysis.
                 </Typography>
                 <Button variant="contained" onClick={() => { setUploadForCategory('architecture_base'); setUploadOpen(true) }}>
-                  Upload Plans
+                  Upload
                 </Button>
               </Stack>
             )
@@ -435,13 +570,13 @@ export default function PlanningArchitect() {
                   variant="contained"
                   onClick={() => navigate(`/homes/${id}/planning/architect/analysis/${finalItem?._id}`)}
                 >
-                  {finalItem?.analysis ? 'View Analysis' : 'Open Analysis'}
+                  {finalItem?.analysis ? 'View' : 'Open'}
                 </Button>
                 <Button
                   variant="outlined"
                   onClick={() => { setUploadForCategory('architecture_base'); setUploadOpen(true) }}
                 >
-                  Upload New Version
+                  Upload
                 </Button>
               </Stack>
             </Stack>
@@ -743,7 +878,7 @@ export default function PlanningArchitect() {
                         <div key={i}>
                           <ListItem
                             secondaryAction={
-                              <Button size="small" variant="outlined" onClick={() => setAddTaskDlg({ open: true, title: t.title, description: t.description || '', tradeId: '', phaseKey: (t.phaseKey || 'planning') })}>Add Task</Button>
+                              <Button size="small" variant="outlined" onClick={() => setAddTaskDlg({ open: true, title: t.title, description: t.description || '', tradeId: '', phaseKey: (t.phaseKey || 'planning') })}>Add</Button>
                             }
                           >
                             <ListItemText primary={t.title} secondary={(t.description || '').trim() || '—'} />
@@ -819,7 +954,7 @@ export default function PlanningArchitect() {
               }
             }}
           >
-            Analyze selected floor plans
+            Analyze
           </Button>
         </DialogActions>
       </Dialog>

@@ -13,6 +13,7 @@ import Box from '@mui/material/Box'
 import Divider from '@mui/material/Divider'
 import Typography from '@mui/material/Typography'
 import Container from '@mui/material/Container'
+import Paper from '@mui/material/Paper'
 import ListSubheader from '@mui/material/ListSubheader'
 import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn'
 import RoofingIcon from '@mui/icons-material/Roofing'
@@ -35,6 +36,11 @@ import DesignServicesOutlinedIcon from '@mui/icons-material/DesignServicesOutlin
 import ChatIcon from '@mui/icons-material/Chat'
 import SettingsIcon from '@mui/icons-material/Settings'
 import AgentChat from '../components/AgentChat.jsx'
+import Autocomplete from '@mui/material/Autocomplete'
+import TextField from '@mui/material/TextField'
+import SearchIcon from '@mui/icons-material/Search'
+import InputAdornment from '@mui/material/InputAdornment'
+import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone'
 
 const drawerWidth = 260
 
@@ -42,10 +48,12 @@ export default function SideNavLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const [homeTitle, setHomeTitle] = useState('')
+  const [home, setHome] = useState(null)
   const [mobileOpen, setMobileOpen] = useState(false)
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const [userRoles, setUserRoles] = useState([])
+  const [chatExpanded, setChatExpanded] = useState(false)
 
   useEffect(() => {
     try {
@@ -65,9 +73,14 @@ export default function SideNavLayout() {
     let mounted = true
     if (currentHomeId) {
       api.getHome(currentHomeId)
-        .then((h) => { if (mounted) setHomeTitle(h?.name || '') })
+        .then((h) => {
+          if (!mounted) return
+          setHome(h)
+          setHomeTitle(h?.name || '')
+        })
         .catch(() => { if (mounted) setHomeTitle('') })
     } else {
+      setHome(null)
       setHomeTitle('')
     }
     return () => { mounted = false }
@@ -79,6 +92,24 @@ export default function SideNavLayout() {
       .then((u) => { if (mounted) setUserRoles(Array.isArray(u?.roles) ? u.roles : []) })
       .catch(() => { if (mounted) setUserRoles([]) })
     return () => { mounted = false }
+  }, [])
+
+  useEffect(() => {
+    function onToggleExpand() {
+      setChatExpanded((v) => !v)
+    }
+    function onSetExpand(ev) {
+      try {
+        const next = !!ev?.detail?.expanded
+        setChatExpanded(next)
+      } catch {}
+    }
+    window.addEventListener('agentchat:toggleExpand', onToggleExpand)
+    window.addEventListener('agentchat:setExpand', onSetExpand)
+    return () => {
+      window.removeEventListener('agentchat:toggleExpand', onToggleExpand)
+      window.removeEventListener('agentchat:setExpand', onSetExpand)
+    }
   }, [])
 
   function go(path) {
@@ -96,6 +127,52 @@ export default function SideNavLayout() {
   const userEmail = (() => {
     try { return localStorage.getItem('userEmail') || '' } catch { return '' }
   })()
+
+  const planningOptions = useMemo(() => {
+    if (!currentHomeId) return []
+    const base = `/homes/${currentHomeId}/planning`
+    return [
+      { type: 'planning', label: 'Planning: Architect', route: `${base}/architect` },
+      { type: 'planning', label: 'Planning: HVAC', route: `${base}/hvac` },
+      { type: 'planning', label: 'Planning: Plumbing', route: `${base}/plumbing` },
+      { type: 'planning', label: 'Planning: Electricals', route: `${base}/electrical` },
+      { type: 'planning', label: 'Planning: Exterior Materials', route: `${base}/exterior-materials` },
+      { type: 'planning', label: 'Planning: Insulation', route: `${base}/insulation` },
+      { type: 'planning', label: 'Planning: Drywall & Paint', route: `${base}/drywall-paint` },
+      { type: 'planning', label: 'Planning: Cabinets', route: `${base}/cabinets` },
+      { type: 'planning', label: 'Planning: Flooring', route: `${base}/flooring` },
+      { type: 'planning', label: 'Planning: Countertops', route: `${base}/countertops` },
+      { type: 'planning', label: 'Planning: Windows & Doors', route: `${base}/windows-doors` },
+      { type: 'planning', label: 'Planning: Appliances', route: `${base}/appliances` },
+    ]
+  }, [currentHomeId])
+
+  const tradeOptions = useMemo(() => {
+    const list = []
+    const trades = Array.isArray(home?.trades) ? home.trades : []
+    for (const t of trades) {
+      list.push({
+        type: 'trade',
+        label: `Trade: ${t.name}`,
+        tradeId: String(t._id || ''),
+        route: `/homes/${currentHomeId}/trades/${t._id}`
+      })
+    }
+    return list
+  }, [home, currentHomeId])
+
+  const searchOptions = useMemo(() => {
+    return [...planningOptions, ...tradeOptions]
+  }, [planningOptions, tradeOptions])
+
+  function onSelectSearchOption(_e, option) {
+    if (!option) return
+    if (option.route) {
+      go(option.route)
+    } else if (option.type === 'trade' && option.tradeId) {
+      go(`/homes/${currentHomeId}/trades/${option.tradeId}`)
+    }
+  }
 
   return (
     <Box sx={{ display: 'flex' }}>
@@ -289,6 +366,53 @@ export default function SideNavLayout() {
         {/* Center content area */}
         <Box sx={{ flexGrow: 1, p: 3, pt: isMobile ? 8 : 3, display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
           <Container maxWidth={location.pathname.includes('/documents') ? false : 'lg'} sx={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
+            <Box
+              sx={{
+                display: currentHomeId ? 'flex' : 'none',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                height: 67,
+                borderBottom: 1,
+                borderColor: 'divider',
+                mb: 2
+              }}
+            >
+              <Box sx={{ maxWidth: 560, flex: '1 1 auto' }}>
+                <Box component={Paper} variant="outlined" sx={{ p: 0.5, borderRadius: 1, bgcolor: 'background.paper' }}>
+                  <Autocomplete
+                    options={searchOptions}
+                    size="small"
+                    fullWidth
+                    getOptionLabel={(o) => o.label}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        placeholder="Search planning or trades…"
+                        InputProps={{
+                          ...params.InputProps,
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <SearchIcon fontSize="small" />
+                            </InputAdornment>
+                          )
+                        }}
+                      />
+                    )}
+                    onChange={onSelectSearchOption}
+                    disableClearable
+                    autoHighlight
+                    filterOptions={(options, state) => {
+                      const q = (state.inputValue || '').toLowerCase()
+                      if (!q) return options
+                      return options.filter((o) => o.label.toLowerCase().includes(q))
+                    }}
+                  />
+                </Box>
+              </Box>
+              <IconButton sx={{ ml: 2 }} aria-label="Notifications">
+                <NotificationsNoneIcon />
+              </IconButton>
+            </Box>
             <Box sx={{ flexGrow: 1 }}>
               <Outlet />
             </Box>
@@ -302,9 +426,9 @@ export default function SideNavLayout() {
         {/* Right chat panel */}
         <Box
           sx={{
-            width: { xs: '100%', md: 380 },
-            minWidth: { md: 340 },
-            maxWidth: { md: 420 },
+            width: { xs: '100%', md: chatExpanded ? 680 : 380 },
+            minWidth: { md: chatExpanded ? 520 : 340 },
+            maxWidth: { md: chatExpanded ? 900 : 420 },
             height: { xs: '60vh', md: '100vh' },
             position: { xs: 'static', md: 'sticky' },
             top: { xs: 0, md: 0 },

@@ -1,0 +1,25 @@
+{
+  "name": "buildwise-mcp-server",
+  "version": "0.1.0",
+  "description": "Buildwise custom MCP server exposing project-aware tools",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "vitest run"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.4.0",
+    "dotenv": "^16.4.5",
+    "node-fetch": "^3.3.2",
+    "mongodb": "^6.6.0"
+  },
+  "devDependencies": {
+    "vitest": "^1.6.0"
+  }
+}
+
+

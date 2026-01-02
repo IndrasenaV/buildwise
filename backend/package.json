@@ -10,6 +10,7 @@
     "build:frontend": "npm --prefix ../frontend run build",
     "build:marketing": "npm --prefix ../marketing run build",
     "build:public": "npm run build:marketing && npm run build:frontend",
+    "build:ppt": "node src/scripts/generatePptFromMd.js docs/ai-capability-buildwise-showcase.md docs/ai-capability-buildwise-showcase.pptx",
     "package:zip": "bash -lc 'cd .. && rm -f buildwise_server.zip && zip -r buildwise_server.zip backend -x \"backend/node_modules/**\"'",
     "lint": "echo \"No linter configured\"",
     "seed:templates": "node src/scripts/seedTemplates.js",
@@ -37,6 +38,7 @@
     "openai": "^4.67.1",
     "pdf-lib": "^1.17.1",
     "pdf-parse": "^1.1.1",
+    "pptxgenjs": "^3.12.0",
     "uuid": "^9.0.1",
     "zod": "^3.25.76"
   },
