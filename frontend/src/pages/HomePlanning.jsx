@@ -19,6 +19,7 @@ import AcUnitIcon from '@mui/icons-material/AcUnit'
 import RoofingIcon from '@mui/icons-material/Roofing'
 import LayersIcon from '@mui/icons-material/Layers'
 import CountertopsIcon from '@mui/icons-material/Countertops'
+import DoorFrontIcon from '@mui/icons-material/DoorFront'
 // import MenuBookIcon from '@mui/icons-material/MenuBook'
 import UploadDocumentDialog from '../components/UploadDocumentDialog.jsx'
 
@@ -54,7 +55,7 @@ export default function HomePlanning() {
       <Paper variant="outlined" sx={{ p: 4 }}>
         <Typography variant="h5" gutterBottom>Planning Flow</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          Follow the typical construction order: Architect, HVAC, Plumbing, Electricals, Exterior Materials, Insulation, Drywall/Paint, Cabinets, Flooring, Countertops.
+          Follow the typical construction order: Architect, HVAC, Plumbing, Electricals, Exterior Materials, Windows &amp; Doors, Insulation, Drywall/Paint, Cabinets, Flooring, Countertops.
         </Typography>
         {(() => {
           const steps = [
@@ -97,6 +98,14 @@ export default function HomePlanning() {
               description: 'Select roofing, cladding, windows/doors finishes, and weatherproofing notes.',
               route: `/homes/${id}/planning/exterior-materials`,
               icon: <RoofingIcon color="primary" />,
+              enabled: !!((home?.documents || []).some((d) => String(d?.category || '').startsWith('architecture_') && d?.isFinal)),
+            },
+            {
+              key: 'windows_doors',
+              title: 'Windows &amp; Doors',
+              description: 'Define window types and glazing, and interior/exterior door counts.',
+              route: `/homes/${id}/planning/windows-doors`,
+              icon: <DoorFrontIcon color="primary" />,
               enabled: !!((home?.documents || []).some((d) => String(d?.category || '').startsWith('architecture_') && d?.isFinal)),
             },
             {

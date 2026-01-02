@@ -10,6 +10,8 @@ import { registerPing } from './src/tools/ping.js';
 import { registerHomeSummary } from './src/tools/home_summary_db.js';
 import { registerCityDocumentsByZip } from './src/tools/city_documents_by_zip.js';
 import { registerBuildingTips } from './src/tools/building_tips.js';
+import { registerImagesSearchAllowed } from './src/tools/images_search_allowed.js';
+import { registerImagesGetAllowed } from './src/tools/images_get_allowed.js';
 
 const SERVER_NAME = 'buildwise-mcp';
 const SERVER_VERSION = '0.1.0';
@@ -32,6 +34,8 @@ registerPing(server, { serverName: SERVER_NAME, version: SERVER_VERSION });
 registerHomeSummary(server);
 registerCityDocumentsByZip(server);
 registerBuildingTips(server);
+registerImagesSearchAllowed(server);
+registerImagesGetAllowed(server);
 
 await server.connect(new StdioServerTransport());
 

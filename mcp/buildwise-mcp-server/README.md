@@ -8,6 +8,8 @@ Tools
 - home_summary: Fetch basic summary for a home from MongoDB (name, address, requirements, counts)
 - city_documents_by_zip: Stub list of city/permit docs by ZIP (replace with real data when available)
 - building_tips: Topic-based building tips (foundation, HVAC, daylight, etc.)
+- images_search_allowed: Site-allowlisted image search (Bing)
+- images_get_allowed: Validate/HEAD-check an image from allowed domains
 
 Folder
 - /Users/indra/buildwise/mcp/buildwise-mcp-server
@@ -22,6 +24,10 @@ Environment configuration
   - `MONGODB_URI` (required): e.g., `mongodb://127.0.0.1:27017/buildwise`
   - `MONGODB_DB` (optional): defaults to DB in URI path or `buildwise`
   - `BUILDWISE_API_BASE` (optional): defaults to `http://localhost:5051/api`
+  - `BING_API_KEY` (for images_search_allowed)
+  - `IMAGES_PROVIDER` (optional: `bing` (default) or `google`)
+  - `GOOGLE_CSE_ID` and `GOOGLE_CSE_KEY` (if using Google provider)
+  - `ALLOWED_IMAGE_DOMAINS` (comma-separated, e.g., `thermador.com,pergo.com,shawfloors.com`)
 
 Install dependencies
 ```bash
@@ -64,6 +70,8 @@ Usage examples
 - “Run home_summary with homeId=<ID>”
 - “Get city_documents_by_zip for 75201”
 - “building_tips topic=daylight”
+- “images_search_allowed query='wide plank oak flooring' count=8 domains=['pergo.com','shawfloors.com']”
+- “images_get_allowed url='https://thermador.com/path/to/image.jpg'”
 
 Notes
 - BUILDWISE_API_BASE can be changed if your backend runs elsewhere.

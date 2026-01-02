@@ -18,7 +18,6 @@ import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import PushPinIcon from '@mui/icons-material/PushPin';
 import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
-import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -395,6 +394,30 @@ export default function AgentChat({ homeId }) {
                   <Stack spacing={1.5}>
                     {m.rich.answer && (
                       <Typography variant="body2">{m.rich.answer}</Typography>
+                    )}
+                    {Array.isArray(m.rich.images) && m.rich.images.length > 0 && (
+                      <Box>
+                        <Typography variant="subtitle2" sx={{ mb: .5 }}>Images</Typography>
+                        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 1 }}>
+                          {m.rich.images.map((img, idx) => (
+                            <Box key={idx} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden', bgcolor: 'common.white' }}>
+                              <a href={img.sourceUrl || img.fullUrl} target="_blank" rel="noreferrer" style={{ display: 'block', textDecoration: 'none' }}>
+                                <img
+                                  src={img.thumbUrl || img.fullUrl}
+                                  alt={img.alt || 'image'}
+                                  style={{ width: '100%', height: 100, objectFit: 'cover', display: 'block' }}
+                                  loading="lazy"
+                                />
+                              </a>
+                              <Box sx={{ p: .5 }}>
+                                <Typography variant="caption" color="text.secondary" noWrap title={img.domain || ''}>
+                                  {img.domain || ''}
+                                </Typography>
+                              </Box>
+                            </Box>
+                          ))}
+                        </Box>
+                      </Box>
                     )}
                     {Array.isArray(m.rich.comparisons) && m.rich.comparisons.map((cmp, idx) => (
                       <Box key={idx}>
