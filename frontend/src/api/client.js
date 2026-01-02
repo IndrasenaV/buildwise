@@ -214,6 +214,16 @@ export const api = {
   },
   createMessage: (homeId, body) => apiRequest(`/homes/${homeId}/messages`, { method: 'POST', body: JSON.stringify(body) }),
   createTaskFromMessage: (homeId, body) => apiRequest(`/homes/${homeId}/messages/task-from-message`, { method: 'POST', body: JSON.stringify(body) }),
+  // Daily Logs
+  listDailyLogs: (homeId, { limit, before, type } = {}) => {
+    const params = new URLSearchParams()
+    if (limit) params.set('limit', String(limit))
+    if (before) params.set('before', before)
+    if (type) params.set('type', type)
+    const qs = params.toString() ? `?${params.toString()}` : ''
+    return apiRequest(`/homes/${homeId}/daily-logs${qs}`)
+  },
+  createDailyLog: (homeId, body) => apiRequest(`/homes/${homeId}/daily-logs`, { method: 'POST', body: JSON.stringify(body || {}) }),
   // Account + subscription
   getMyAccount: () => apiRequest('/my/account'),
   initMyAccount: () => apiRequest('/my/account/init', { method: 'POST' }),

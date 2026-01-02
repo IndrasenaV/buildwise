@@ -41,6 +41,7 @@ export default function SideNavLayout() {
   const [execAnchorEl, setExecAnchorEl] = useState(null)
   const [projectAnchorEl, setProjectAnchorEl] = useState(null)
   const [docsAnchorEl, setDocsAnchorEl] = useState(null)
+  const [scheduleAnchorEl, setScheduleAnchorEl] = useState(null)
 
   useEffect(() => {
     try {
@@ -273,9 +274,28 @@ export default function SideNavLayout() {
                   </Box>
                 </MenuItem>
               </Menu>
-              <Button color="inherit" onClick={() => go(`/homes/${currentHomeId}/schedule`)} sx={{ textTransform: 'none' }}>
-                Schedule
+              <Button
+                color="inherit"
+                endIcon={<ExpandMoreIcon />}
+                onClick={(e) => setScheduleAnchorEl(e.currentTarget)}
+                sx={{ textTransform: 'none' }}
+              >
+                Schedule & Logs
               </Button>
+              <Menu
+                anchorEl={scheduleAnchorEl}
+                open={!!scheduleAnchorEl}
+                onClose={() => setScheduleAnchorEl(null)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+              >
+                <MenuItem onClick={() => { setScheduleAnchorEl(null); go(`/homes/${currentHomeId}/schedule`) }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, lineHeight: 1.2 }}>Gantt Schedule</Typography>
+                </MenuItem>
+                <MenuItem onClick={() => { setScheduleAnchorEl(null); go(`/homes/${currentHomeId}/daily-logs`) }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, lineHeight: 1.2 }}>Daily Logs</Typography>
+                </MenuItem>
+              </Menu>
               <Button
                 color="inherit"
                 endIcon={<ExpandMoreIcon />}

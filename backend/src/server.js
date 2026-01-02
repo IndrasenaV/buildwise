@@ -16,6 +16,7 @@ const myRouter = require('./routes/my');
 const templatesRouter = require('./routes/templates');
 const promptsRouter = require('./routes/prompts');
 const messagesRouter = require('./routes/messages');
+const dailyLogsRouter = require('./routes/dailyLogs');
 const fileStorageRouter = require('./routes/uploadToFileStorage');
 const aiRouter = require('./routes/ai');
 const { notFoundHandler, errorHandler } = require('./middleware/errorHandler');
@@ -43,6 +44,7 @@ app.use('/api/my', myRouter);
 app.use('/api/templates', templatesRouter);
 app.use('/api/prompts', promptsRouter);
 app.use('/api/homes', messagesRouter);
+app.use('/api/homes', dailyLogsRouter);
 app.use('/api/file-storage', fileStorageRouter);
 app.use('/api/ai', aiRouter);
 

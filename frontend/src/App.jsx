@@ -38,6 +38,7 @@ import PlanningInsulation from './pages/PlanningInsulation.jsx'
 import PlanningExteriorMaterials from './pages/PlanningExteriorMaterials.jsx'
 import PlanningCountertops from './pages/PlanningCountertops.jsx'
 import TradeBudget from './pages/TradeBudget.jsx'
+import HomeDailyLogs from './pages/HomeDailyLogs.jsx'
 
 function App() {
   return (
@@ -76,6 +77,7 @@ function App() {
         <Route path="/homes/:id/schedule" element={<HomeSchedule />} />
         <Route path="/homes/:id/budget" element={<HomeBudget />} />
         <Route path="/homes/:id/messages" element={<HomeMessages />} />
+        <Route path="/homes/:id/daily-logs" element={<HomeDailyLogs />} />
         <Route path="/onboarding" element={<Onboarding />} />
         <Route path="/templates" element={<Templates />} />
         <Route path="/templates/:id" element={<TemplateEditor />} />
