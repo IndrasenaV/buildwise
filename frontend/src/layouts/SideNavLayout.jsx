@@ -48,6 +48,15 @@ export default function SideNavLayout() {
   const [searchInput, setSearchInput] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
 
+  const storedHomeId = useMemo(() => {
+    try { return localStorage.getItem('lastHomeId') || '' } catch { return '' }
+  }, [])
+
+  const routeHomeId = useMemo(() => {
+    const m = location.pathname.match(/^\/homes\/([^/]+)/)
+    return m ? m[1] : ''
+  }, [location.pathname])
+
   useEffect(() => {
     try {
       const token = localStorage.getItem('token')
@@ -57,13 +66,13 @@ export default function SideNavLayout() {
     } catch {}
   }, [navigate])
 
-  const currentHomeId = useMemo(() => {
-    const m = location.pathname.match(/^\/homes\/([^/]+)/)
-    return m ? m[1] : ''
-  }, [location.pathname])
+  const currentHomeId = routeHomeId || storedHomeId
 
   useEffect(() => {
     let mounted = true
+    if (routeHomeId) {
+      try { localStorage.setItem('lastHomeId', routeHomeId) } catch {}
+    }
     if (currentHomeId) {
       api.getHome(currentHomeId)
         .then((h) => {
@@ -77,7 +86,7 @@ export default function SideNavLayout() {
       setHomeTitle('')
     }
     return () => { mounted = false }
-  }, [currentHomeId])
+  }, [currentHomeId, routeHomeId])
 
   useEffect(() => {
     let mounted = true
