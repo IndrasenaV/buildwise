@@ -367,7 +367,7 @@ export default function AgentChat({ homeId }) {
           ))}
         </Menu>
       </Box>
-      <Box sx={{ flex: 1, overflowY: 'auto', p: 2, bgcolor: 'grey.50' }}>
+      <Box sx={{ flex: 1, overflowY: 'auto', p: 2, bgcolor: 'background.default' }}>
         {(!messages || messages.length === 0) && (
           <Stack alignItems="center" justifyContent="center" sx={{ height: '100%', color: 'text.secondary', textAlign: 'center' }}>
             <SmartToyIcon sx={{ fontSize: 42, opacity: 0.25, mb: 1 }} />
@@ -382,7 +382,7 @@ export default function AgentChat({ homeId }) {
                 sx={{
                   p: 1.5,
                   bgcolor: m.role === 'user' ? 'primary.main' : 'common.white',
-                  color: m.role === 'user' ? 'primary.contrastText' : 'text.primary',
+                  color: m.role === 'user' ? 'primary.contrastText' : '#111',
                   borderRadius: 2,
                   borderTopRightRadius: m.role === 'user' ? 0 : 2,
                   borderTopLeftRadius: m.role === 'assistant' ? 0 : 2,
@@ -531,7 +531,7 @@ export default function AgentChat({ homeId }) {
                     )}
                   </Stack>
                 ) : (
-                  <Typography variant="body2">{m.content}</Typography>
+                  <Typography variant="body2" sx={{ color: m.role === 'user' ? 'inherit' : '#111' }}>{m.content}</Typography>
                 )}
               </Paper>
               {m.context && m.context.length > 0 && (
@@ -557,10 +557,10 @@ export default function AgentChat({ homeId }) {
           ))}
           {isLoading && (
             <Box sx={{ alignSelf: 'flex-start' }}>
-              <Paper elevation={0} sx={{ p: 1.5, bgcolor: 'common.white', border: 1, borderColor: 'divider', borderRadius: 2, borderTopLeftRadius: 0 }}>
+              <Paper elevation={0} sx={{ p: 1.5, bgcolor: 'common.white', color: '#111', border: 1, borderColor: 'divider', borderRadius: 2, borderTopLeftRadius: 0 }}>
                 <Stack direction="row" spacing={1} alignItems="center">
                   <CircularProgress size={16} />
-                  <Typography variant="body2" color="text.secondary">Thinking...</Typography>
+                  <Typography variant="body2" sx={{ color: '#111' }}>Thinking...</Typography>
                 </Stack>
               </Paper>
             </Box>

@@ -21,11 +21,14 @@ import SettingsIcon from '@mui/icons-material/Settings'
 import DescriptionIcon from '@mui/icons-material/Description'
 import LogoutIcon from '@mui/icons-material/Logout'
 import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone'
+import LightModeIcon from '@mui/icons-material/LightMode'
+import DarkModeIcon from '@mui/icons-material/DarkMode'
 import AgentChat from '../components/AgentChat.jsx'
 import Autocomplete from '@mui/material/Autocomplete'
 import TextField from '@mui/material/TextField'
 import SearchIcon from '@mui/icons-material/Search'
 import InputAdornment from '@mui/material/InputAdornment'
+import Chip from '@mui/material/Chip'
 
 export default function SideNavLayout() {
   const navigate = useNavigate()
@@ -42,6 +45,8 @@ export default function SideNavLayout() {
   const [projectAnchorEl, setProjectAnchorEl] = useState(null)
   const [docsAnchorEl, setDocsAnchorEl] = useState(null)
   const [scheduleAnchorEl, setScheduleAnchorEl] = useState(null)
+  const [searchInput, setSearchInput] = useState('')
+  const [searchOpen, setSearchOpen] = useState(false)
 
   useEffect(() => {
     try {
@@ -102,6 +107,15 @@ export default function SideNavLayout() {
 
   function go(path) {
     if (location.pathname !== path) navigate(path)
+  }
+
+  function toggleThemeMode() {
+    try {
+      const current = theme.palette.mode === 'dark' ? 'dark' : 'light'
+      const next = current === 'dark' ? 'light' : 'dark'
+      window.dispatchEvent(new CustomEvent('theme:set', { detail: { mode: next } }))
+      try { localStorage.setItem('themeMode', next) } catch {}
+    } catch {}
   }
 
   function logout() {
@@ -168,9 +182,8 @@ export default function SideNavLayout() {
         position="sticky"
         elevation={0}
         sx={{
-          bgcolor: 'rgba(0,0,0,0.72)',
+          bgcolor: '#000000',
           color: '#fff',
-          backdropFilter: 'saturate(180%) blur(6px)'
         }}
       >
         <Toolbar sx={{ gap: 2 }}>
@@ -334,26 +347,62 @@ export default function SideNavLayout() {
           ) : null}
           <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'center' }}>
             {currentHomeId ? (
-              <Box component={Paper} variant="outlined" sx={{ p: 0.5, borderRadius: 1, bgcolor: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.24)', minWidth: isMobile ? 200 : 520, maxWidth: 760, width: '100%' }}>
+              <Box component={Paper} variant="outlined" sx={{ p: 0.5, borderRadius: 1, bgcolor: 'common.white', borderColor: 'rgba(0,0,0,0.18)', minWidth: isMobile ? 200 : 520, maxWidth: 760, width: '100%' }}>
                   <Autocomplete
                     options={searchOptions}
                     size="small"
                     fullWidth
                     getOptionLabel={(o) => o.label}
+                    forcePopupIcon={false}
+                    inputValue={searchInput}
+                    onInputChange={(_e, value, reason) => {
+                      setSearchInput(value)
+                      if (reason === 'input') setSearchOpen(!!value)
+                    }}
+                    open={searchOpen}
+                    onOpen={() => setSearchOpen(!!searchInput)}
+                    onClose={() => setSearchOpen(false)}
+                    PaperComponent={(props) => <Paper {...props} sx={{ bgcolor: 'common.white' }} />}
+                    renderOption={(props, option) => (
+                      <li {...props} key={`${option.type}-${option.route || option.tradeId || option.label}`}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.5 }}>
+                          <Chip size="small" label={option.type === 'trade' ? 'Trade' : 'Planning'} />
+                          <Box>
+                            <Typography variant="body2" sx={{ lineHeight: 1.2, fontWeight: 600 }}>{option.label}</Typography>
+                            {option.route && <Typography variant="caption" color="text.secondary">{option.route}</Typography>}
+                          </Box>
+                        </Box>
+                      </li>
+                    )}
                     renderInput={(params) => (
                       <TextField
                         {...params}
                         placeholder="Search planning or trades…"
                         InputProps={{
                           ...params.InputProps,
+                          endAdornment: null,
                           startAdornment: (
                             <InputAdornment position="start">
-                            <SearchIcon fontSize="small" sx={{ color: 'rgba(255,255,255,0.7)' }} />
+                            <SearchIcon fontSize="small" sx={{ color: 'rgba(0,0,0,0.45)' }} />
                             </InputAdornment>
                           )
                         }}
-                      InputLabelProps={{ shrink: false }}
-                      variant="outlined"
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            bgcolor: 'common.white'
+                          },
+                          '& .MuiOutlinedInput-notchedOutline': {
+                            borderColor: 'rgba(0,0,0,0.18)'
+                          },
+                          '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': {
+                            borderColor: 'rgba(0,0,0,0.28)'
+                          },
+                          '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                            borderColor: 'rgba(0,0,0,0.32)'
+                          }
+                        }}
+                        InputLabelProps={{ shrink: false }}
+                        variant="outlined"
                       />
                     )}
                     onChange={onSelectSearchOption}
@@ -400,6 +449,11 @@ export default function SideNavLayout() {
               </Menu>
             </>
           )}
+          <Tooltip title={`Switch to ${theme.palette.mode === 'dark' ? 'light' : 'dark'} mode`}>
+            <IconButton aria-label="Toggle theme" color="inherit" onClick={toggleThemeMode}>
+              {theme.palette.mode === 'dark' ? <LightModeIcon /> : <DarkModeIcon />}
+            </IconButton>
+          </Tooltip>
           <IconButton aria-label="Notifications" color="inherit">
                 <NotificationsNoneIcon />
               </IconButton>
@@ -449,12 +503,11 @@ export default function SideNavLayout() {
         {/* Right chat panel */}
         <Box
           sx={{
-            width: { xs: '100%', md: chatExpanded ? 680 : 380 },
-            minWidth: { md: chatExpanded ? 520 : 340 },
-            maxWidth: { md: chatExpanded ? 900 : 420 },
-            height: { xs: '60vh', md: '100vh' },
+            width: { xs: '100%', md: chatExpanded ? '70vw' : '30vw' },
+            minWidth: { md: 360 },
+            height: { xs: '60vh', md: 'calc(100vh - 64px)' },
             position: { xs: 'static', md: 'sticky' },
-            top: { xs: 0, md: 0 },
+            top: { xs: 0, md: 64 },
             display: 'flex',
             flexDirection: 'column'
           }}
