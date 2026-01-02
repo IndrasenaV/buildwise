@@ -152,6 +152,163 @@ router.post('/:homeId/documents/:docId/analyze-architecture', async (req, res) =
   }
 });
 
+// Extract exterior materials (windows, doors, roofing, cladding) from architecture docs
+router.post('/:homeId/extract-exterior-materials', requireAuth, async (req, res) => {
+  const { z } = require('zod');
+  const { executeWithLangChain } = require('../services/langchainService');
+  const { getPromptText, getPrompt } = require('../services/promptService');
+  const { Home } = require('../models/Home');
+  const { homeId } = req.params;
+  const { docId } = req.body || {};
+
+  try {
+    const home = await Home.findById(homeId);
+    if (!home) return res.status(404).json({ message: 'Home not found' });
+
+    // Find the document to analyze - prefer final architecture doc, or use provided docId
+    const archDocs = (home.documents || []).filter(d => String(d.category || '').startsWith('architecture_'));
+    let doc;
+    if (docId) {
+      doc = (home.documents || []).find(d => String(d._id) === String(docId));
+    } else {
+      doc = archDocs.find(d => d.isFinal) || archDocs[0];
+    }
+    if (!doc || !doc.url) {
+      return res.status(400).json({ message: 'No architecture document found. Upload one first.' });
+    }
+
+    console.log(`[ExtractExterior] Processing doc: ${doc.title || doc._id}`);
+
+    // Build room context from existing roomAnalysis (if available) to help with room name matching
+    let roomContextStr = '';
+    const roomAnalysis = doc.analysis?.roomAnalysis || [];
+    if (roomAnalysis.length > 0) {
+      const roomList = roomAnalysis.map((r, idx) => {
+        const level = r.level || 'unknown';
+        const dims = r.dimensions ? `${r.dimensions.lengthFt || 0}x${r.dimensions.widthFt || 0}ft` : '';
+        return `${idx + 1}. "${r.name}" (Level: ${level}${dims ? `, ${dims}` : ''})`;
+      }).join('\n');
+      roomContextStr = `\n\nKNOWN ROOMS FROM FLOOR PLAN ANALYSIS:\nUse these room names when assigning roomName to windows and doors. Match schedule abbreviations (e.g., BR1, MBA, LIV, KIT, GAR) to the closest room name from this list:\n${roomList}\n`;
+      console.log(`[ExtractExterior] Injecting ${roomAnalysis.length} known rooms as context`);
+    }
+
+    // Get the extraction prompt
+    const system = await getPromptText('system.jsonOnly');
+    const promptDoc = await getPrompt('architecture.extract.exterior_materials');
+    const instruction = promptDoc.text + roomContextStr;
+
+    // Define Zod schema for structured output
+    const extractionSchema = z.object({
+      roofing: z.object({
+        type: z.string().nullable(),
+        material: z.string().nullable(),
+        areaSqFt: z.number().nullable(),
+        slope: z.string().nullable(),
+        underlayment: z.string().nullable(),
+        estCost: z.number().nullable(),
+      }).nullable(),
+      cladding: z.array(z.object({
+        area: z.string().nullable(),
+        type: z.string().nullable(),
+        material: z.string().nullable(),
+        areaSqFt: z.number().nullable(),
+        estCost: z.number().nullable(),
+      })).nullable(),
+      windows: z.array(z.object({
+        label: z.string(),
+        roomName: z.string().nullable(),
+        level: z.union([z.number(), z.string()]).nullable(),
+        openingType: z.string().nullable(),
+        widthIn: z.number().nullable(),
+        heightIn: z.number().nullable(),
+        areaSqFt: z.number().nullable(),
+        frameMaterial: z.string().nullable(),
+        glazing: z.string().nullable(),
+        orientation: z.string().nullable(),
+        notes: z.string().nullable(),
+        estCost: z.number().nullable(),
+      })).nullable(),
+      doors: z.array(z.object({
+        label: z.string(),
+        roomName: z.string().nullable(),
+        level: z.union([z.number(), z.string()]).nullable(),
+        doorType: z.string().nullable(),
+        isExterior: z.boolean().nullable(),
+        widthIn: z.number().nullable(),
+        heightIn: z.number().nullable(),
+        material: z.string().nullable(),
+        finish: z.string().nullable(),
+        notes: z.string().nullable(),
+        estCost: z.number().nullable(),
+      })).nullable(),
+      totals: z.object({
+        windowCount: z.number().nullable(),
+        doorCount: z.number().nullable(),
+        totalWindowsCost: z.number().nullable(),
+        totalDoorsCost: z.number().nullable(),
+        totalRoofingCost: z.number().nullable(),
+        totalCladdingCost: z.number().nullable(),
+        totalCost: z.number().nullable(),
+      }).nullable(),
+    });
+
+    // Execute LLM with structured output
+    const { data: result, usage } = await executeWithLangChain({
+      systemPrompt: system,
+      userPrompt: instruction,
+      urls: [doc.url],
+      model: 'gpt-4o',
+      temperature: 0.1,
+      supportsImages: true,
+      schema: extractionSchema,
+    });
+
+    console.log('[ExtractExterior] Extraction complete:', JSON.stringify(result, null, 2));
+
+    // Prepare data for storage
+    const exteriorMaterials = {
+      extractedAt: new Date(),
+      extractedFromDocId: String(doc._id),
+      roofing: result.roofing || null,
+      cladding: Array.isArray(result.cladding) ? result.cladding : [],
+      windows: Array.isArray(result.windows) ? result.windows : [],
+      doors: Array.isArray(result.doors) ? result.doors : [],
+      totals: result.totals || {},
+    };
+
+    // Prepare budget-level summary
+    const budgetExteriorMaterials = {
+      totalWindowsCost: result.totals?.totalWindowsCost || 0,
+      totalDoorsCost: result.totals?.totalDoorsCost || 0,
+      totalRoofingCost: result.totals?.totalRoofingCost || 0,
+      totalCladdingCost: result.totals?.totalCladdingCost || 0,
+      totalCost: result.totals?.totalCost || 0,
+      extractedAt: new Date(),
+    };
+
+    // Update home with extracted data
+    const updated = await Home.findByIdAndUpdate(
+      homeId,
+      {
+        $set: {
+          exteriorMaterials,
+          'budget.exteriorMaterials': budgetExteriorMaterials,
+        }
+      },
+      { new: true }
+    );
+
+    return res.json({
+      home: updated,
+      exteriorMaterials,
+      budget: budgetExteriorMaterials,
+    });
+  } catch (e) {
+    console.error('[ExtractExterior] Error:', e);
+    return res.status(500).json({ message: e.message || 'Extraction failed' });
+  }
+});
+
 
 // Save requirements interview answers
 router.put('/:homeId/requirements-interview', require('../middleware/auth').requireAuth, async (req, res) => {

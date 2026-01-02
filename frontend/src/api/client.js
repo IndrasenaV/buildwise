@@ -103,6 +103,7 @@ export const api = {
   updateDocument: (homeId, docId, body) => apiRequest(`/homes/${homeId}/documents/${encodeURIComponent(docId)}`, { method: 'PATCH', body: JSON.stringify(body) }),
   deleteDocument: (homeId, docId) => apiRequest(`/homes/${homeId}/documents/${encodeURIComponent(docId)}`, { method: 'DELETE' }),
   analyzeArchitectureDoc: (homeId, docId) => apiRequest(`/homes/${homeId}/documents/${encodeURIComponent(docId)}/analyze-architecture`, { method: 'POST' }),
+  extractExteriorMaterials: (homeId, docId) => apiRequest(`/homes/${homeId}/extract-exterior-materials`, { method: 'POST', body: JSON.stringify(docId ? { docId } : {}) }),
   classifyArchitecturePages: (homeId, docId, body = {}) =>
     apiRequest(`/homes/${homeId}/documents/${encodeURIComponent(docId)}/architecture-pages/classify`, { method: 'POST', body: JSON.stringify(body || {}) }),
   analyzeArchitectureSelectedPages: (homeId, docId, selectedPages) =>
