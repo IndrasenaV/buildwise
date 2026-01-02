@@ -376,7 +376,17 @@ const HomeSchema = new mongoose.Schema(
     // Optional freeform homeowner requirements used to guide analysis
     requirements: { type: String, default: '' },
     // New: structured list of homeowner requirements
-    requirementsList: [{ type: String }],
+    requirementsList: [
+      {
+        _id: { type: String, default: uuidv4 },
+        text: { type: String, required: true },
+        tags: [{ type: String }],
+        category: { type: String, default: '' }, // optional primary category
+        priority: { type: String, enum: ['must', 'should', 'nice', ''], default: '' },
+        source: { type: mongoose.Schema.Types.Mixed, default: null }, // e.g., { type: 'manual'|'paste'|'interview'|'analysis'|'doc', refId, note }
+        createdAt: { type: Date, default: Date.now },
+      }
+    ],
     // Structured interview answers for architecture planning (dynamic Q&A)
     requirementsInterview: { type: mongoose.Schema.Types.Mixed, default: null },
     // Flooring selections per room (free-form structure managed by UI)

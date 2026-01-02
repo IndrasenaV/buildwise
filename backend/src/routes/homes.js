@@ -62,9 +62,18 @@ router.post('/:homeId/documents/:docId/analyze-architecture', async (req, res) =
     // Build extra context from homeowner requirements and interview
     const parts = [];
     if (Array.isArray(home.requirementsList) && home.requirementsList.length) {
-      const items = home.requirementsList.map((s) => String(s || '').trim()).filter(Boolean);
-      if (items.length) {
-        parts.push(`Homeowner requirements (list):\n- ${items.join('\n- ')}`);
+      const lines = [];
+      for (const it of home.requirementsList) {
+        if (!it) continue;
+        const text = typeof it === 'string' ? String(it || '').trim() : String(it.text || '').trim();
+        if (!text) continue;
+        const tags = Array.isArray(it.tags) ? it.tags.filter(Boolean) : [];
+        const cat = typeof it.category === 'string' && it.category ? it.category : '';
+        const tagFmt = (cat ? [cat, ...tags] : tags).join(', ');
+        lines.push(tagFmt ? `${text} [${tagFmt}]` : text);
+      }
+      if (lines.length) {
+        parts.push(`Homeowner requirements (list):\n- ${lines.join('\n- ')}`);
       }
     }
     if ((home.requirements || '').trim()) {
