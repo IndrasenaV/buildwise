@@ -1,59 +1,46 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import Drawer from '@mui/material/Drawer'
-import List from '@mui/material/List'
-import ListItem from '@mui/material/ListItem'
-import ListItemButton from '@mui/material/ListItemButton'
-import ListItemIcon from '@mui/material/ListItemIcon'
-import ListItemText from '@mui/material/ListItemText'
-import HomeIcon from '@mui/icons-material/Home'
-import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'
-import LogoutIcon from '@mui/icons-material/Logout'
 import Box from '@mui/material/Box'
-import Divider from '@mui/material/Divider'
 import Typography from '@mui/material/Typography'
 import Container from '@mui/material/Container'
-import Paper from '@mui/material/Paper'
-import ListSubheader from '@mui/material/ListSubheader'
-import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn'
-import RoofingIcon from '@mui/icons-material/Roofing'
-import DesignServicesIcon from '@mui/icons-material/DesignServices'
-import ArchitectureIcon from '@mui/icons-material/Architecture'
 import { api } from '../api/client'
-import DescriptionIcon from '@mui/icons-material/Description'
-import ContactsIcon from '@mui/icons-material/Contacts'
-import EventIcon from '@mui/icons-material/Event'
-import BuildIcon from '@mui/icons-material/Build'
-import AttachMoneyIcon from '@mui/icons-material/AttachMoney'
-import DashboardIcon from '@mui/icons-material/Dashboard'
 import AppBar from '@mui/material/AppBar'
 import Toolbar from '@mui/material/Toolbar'
 import IconButton from '@mui/material/IconButton'
-import MenuIcon from '@mui/icons-material/Menu'
 import { useTheme } from '@mui/material/styles'
 import useMediaQuery from '@mui/material/useMediaQuery'
-import DesignServicesOutlinedIcon from '@mui/icons-material/DesignServicesOutlined'
-import ChatIcon from '@mui/icons-material/Chat'
+import Button from '@mui/material/Button'
+import Paper from '@mui/material/Paper'
+import Menu from '@mui/material/Menu'
+import MenuItem from '@mui/material/MenuItem'
+import Divider from '@mui/material/Divider'
+import Tooltip from '@mui/material/Tooltip'
+import Avatar from '@mui/material/Avatar'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import SettingsIcon from '@mui/icons-material/Settings'
+import DescriptionIcon from '@mui/icons-material/Description'
+import LogoutIcon from '@mui/icons-material/Logout'
+import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone'
 import AgentChat from '../components/AgentChat.jsx'
 import Autocomplete from '@mui/material/Autocomplete'
 import TextField from '@mui/material/TextField'
 import SearchIcon from '@mui/icons-material/Search'
 import InputAdornment from '@mui/material/InputAdornment'
-import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone'
-
-const drawerWidth = 260
 
 export default function SideNavLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const [homeTitle, setHomeTitle] = useState('')
   const [home, setHome] = useState(null)
-  const [mobileOpen, setMobileOpen] = useState(false)
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const [userRoles, setUserRoles] = useState([])
   const [chatExpanded, setChatExpanded] = useState(false)
+  const [adminAnchorEl, setAdminAnchorEl] = useState(null)
+  const [userAnchorEl, setUserAnchorEl] = useState(null)
+  const [execAnchorEl, setExecAnchorEl] = useState(null)
+  const [projectAnchorEl, setProjectAnchorEl] = useState(null)
+  const [docsAnchorEl, setDocsAnchorEl] = useState(null)
 
   useEffect(() => {
     try {
@@ -175,210 +162,159 @@ export default function SideNavLayout() {
   }
 
   return (
-    <Box sx={{ display: 'flex' }}>
-      {isMobile && (
-        <AppBar position="fixed" color="default" elevation={0}>
-          <Toolbar>
-            <IconButton edge="start" aria-label="menu" onClick={() => setMobileOpen(true)}>
-              <MenuIcon />
-            </IconButton>
-            <Box sx={{ display: 'flex', alignItems: 'center', ml: 1, cursor: 'pointer' }} onClick={() => go('/homes')}>
-              <img src={`${import.meta.env.BASE_URL}logo.svg`} alt="Buildwise AI" style={{ height: 24, marginRight: 8 }} />
-              <span className="brand-text">Buildwise AI</span>
-            </Box>
-          </Toolbar>
-        </AppBar>
-      )}
-      <Drawer
-        variant={isMobile ? 'temporary' : 'permanent'}
-        open={isMobile ? mobileOpen : true}
-        onClose={() => setMobileOpen(false)}
-        ModalProps={{ keepMounted: true }}
+    <Box sx={{ display: 'flex', minHeight: '100vh', flexDirection: 'column' }}>
+      <AppBar
+        position="sticky"
+        elevation={0}
         sx={{
-          width: drawerWidth,
-          flexShrink: 0,
-          '& .MuiDrawer-paper': {
-            width: drawerWidth,
-            boxSizing: 'border-box'
-          },
-          display: { xs: 'block', sm: 'block' }
+          bgcolor: 'rgba(0,0,0,0.72)',
+          color: '#fff',
+          backdropFilter: 'saturate(180%) blur(6px)'
         }}
       >
-        <Box sx={{ p: 2 }}>
+        <Toolbar sx={{ gap: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={() => go('/homes')}>
             <img src={`${import.meta.env.BASE_URL}logo.svg`} alt="Buildwise AI" style={{ height: 26, marginRight: 8 }} />
             <span className="brand-text">Buildwise AI</span>
           </Box>
+          <Divider orientation="vertical" flexItem light sx={{ borderColor: 'rgba(255,255,255,0.18)' }} />
+          {currentHomeId ? (
+            <>
+              <Button color="inherit" onClick={() => go(`/homes/${currentHomeId}/dashboard`)} sx={{ textTransform: 'none' }}>
+                Dashboard
+              </Button>
+              <Button
+                color="inherit"
+                endIcon={<ExpandMoreIcon />}
+                onClick={(e) => setProjectAnchorEl(e.currentTarget)}
+                sx={{ textTransform: 'none' }}
+              >
+                Project
+              </Button>
+              <Menu
+                anchorEl={projectAnchorEl}
+                open={!!projectAnchorEl}
+                onClose={() => setProjectAnchorEl(null)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+              >
+                <MenuItem
+                  onClick={() => { setProjectAnchorEl(null); go(`/homes/${currentHomeId}/planning`) }}
+                  sx={{ alignItems: 'flex-start', py: 1, px: 2, minWidth: 300 }}
+                >
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600, lineHeight: 1.2 }}>Planning</Typography>
+                    <Typography variant="caption" color="text.secondary">Define selections and scope; align design decisions with budget.</Typography>
+                  </Box>
+                </MenuItem>
+                <MenuItem
+                  onClick={() => { setProjectAnchorEl(null); go(`/homes/${currentHomeId}/budget`) }}
+                  sx={{ alignItems: 'flex-start', py: 1, px: 2, minWidth: 300 }}
+                >
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600, lineHeight: 1.2 }}>Budget</Typography>
+                    <Typography variant="caption" color="text.secondary">Estimate and reconcile costs across trades and materials.</Typography>
+                  </Box>
+                </MenuItem>
+                <MenuItem
+                  onClick={() => { setProjectAnchorEl(null); go(`/homes/${currentHomeId}/permits`) }}
+                  sx={{ alignItems: 'flex-start', py: 1, px: 2, minWidth: 300 }}
+                >
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600, lineHeight: 1.2 }}>Permits</Typography>
+                    <Typography variant="caption" color="text.secondary">Submit, track, and manage permit documents and approvals.</Typography>
+                  </Box>
+                </MenuItem>
+                <MenuItem
+                  onClick={() => { setProjectAnchorEl(null); go(`/homes/${currentHomeId}/schedule`) }}
+                  sx={{ display: 'none' }}
+                />
+              </Menu>
+              <Button
+                color="inherit"
+                endIcon={<ExpandMoreIcon />}
+                onClick={(e) => setExecAnchorEl(e.currentTarget)}
+                sx={{ textTransform: 'none' }}
+              >
+                Execution
+              </Button>
+              <Menu
+                anchorEl={execAnchorEl}
+                open={!!execAnchorEl}
+                onClose={() => setExecAnchorEl(null)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+              >
+                <MenuItem
+                  onClick={() => { setExecAnchorEl(null); go(`/homes/${currentHomeId}/preconstruction`) }}
+                  sx={{ alignItems: 'flex-start', py: 1, px: 2, minWidth: 280 }}
+                >
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600, lineHeight: 1.2 }}>Preconstruction</Typography>
+                    <Typography variant="caption" color="text.secondary">Plan sequencing, long‑lead items, and site prep prior to build.</Typography>
+                  </Box>
+                </MenuItem>
+                <MenuItem
+                  onClick={() => { setExecAnchorEl(null); go(`/homes/${currentHomeId}/exterior`) }}
+                  sx={{ alignItems: 'flex-start', py: 1, px: 2, minWidth: 280 }}
+                >
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600, lineHeight: 1.2 }}>Exterior</Typography>
+                    <Typography variant="caption" color="text.secondary">Manage structure, roofing, cladding, openings, and weatherproofing.</Typography>
+                  </Box>
+                </MenuItem>
+                <MenuItem
+                  onClick={() => { setExecAnchorEl(null); go(`/homes/${currentHomeId}/interior`) }}
+                  sx={{ alignItems: 'flex-start', py: 1, px: 2, minWidth: 280 }}
+                >
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600, lineHeight: 1.2 }}>Interior</Typography>
+                    <Typography variant="caption" color="text.secondary">Track drywall, trim, paint, and interior install/finish steps.</Typography>
+                  </Box>
+                </MenuItem>
+              </Menu>
+              <Button color="inherit" onClick={() => go(`/homes/${currentHomeId}/schedule`)} sx={{ textTransform: 'none' }}>
+                Schedule
+              </Button>
+              <Button
+                color="inherit"
+                endIcon={<ExpandMoreIcon />}
+                onClick={(e) => setDocsAnchorEl(e.currentTarget)}
+                sx={{ textTransform: 'none' }}
+              >
+                Docs &amp; Messages
+              </Button>
+              <Menu
+                anchorEl={docsAnchorEl}
+                open={!!docsAnchorEl}
+                onClose={() => setDocsAnchorEl(null)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+              >
+                <MenuItem
+                  onClick={() => { setDocsAnchorEl(null); go(`/homes/${currentHomeId}/documents`) }}
+                  sx={{ alignItems: 'flex-start', py: 1, px: 2, minWidth: 280 }}
+                >
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600, lineHeight: 1.2 }}>Documents</Typography>
+                    <Typography variant="caption" color="text.secondary">Organize drawings, submittals, and shared project files.</Typography>
         </Box>
-        <Divider />
-        <List>
-          <ListItem disablePadding>
-            <ListItemButton onClick={() => go('/homes')}>
-              <ListItemIcon><HomeIcon /></ListItemIcon>
-              <ListItemText primary="Homes" />
-            </ListItemButton>
-          </ListItem>
-          <ListItem disablePadding>
-            <ListItemButton onClick={() => go('/onboarding')}>
-              <ListItemIcon><AddCircleOutlineIcon /></ListItemIcon>
-              <ListItemText primary="Onboard New Home" />
-            </ListItemButton>
-          </ListItem>
-          <ListItem disablePadding>
-            {userRoles.includes('sysadmin') && (
-              <ListItemButton onClick={() => go('/templates')}>
-                <ListItemIcon><DesignServicesOutlinedIcon /></ListItemIcon>
-                <ListItemText primary="Templates" />
-              </ListItemButton>
-            )}
-          </ListItem>
-          <ListItem disablePadding>
-            {userRoles.includes('sysadmin') && (
-              <ListItemButton onClick={() => go('/prompts')}>
-                <ListItemIcon><SettingsIcon /></ListItemIcon>
-                <ListItemText primary="Prompts" />
-              </ListItemButton>
-            )}
-          </ListItem>
-          <ListItem disablePadding>
-            {userRoles.includes('sysadmin') && (
-              <ListItemButton onClick={() => go('/knowledge')}>
-                <ListItemIcon><DescriptionIcon /></ListItemIcon>
-                <ListItemText primary="Knowledge Base" />
-              </ListItemButton>
-            )}
-          </ListItem>
-        </List>
-        {currentHomeId && (
-          <>
-            <Divider />
-            <List subheader={<ListSubheader component="div" disableSticky sx={{ bgcolor: 'transparent' }}>{homeTitle || 'Selected Home'}</ListSubheader>}>
-              <ListSubheader component="div" disableSticky sx={{ bgcolor: 'transparent', color: 'text.secondary', fontSize: 12, lineHeight: '28px' }}>
-                Project Flow
-              </ListSubheader>
-              <ListItem disablePadding>
-                <ListItemButton selected={location.pathname.includes('/planning')} onClick={() => go(`/homes/${currentHomeId}/planning`)}>
-                  <ListItemIcon><ArchitectureIcon /></ListItemIcon>
-                  <ListItemText primary="Planning" />
-                </ListItemButton>
-              </ListItem>
-              <ListItem disablePadding>
-                <ListItemButton selected={location.pathname.includes('/budget')} onClick={() => go(`/homes/${currentHomeId}/budget`)}>
-                  <ListItemIcon><AttachMoneyIcon /></ListItemIcon>
-                  <ListItemText primary="Budget" />
-                </ListItemButton>
-              </ListItem>
-              <ListItem disablePadding>
-                <ListItemButton selected={location.pathname.includes('/permits')} onClick={() => go(`/homes/${currentHomeId}/permits`)}>
-                  <ListItemIcon><DescriptionIcon /></ListItemIcon>
-                  <ListItemText primary="Permits" />
-                </ListItemButton>
-              </ListItem>
-              <ListItem disablePadding>
-                <ListItemButton selected={location.pathname.includes('/preconstruction')} onClick={() => go(`/homes/${currentHomeId}/preconstruction`)}>
-                  <ListItemIcon><DesignServicesIcon /></ListItemIcon>
-                  <ListItemText primary="Preconstruction" />
-                </ListItemButton>
-              </ListItem>
-              <ListItem disablePadding>
-                <ListItemButton selected={location.pathname.includes('/exterior')} onClick={() => go(`/homes/${currentHomeId}/exterior`)}>
-                  <ListItemIcon><RoofingIcon /></ListItemIcon>
-                  <ListItemText primary="Exterior Build" />
-                </ListItemButton>
-              </ListItem>
-              <ListItem disablePadding>
-                <ListItemButton selected={location.pathname.includes('/interior')} onClick={() => go(`/homes/${currentHomeId}/interior`)}>
-                  <ListItemIcon><AssignmentTurnedInIcon /></ListItemIcon>
-                  <ListItemText primary="Interior / Finish Out" />
-                </ListItemButton>
-              </ListItem>
-              <Divider sx={{ my: 1 }} />
-              <ListSubheader component="div" disableSticky sx={{ bgcolor: 'transparent', color: 'text.secondary', fontSize: 12, lineHeight: '28px' }}>
-                General
-              </ListSubheader>
-              <ListItem disablePadding>
-                <ListItemButton selected={location.pathname.includes('/dashboard')} onClick={() => go(`/homes/${currentHomeId}/dashboard`)}>
-                  <ListItemIcon><DashboardIcon /></ListItemIcon>
-                  <ListItemText primary="Dashboard" />
-                </ListItemButton>
-              </ListItem>
-              <ListItem disablePadding>
-                <ListItemButton selected={location.pathname.includes('/messages')} onClick={() => go(`/homes/${currentHomeId}/messages`)}>
-                  <ListItemIcon><ChatIcon /></ListItemIcon>
-                  <ListItemText primary="Messages" />
-                </ListItemButton>
-              </ListItem>
-              <ListItem disablePadding>
-                <ListItemButton selected={location.pathname.includes('/tools')} onClick={() => go(`/homes/${currentHomeId}/tools`)}>
-                  <ListItemIcon><DesignServicesOutlinedIcon /></ListItemIcon>
-                  <ListItemText primary="Tools" />
-                </ListItemButton>
-              </ListItem>
-              <ListItem disablePadding>
-                <ListItemButton selected={location.pathname.includes('/trades')} onClick={() => go(`/homes/${currentHomeId}/trades`)}>
-                  <ListItemIcon><BuildIcon /></ListItemIcon>
-                  <ListItemText primary="Trades" />
-                </ListItemButton>
-              </ListItem>
-              <ListItem disablePadding>
-                <ListItemButton selected={location.pathname.includes('/documents')} onClick={() => go(`/homes/${currentHomeId}/documents`)}>
-                  <ListItemIcon><DescriptionIcon /></ListItemIcon>
-                  <ListItemText primary="Documents" />
-                </ListItemButton>
-              </ListItem>
-              <ListItem disablePadding>
-                <ListItemButton selected={location.pathname.includes('/contacts')} onClick={() => go(`/homes/${currentHomeId}/contacts`)}>
-                  <ListItemIcon><ContactsIcon /></ListItemIcon>
-                  <ListItemText primary="Contacts" />
-                </ListItemButton>
-              </ListItem>
-              <ListItem disablePadding>
-                <ListItemButton selected={location.pathname.includes('/schedule')} onClick={() => go(`/homes/${currentHomeId}/schedule`)}>
-                  <ListItemIcon><EventIcon /></ListItemIcon>
-                  <ListItemText primary="Schedule" />
-                </ListItemButton>
-              </ListItem>
-            </List>
-          </>
-        )}
-        <Box sx={{ flexGrow: 1 }} />
-        <Divider />
-        <Box sx={{ p: 2 }}>
-          <ListItem disablePadding>
-            <ListItemButton selected={location.pathname.includes('/account')} onClick={() => go('/account')}>
-              <ListItemIcon><SettingsIcon /></ListItemIcon>
-              <ListItemText primary="Account" />
-            </ListItemButton>
-          </ListItem>
-          <Divider sx={{ my: 1 }} />
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-            {userEmail || 'Logged in'}
-          </Typography>
-          <ListItem disablePadding>
-            <ListItemButton color="inherit" onClick={logout}>
-              <ListItemIcon><LogoutIcon /></ListItemIcon>
-              <ListItemText primary="Logout" />
-            </ListItemButton>
-          </ListItem>
-        </Box>
-      </Drawer>
-      <Box component="main" sx={{ flexGrow: 1, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, minHeight: '100vh' }}>
-        {/* Center content area */}
-        <Box sx={{ flexGrow: 1, p: 3, pt: isMobile ? 8 : 3, display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
-          <Container maxWidth={location.pathname.includes('/documents') ? false : 'lg'} sx={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
-            <Box
-              sx={{
-                display: currentHomeId ? 'flex' : 'none',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                height: 67,
-                borderBottom: 1,
-                borderColor: 'divider',
-                mb: 2
-              }}
-            >
-              <Box sx={{ maxWidth: 560, flex: '1 1 auto' }}>
-                <Box component={Paper} variant="outlined" sx={{ p: 0.5, borderRadius: 1, bgcolor: 'background.paper' }}>
+                </MenuItem>
+                <MenuItem
+                  onClick={() => { setDocsAnchorEl(null); go(`/homes/${currentHomeId}/messages`) }}
+                  sx={{ alignItems: 'flex-start', py: 1, px: 2, minWidth: 280 }}
+                >
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600, lineHeight: 1.2 }}>Messages</Typography>
+                    <Typography variant="caption" color="text.secondary">Communicate with owners, architects, and trades in one place.</Typography>
+                  </Box>
+                </MenuItem>
+              </Menu>
+            </>
+          ) : null}
+          <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'center' }}>
+            {currentHomeId ? (
+              <Box component={Paper} variant="outlined" sx={{ p: 0.5, borderRadius: 1, bgcolor: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.24)', minWidth: isMobile ? 200 : 520, maxWidth: 760, width: '100%' }}>
                   <Autocomplete
                     options={searchOptions}
                     size="small"
@@ -392,10 +328,12 @@ export default function SideNavLayout() {
                           ...params.InputProps,
                           startAdornment: (
                             <InputAdornment position="start">
-                              <SearchIcon fontSize="small" />
+                            <SearchIcon fontSize="small" sx={{ color: 'rgba(255,255,255,0.7)' }} />
                             </InputAdornment>
                           )
                         }}
+                      InputLabelProps={{ shrink: false }}
+                      variant="outlined"
                       />
                     )}
                     onChange={onSelectSearchOption}
@@ -408,11 +346,76 @@ export default function SideNavLayout() {
                     }}
                   />
                 </Box>
+            ) : null}
               </Box>
-              <IconButton sx={{ ml: 2 }} aria-label="Notifications">
+          {userRoles.includes('sysadmin') && (
+            <>
+              <Button
+                color="inherit"
+                endIcon={<ExpandMoreIcon />}
+                onClick={(e) => setAdminAnchorEl(e.currentTarget)}
+                sx={{ textTransform: 'none' }}
+              >
+                Admin
+              </Button>
+              <Menu
+                anchorEl={adminAnchorEl}
+                open={!!adminAnchorEl}
+                onClose={() => setAdminAnchorEl(null)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+              >
+                <MenuItem onClick={() => { setAdminAnchorEl(null); go('/templates') }}>
+                  <SettingsIcon fontSize="small" style={{ marginRight: 8 }} />
+                  Templates
+                </MenuItem>
+                <MenuItem onClick={() => { setAdminAnchorEl(null); go('/prompts') }}>
+                  <SettingsIcon fontSize="small" style={{ marginRight: 8 }} />
+                  Prompts
+                </MenuItem>
+                <MenuItem onClick={() => { setAdminAnchorEl(null); go('/knowledge') }}>
+                  <DescriptionIcon fontSize="small" style={{ marginRight: 8 }} />
+                  Knowledge Base
+                </MenuItem>
+              </Menu>
+            </>
+          )}
+          <IconButton aria-label="Notifications" color="inherit">
                 <NotificationsNoneIcon />
               </IconButton>
-            </Box>
+          <Tooltip title={userEmail || ''}>
+            <IconButton color="inherit" onClick={(e) => setUserAnchorEl(e.currentTarget)}>
+              <Avatar sx={{ width: 28, height: 28, bgcolor: 'primary.light', color: 'black' }}>
+                {(userEmail || 'U').slice(0, 1).toUpperCase()}
+              </Avatar>
+            </IconButton>
+          </Tooltip>
+          <Menu
+            anchorEl={userAnchorEl}
+            open={!!userAnchorEl}
+            onClose={() => setUserAnchorEl(null)}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+          >
+            <MenuItem onClick={() => { setUserAnchorEl(null); go('/homes') }}>Homes</MenuItem>
+            <MenuItem onClick={() => { setUserAnchorEl(null); go('/account?tab=profile') }}>
+              Profile
+            </MenuItem>
+            <MenuItem onClick={() => { setUserAnchorEl(null); go('/account') }}>
+              Account Information
+            </MenuItem>
+            <Divider />
+            <MenuItem onClick={() => { setUserAnchorEl(null); logout() }}>
+              <LogoutIcon fontSize="small" style={{ marginRight: 8 }} />
+              Logout
+            </MenuItem>
+          </Menu>
+        </Toolbar>
+      </AppBar>
+      <Box component="main" sx={{ flexGrow: 1, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, minHeight: '100%', width: '100%' }}>
+        {/* Center content area */}
+        <Box sx={{ flexGrow: 1, p: 3, display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
+          <Container maxWidth={location.pathname.includes('/documents') || location.pathname.includes('/schedule') ? false : 'lg'} sx={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
             <Box sx={{ flexGrow: 1 }}>
               <Outlet />
             </Box>
