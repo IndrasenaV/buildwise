@@ -379,6 +379,10 @@ const HomeSchema = new mongoose.Schema(
     appliances: { type: mongoose.Schema.Types.Mixed, default: null },
     // Cabinets planning selections
     cabinets: { type: mongoose.Schema.Types.Mixed, default: null },
+    // Exterior materials extracted from architecture PDFs (roofing, cladding, windows, doors)
+    exteriorMaterials: { type: mongoose.Schema.Types.Mixed, default: null },
+    // Budget-level summaries for budgeting system
+    budget: { type: mongoose.Schema.Types.Mixed, default: null },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
   },
