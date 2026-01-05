@@ -276,23 +276,22 @@ router.post('/:homeId/extract-exterior-materials', requireAuth, async (req, res)
       totals: result.totals || {},
     };
 
-    // Prepare budget-level summary
-    const budgetExteriorMaterials = {
-      totalWindowsCost: result.totals?.totalWindowsCost || 0,
-      totalDoorsCost: result.totals?.totalDoorsCost || 0,
-      totalRoofingCost: result.totals?.totalRoofingCost || 0,
-      totalCladdingCost: result.totals?.totalCladdingCost || 0,
-      totalCost: result.totals?.totalCost || 0,
-      extractedAt: new Date(),
-    };
+    // Sync budget using budgetService
+    const { syncFromExteriorMaterials, calculateSummary } = require('../services/budgetService');
 
-    // Update home with extracted data
+    // Get existing home to preserve other budget data
+    const homeForBudget = await Home.findById(homeId);
+    let budget = homeForBudget.budget || {};
+    budget = syncFromExteriorMaterials({ exteriorMaterials }, budget);
+    budget = calculateSummary(budget);
+
+    // Update home with extracted data and synced budget
     const updated = await Home.findByIdAndUpdate(
       homeId,
       {
         $set: {
           exteriorMaterials,
-          'budget.exteriorMaterials': budgetExteriorMaterials,
+          budget,
         }
       },
       { new: true }
@@ -301,7 +300,7 @@ router.post('/:homeId/extract-exterior-materials', requireAuth, async (req, res)
     return res.json({
       home: updated,
       exteriorMaterials,
-      budget: budgetExteriorMaterials,
+      budget: updated.budget,
     });
   } catch (e) {
     console.error('[ExtractExterior] Error:', e);
@@ -322,6 +321,81 @@ router.put('/:homeId/requirements-interview', require('../middleware/auth').requ
 
 router.post('/:homeId/assign-client', assignClientToHome);
 router.post('/:homeId/monitors', addMonitorToHome);
+
+// Budget routes
+router.post('/:homeId/budget/recalculate', requireAuth, async (req, res) => {
+  const { Home } = require('../models/Home');
+  const { recalculateBudget } = require('../services/budgetService');
+  const { homeId } = req.params;
+  try {
+    const home = await Home.findById(homeId);
+    if (!home) return res.status(404).json({ message: 'Home not found' });
+
+    const budget = recalculateBudget(home);
+    const updated = await Home.findByIdAndUpdate(homeId, { $set: { budget } }, { new: true });
+    return res.json({ budget: updated.budget });
+  } catch (e) {
+    console.error('[Budget] Recalculate error:', e);
+    return res.status(500).json({ message: e.message });
+  }
+});
+
+router.put('/:homeId/budget/manual', requireAuth, async (req, res) => {
+  const { Home } = require('../models/Home');
+  const { addManualEntry, calculateSummary } = require('../services/budgetService');
+  const { homeId } = req.params;
+  const { entry } = req.body || {};
+  if (!entry || !entry.label) return res.status(400).json({ message: 'Entry with label is required' });
+  try {
+    const home = await Home.findById(homeId);
+    if (!home) return res.status(404).json({ message: 'Home not found' });
+
+    const budget = addManualEntry(home.budget || {}, entry);
+    const updated = await Home.findByIdAndUpdate(homeId, { $set: { budget } }, { new: true });
+    return res.json({ budget: updated.budget });
+  } catch (e) {
+    console.error('[Budget] Manual entry error:', e);
+    return res.status(500).json({ message: e.message });
+  }
+});
+
+router.delete('/:homeId/budget/manual/:entryId', requireAuth, async (req, res) => {
+  const { Home } = require('../models/Home');
+  const { removeManualEntry } = require('../services/budgetService');
+  const { homeId, entryId } = req.params;
+  try {
+    const home = await Home.findById(homeId);
+    if (!home) return res.status(404).json({ message: 'Home not found' });
+
+    const budget = removeManualEntry(home.budget || {}, entryId);
+    const updated = await Home.findByIdAndUpdate(homeId, { $set: { budget } }, { new: true });
+    return res.json({ budget: updated.budget });
+  } catch (e) {
+    console.error('[Budget] Remove manual entry error:', e);
+    return res.status(500).json({ message: e.message });
+  }
+});
+
+router.put('/:homeId/budget/contingency', requireAuth, async (req, res) => {
+  const { Home } = require('../models/Home');
+  const { calculateSummary } = require('../services/budgetService');
+  const { homeId } = req.params;
+  const { percent } = req.body || {};
+  if (typeof percent !== 'number') return res.status(400).json({ message: 'Percent is required' });
+  try {
+    const home = await Home.findById(homeId);
+    if (!home) return res.status(404).json({ message: 'Home not found' });
+
+    const budget = home.budget || {};
+    budget.contingency = budget.contingency || {};
+    budget.contingency.percent = percent;
+    const updated = await Home.findByIdAndUpdate(homeId, { $set: { budget: calculateSummary(budget) } }, { new: true });
+    return res.json({ budget: updated.budget });
+  } catch (e) {
+    console.error('[Budget] Contingency update error:', e);
+    return res.status(500).json({ message: e.message });
+  }
+});
 
 module.exports = router;
 

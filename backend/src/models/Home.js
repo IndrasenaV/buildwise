@@ -3,6 +3,73 @@ const { v4: uuidv4 } = require('uuid');
 
 const PhaseKeyEnum = ['planning', 'preconstruction', 'exterior', 'interior'];
 
+// Budget item for line-level tracking
+const BudgetItemSchema = new mongoose.Schema(
+  {
+    _id: { type: String, default: uuidv4 },
+    label: { type: String, required: true },
+    estimated: { type: Number, default: 0 },
+    actual: { type: Number, default: 0 },
+    source: { type: String, default: 'manual' }, // 'extraction', 'trade', 'manual'
+  },
+  { _id: false }
+);
+
+// Budget category for grouping related costs
+const BudgetCategorySchema = new mongoose.Schema(
+  {
+    estimated: { type: Number, default: 0 },
+    actual: { type: Number, default: 0 },
+    notes: { type: String, default: '' },
+    items: [BudgetItemSchema],
+    lastSyncedAt: { type: Date, default: null },
+  },
+  { _id: false }
+);
+
+// Manual budget entry for user-entered items
+const ManualEntrySchema = new mongoose.Schema(
+  {
+    _id: { type: String, default: uuidv4 },
+    category: { type: String, required: true },
+    label: { type: String, required: true },
+    estimated: { type: Number, default: 0 },
+    actual: { type: Number, default: 0 },
+    createdAt: { type: Date, default: Date.now },
+  },
+  { _id: false }
+);
+
+// Full budget schema for Home
+const BudgetSchema = new mongoose.Schema(
+  {
+    exteriorMaterials: {
+      roofing: { type: BudgetCategorySchema, default: () => ({}) },
+      cladding: { type: BudgetCategorySchema, default: () => ({}) },
+      windows: { type: BudgetCategorySchema, default: () => ({}) },
+      doors: { type: BudgetCategorySchema, default: () => ({}) },
+    },
+    flooring: { type: BudgetCategorySchema, default: () => ({}) },
+    appliances: { type: BudgetCategorySchema, default: () => ({}) },
+    cabinets: { type: BudgetCategorySchema, default: () => ({}) },
+    windowsDoors: { type: BudgetCategorySchema, default: () => ({}) },
+    trades: { type: BudgetCategorySchema, default: () => ({}) },
+    contingency: {
+      percent: { type: Number, default: 10 },
+      amount: { type: Number, default: 0 },
+    },
+    manualEntries: [ManualEntrySchema],
+    summary: {
+      totalEstimated: { type: Number, default: 0 },
+      totalActual: { type: Number, default: 0 },
+      variance: { type: Number, default: 0 },
+    },
+    lastUpdatedAt: { type: Date, default: null },
+  },
+  { _id: false }
+);
+
+
 const PersonLiteSchema = new mongoose.Schema(
   {
     fullName: { type: String, required: true },
@@ -400,7 +467,7 @@ const HomeSchema = new mongoose.Schema(
     // Exterior materials extracted from architecture PDFs (roofing, cladding, windows, doors)
     exteriorMaterials: { type: mongoose.Schema.Types.Mixed, default: null },
     // Budget-level summaries for budgeting system
-    budget: { type: mongoose.Schema.Types.Mixed, default: null },
+    budget: { type: BudgetSchema, default: () => ({}) },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
   },

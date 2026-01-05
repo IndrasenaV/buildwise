@@ -27,6 +27,3 @@ DailyLogSchema.index({ homeId: 1, createdAt: -1 });
 const DailyLog = mongoose.model('DailyLog', DailyLogSchema);
 
 module.exports = { DailyLog };
-
-*** End Patch
-

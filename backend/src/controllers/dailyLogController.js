@@ -43,6 +43,3 @@ async function createDailyLog(req, res) {
 }
 
 module.exports = { listDailyLogs, createDailyLog };
-
-*** End Patch  />}!json】ಾ  }```!json error
-

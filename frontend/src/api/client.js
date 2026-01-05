@@ -260,6 +260,15 @@ export const api = {
     apiRequest('/ai/architecture-questions/next', { method: 'POST', body: JSON.stringify({ mode, answers }) }),
   saveRequirementsInterview: (homeId, answers) =>
     apiRequest(`/homes/${homeId}/requirements-interview`, { method: 'PUT', body: JSON.stringify(answers || {}) }),
+  // Budget management
+  recalculateBudget: (homeId) =>
+    apiRequest(`/homes/${homeId}/budget/recalculate`, { method: 'POST' }),
+  addBudgetManualEntry: (homeId, entry) =>
+    apiRequest(`/homes/${homeId}/budget/manual`, { method: 'PUT', body: JSON.stringify({ entry }) }),
+  removeBudgetManualEntry: (homeId, entryId) =>
+    apiRequest(`/homes/${homeId}/budget/manual/${encodeURIComponent(entryId)}`, { method: 'DELETE' }),
+  updateBudgetContingency: (homeId, percent) =>
+    apiRequest(`/homes/${homeId}/budget/contingency`, { method: 'PUT', body: JSON.stringify({ percent }) }),
   // Bid comparison for a trade
   compareTradeBids: (homeId, bidId, { urls, extraContext }) =>
     apiRequest(`/homes/${homeId}/trades/${bidId}/compare-bids`, {
